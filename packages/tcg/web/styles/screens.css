@@ -132,7 +132,7 @@ a.menu-item:hover { text-decoration: none; }
   .page-head { padding: calc(var(--safe-t) + 10px) 14px 8px; gap: 10px; }
   .page-right .wallet-chip { padding: 3px; }
   .page-right .wc-text { display: none; }
-  .page-wrap { padding: 4px 14px calc(var(--safe-b) + 20px); align-content: start; }
+  .page-wrap { padding: 4px 14px calc(var(--safe-b) + 20px); align-content: safe center; }   /* short pages sit in the middle, not at the top over an empty half */
   .page-title h1 { font-size: clamp(18px, 5.6vw, 26px); letter-spacing: 0.06em; white-space: normal; line-height: 1.05; }
   .page-title .kicker { font-size: 10px; letter-spacing: 0.18em; }
   /* stat grids: two columns, and an odd last tile spans both */
@@ -436,6 +436,8 @@ body:has(#ui > .page:not([hidden])) #arena { filter: blur(1.5px) brightness(0.9)
 .ph-next { display: flex; flex-wrap: wrap; gap: 10px; }
 /* the daily puzzle's next-day countdown */
 .pz-next { margin-left: auto; font-size: 12px; letter-spacing: 0.06em; color: var(--muted); }
+.puzzle-page .panel-head h2 { white-space: nowrap; }   /* the day stays on one line ("Thu, Nov 12" wrapped on phones) */
+.puzzle-page .pz-next { text-align: right; }
 /* long grids fade out at their bottom edge instead of being cut off */
 @media (min-width: 901px) { .champ-grid, .forge-grid { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 36px), transparent); } }
 /* the gauntlet's stage labels sit on a dark plate, legible over the arena's glow */
