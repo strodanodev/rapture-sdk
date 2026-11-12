@@ -17,7 +17,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 
 import { die, flag, parseArgs } from './common';
-import { CHAINS, createRpc, decodeCoreStats, decodeString, encodeUintCall, pool, readTokenJson, RpcError, SEL, toHttp, traitsOf, TRANSFER_TOPIC, ZERO_TOPIC } from './evm';
+import { CHAINS, createRpc, decodeCoreStats, decodeString, encodeUintCall, pool, readTokenJson, RpcError, SEL, statedRangeCap, toHttp, traitsOf, TRANSFER_TOPIC, ZERO_TOPIC } from './evm';
 import type { CoreStats } from './evm';
 
 const args = parseArgs();
@@ -56,8 +56,8 @@ async function fromExplorer(): Promise<Found[] | null> {
   return out;
 }
 
-async function deployBlock(latest: number): Promise<number> {
-  // Binary search for the first block with code at the address; a node without history answers 0.
+async function deployBlock(latest: number): Promise<number | null> {
+  // Binary search for the first block with code at the address; null when the node keeps no historical state.
   let lo = 0, hi = latest;
   try {
     while (lo < hi) {
@@ -66,26 +66,56 @@ async function deployBlock(latest: number): Promise<number> {
       if (code && code !== '0x') hi = mid; else lo = mid + 1;
     }
     return lo;
-  } catch { return 0; }
+  } catch { return null; }
 }
+
+// Liteforge's RPC (Zeeve) allows 2,000 blocks per eth_getLogs and spends about a second per call however small the
+// range, so a capped node is scanned in fixed windows with several calls in flight: throughput comes from parallel
+// calls, not from wider ranges. Without --from-block a capped scan that would take more calls than this stops early.
+const LOG_CALLS = 8;
+const MAX_LOG_WINDOWS = 5_000;
 
 async function fromLogs(): Promise<Found[]> {
   const latest = Number(BigInt(await rpc.request<string>('eth_blockNumber', [])));
-  let from = flag(args, 'from-block') ? Number(flag(args, 'from-block')) : await deployBlock(latest);
+  const given = flag(args, 'from-block');
+  const deployed = given ? null : await deployBlock(latest);
+  if (!given && deployed === null) log('the node keeps no historical state, so the deploy block is unknown: scanning from block 0 (pass --from-block)');
+  let from = given ? Number(given) : deployed ?? 0;
   log(`scanning mint logs from block ${from} to ${latest}…`);
   const ids = new Set<string>();
+  const scan = async (a: number, b: number): Promise<void> => {
+    const logs = await rpc.request<Array<{ topics: string[] }>>('eth_getLogs', [{ address, fromBlock: hexBlock(a), toBlock: hexBlock(b), topics: [TRANSFER_TOPIC, ZERO_TOPIC] }]);
+    for (const l of logs) if (l.topics.length === 4) ids.add(BigInt(l.topics[3]).toString());
+  };
+  // Wide ranges first: some nodes answer millions of blocks per call.
   let span = 50_000;
+  let cap: number | null = null;
   while (from <= latest) {
     const to = Math.min(latest, from + span - 1);
     try {
-      const logs = await rpc.request<Array<{ topics: string[] }>>('eth_getLogs', [{ address, fromBlock: hexBlock(from), toBlock: hexBlock(to), topics: [TRANSFER_TOPIC, ZERO_TOPIC] }]);
-      for (const l of logs) if (l.topics.length === 4) ids.add(BigInt(l.topics[3]).toString());
+      await scan(from, to);
       from = to + 1;
       span = Math.min(span * 2, 2_000_000);
     } catch (e) {
-      if (!(e instanceof RpcError) || e.code === undefined || e.code >= 429 || span <= 100) throw e;
+      if (!(e instanceof RpcError) || e.code === undefined || e.code >= 429) throw e;
+      const stated = statedRangeCap(e.message);
+      if (stated !== null && stated < span) { cap = stated; break; }
+      if (span <= 100) throw e;
       span = Math.max(100, Math.floor(span / 4)); // the node caps the range or the result size: ask for less
     }
+  }
+  if (cap !== null && from <= latest) {
+    const windows: Array<[number, number]> = [];
+    for (let a = from; a <= latest; a += cap) windows.push([a, Math.min(latest, a + cap - 1)]);
+    if (!given && windows.length > MAX_LOG_WINDOWS) {
+      die(`the node allows ${cap} blocks per eth_getLogs, so blocks ${from}-${latest} need ${windows.length} calls: pass --from-block <the collection's deploy block>, --tokens or --explorer`);
+    }
+    log(`  the node allows ${cap} blocks per eth_getLogs: ${windows.length} calls, ${LOG_CALLS} at a time`);
+    let done = 0;
+    await pool(windows, LOG_CALLS, async ([a, b]) => {
+      await scan(a, b);
+      if (++done % 1000 === 0) log(`  ${done}/${windows.length} windows`);
+    });
   }
   return [...ids].map((tokenId) => ({ tokenId, json: null, uri: '' }));
 }

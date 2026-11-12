@@ -17,7 +17,7 @@ export const SEL = {
 /** Known chains, so a builder can write `--chain liteforge` instead of URLs and addresses. */
 export const CHAINS: Record<string, { chainId: number; rpc: string; explorer: string; playerProfile?: string }> = {
   // PlayerProfile: LitNode v0.11.26 contracts/deployed.testnet.json.
-  liteforge: { chainId: 4441, rpc: 'https://liteforge.rpc.caldera.xyz/http', explorer: 'https://liteforge.explorer.caldera.xyz', playerProfile: '0xe2cf46ab11eAfB18c1933409E35ae68CEce88882' },
+  liteforge: { chainId: 4441, rpc: 'https://rpc.testnet.liteforge.zeeve.net/', explorer: 'https://liteforge.explorer.caldera.xyz', playerProfile: '0xe2cf46ab11eAfB18c1933409E35ae68CEce88882' },
 };
 export const chainById = (chainId: number): (typeof CHAINS)[string] | null => Object.values(CHAINS).find((c) => c.chainId === chainId) ?? null;
 /** keccak256("Transfer(address,address,uint256)") */
@@ -81,6 +81,13 @@ export function traitsOf(json: Record<string, unknown> | null): Record<string, s
 }
 
 // ------------------------------------------------------------------ JSON-RPC
+
+/** The block range a node says eth_getLogs allows ("range exceeds 2000 blocks", "maximum block range: 5000"), or null. */
+export function statedRangeCap(message: string): number | null {
+  const m = /(\d[\d,]*)\s*blocks?\b/i.exec(message) ?? /block range\D{0,16}(\d[\d,]*)/i.exec(message);
+  const n = m ? Number(m[1].replace(/,/g, '')) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 export interface Rpc {
   call(to: string, data: string, block?: string): Promise<string>;

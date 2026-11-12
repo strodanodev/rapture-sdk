@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { decodeCoreStats, decodeString, encodeUintCall, readTokenJson, SEL, toHttp, traitsOf } from '../src/tools/evm';
+import { CHAINS, decodeCoreStats, decodeString, encodeUintCall, readTokenJson, SEL, statedRangeCap, toHttp, traitsOf } from '../src/tools/evm';
 
 const w = (n: number | bigint): string => BigInt(n).toString(16).padStart(64, '0');
 
@@ -36,4 +36,16 @@ test('maps ipfs:// through a gateway and leaves http alone', () => {
   assert.equal(toHttp('ipfs://ipfs/bafy/1.webp', 'https://g/ipfs'), 'https://g/ipfs/bafy/1.webp');
   assert.equal(toHttp('https://x.test/a.png', 'https://g/ipfs/'), 'https://x.test/a.png');
   assert.equal(toHttp('ar://abc', 'https://g/ipfs/'), null);
+});
+
+test('reads the block range a node allows from its eth_getLogs error', () => {
+  assert.equal(statedRangeCap('eth_getLogs range exceeds 2000 blocks; split the range'), 2000);
+  assert.equal(statedRangeCap('exceed maximum block range: 5000'), 5000);
+  assert.equal(statedRangeCap('query returned more than 10000 results'), null);
+  assert.equal(statedRangeCap('execution reverted'), null);
+});
+
+test('the liteforge preset reads through Zeeve, never the frozen Caldera RPC', () => {
+  assert.equal(CHAINS.liteforge.rpc, 'https://rpc.testnet.liteforge.zeeve.net/');
+  assert.equal(CHAINS.liteforge.chainId, 4441);
 });

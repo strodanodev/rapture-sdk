@@ -13,7 +13,7 @@ characters on LitVM Liteforge (testnet, chain id `4441`), plus the public data a
 | Snapshot of all 50 designs | `https://forge.litvm.games/assets/rapture/cards.json`, or build your own with `tessaract snapshot 0x138F…2721 --chain liteforge` |
 | Wallet holds any Rapture card? | `GET https://forge.litvm.games/api/rapture/holder?address=0x…` (CORS open) |
 | 3D avatars | `animation_url` in the token JSON: meshopt GLB (`erc6699-avatar/1`) |
-| Chain | RPC `https://liteforge.rpc.caldera.xyz/http`, explorer `https://liteforge.explorer.caldera.xyz` |
+| Chain | RPC `https://rpc.testnet.liteforge.zeeve.net/`, explorer `https://liteforge.explorer.caldera.xyz` |
 
 **Using the art, names or avatars in your own game needs permission from LitVM Games.** The data is
 public, but the characters are not covered by the SDK's code license (see `NOTICE`).

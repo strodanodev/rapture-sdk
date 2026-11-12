@@ -18,7 +18,7 @@ export const LITEFORGE = Object.freeze({
   chainIdHex: "0x1159",
   name: "LitVM Liteforge",
   nativeCurrency: Object.freeze({ name: "zkLTC", symbol: "zkLTC", decimals: 18 }),
-  rpcUrls: Object.freeze(["https://liteforge.rpc.caldera.xyz/http"]),
+  rpcUrls: Object.freeze(["https://rpc.testnet.liteforge.zeeve.net/"]),
   explorer: "https://liteforge.explorer.caldera.xyz",
   faucet: "https://liteforge.hub.caldera.xyz",
 });
