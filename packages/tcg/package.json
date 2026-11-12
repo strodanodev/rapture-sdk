@@ -1,0 +1,72 @@
+{
+  "name": "@rapture-sdk/tcg",
+  "version": "0.9.15",
+  "private": true,
+  "description": "The Rapture SDK's TCG kit (formerly Tessaract): a lightweight Web3 trading card game maker. One JSON file is a game; ERC-6699 agents are champions; matches replay deterministically and are ready for LitNode settlement.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strodanodev/rapture-sdk.git",
+    "directory": "packages/tcg"
+  },
+  "homepage": "https://github.com/strodanodev/rapture-sdk/tree/main/packages/tcg#readme",
+  "bugs": {
+    "url": "https://github.com/strodanodev/rapture-sdk/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "bin": {
+    "rapture": "dist/cli.js",
+    "tessaract": "dist/cli.js",
+    "deckwright": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "templates",
+    "web/index.html",
+    "web/app.js",
+    "web/arena3d.js",
+    "web/ui",
+    "web/styles",
+    "web/favicon.svg",
+    "web/lib",
+    "web/audio",
+    "vercel.json",
+    "plugin",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "rapture": "tsx src/cli.ts",
+    "tessaract": "tsx src/cli.ts",
+    "new": "tsx src/cli.ts new",
+    "import": "tsx src/cli.ts import",
+    "snapshot": "tsx src/cli.ts snapshot",
+    "sim": "tsx src/cli.ts sim",
+    "title": "tsx src/cli.ts title",
+    "web": "tsx src/cli.ts web",
+    "relay": "tsx src/cli.ts relay",
+    "dev": "tsx src/cli.ts dev",
+    "build": "node scripts/build-cli.mjs",
+    "prepare": "node scripts/build-cli.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"test/*.test.*\"",
+    "arena3d": "node scripts/build-arena3d.mjs"
+  },
+  "dependencies": {
+    "esbuild": "0.28.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.3",
+    "@types/three": "0.186.0",
+    "three": "0.186.1",
+    "tsx": "4.23.7",
+    "typescript": "6.0.3"
+  }
+}

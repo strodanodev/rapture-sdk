@@ -1,0 +1,83 @@
+name: CI
+
+# The Rapture SDK's checks: the TCG kit (packages/tcg) and Rapture Studio (apps/studio), built against the kit in
+# this repo. The private monorepo runs the same checks (scripts/check.sh rapture-sdk) before it publishes this mirror.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tcg:
+    name: tcg (typecheck, test, builder smoke test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/tcg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: packages/tcg/package.json   # pnpm version from its "packageManager"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: packages/tcg/pnpm-lock.yaml
+
+      - name: Install (also builds dist/, the CLI)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Committed 3D arena bundle matches the source
+        # web/arena3d.js is generated from src/arena3d with three.js (a dev dependency builders never install).
+        run: node scripts/build-arena3d.mjs && git diff --exit-code web/arena3d.js
+
+      - name: Committed site engine matches the source
+        # web/engine is generated; a rules change without `pnpm web` would ship stale rules to the demo.
+        run: |
+          node dist/cli.js web templates/starter.game.json --out "$RUNNER_TEMP/web" > /dev/null
+          diff -q <(tail -n +3 "$RUNNER_TEMP/web/engine/tessaract.js") <(tail -n +3 web/engine/tessaract.js)
+
+      - name: Starter and the sample collection meet balance and fun targets
+        run: |
+          node dist/cli.js sim templates/starter.game.json --matches 400 --strict
+          node dist/cli.js sim test/fixtures/sample-duel.game.json --matches 400 --decks mixed --strict
+
+      - name: Builder path (create, sim, LitNode compatibility)
+        run: |
+          node dist/cli.js create "$RUNNER_TEMP/ci-game" --title "CI Game"
+          node dist/cli.js sim "$RUNNER_TEMP/ci-game/games/ci-game.game.json" --matches 300 --strict
+          node dist/cli.js title "$RUNNER_TEMP/ci-game/games/ci-game.game.json" --out "$RUNNER_TEMP/rulesets"
+
+      - name: Package contents
+        run: npm pack --dry-run 2>&1 | grep -E "dist/cli.js|SKILL.md|LICENSE|NOTICE"
+
+  studio:
+    name: studio (build against the kit, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: packages/tcg/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the kit (Studio bundles its engine from it)
+        working-directory: packages/tcg
+        run: pnpm install --frozen-lockfile
+      - name: Build Studio's engine from this repo's kit
+        working-directory: apps/studio
+        run: RAPTURE_TCG_DIR=../../packages/tcg node scripts/build.mjs
+      - name: Tests
+        working-directory: apps/studio
+        run: node --test "test/*.test.mjs"

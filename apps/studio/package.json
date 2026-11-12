@@ -1,0 +1,19 @@
+{
+  "name": "@rapture-sdk/studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rapture Studio (formerly Tessaract Studio): build a Web3 trading card game visually. Edit cards, rules and hero powers, balance with bot sims, export a game for the Rapture SDK's TCG kit.",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/strodanodev/rapture-sdk.git", "directory": "apps/studio" },
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "tessaract dev --dir web --port 4180",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "tessaract": "github:strodanodev/tessaract#v0.9.15"
+  }
+}

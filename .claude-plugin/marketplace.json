@@ -1,0 +1,23 @@
+{
+  "name": "rapture-sdk",
+  "owner": {
+    "name": "strodanodev",
+    "url": "https://github.com/strodanodev"
+  },
+  "description": "Rapture SDK: build a Web3 game from an NFT collection, as a Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "rapture-sdk",
+      "source": "./packages/tcg/plugin",
+      "description": "Build, balance, ship and host an NFT trading card game with the Rapture SDK (formerly Tessaract).",
+      "version": "0.9.15",
+      "category": "development",
+      "tags": [
+        "tcg",
+        "nft",
+        "web3",
+        "game-maker"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,594 @@
+/* The battle HUD (Rapture Chess's match HUD, laid out for cards): plates for both champions, the turn medallion, the
+ * two lanes on the dais, the fanned hand, the end-turn medallion, banners and flashes, the fallen feed, the battle
+ * menu, the replay and spectator dock, the battle VFX, and the result screen. Only small elements loop.
+ *
+ * Each section holds one component, with the media queries that concern only it: wider screens (900x600 and up) set
+ * the table furniture round the board (deck piles, the foe's hand, the energy crystal), the hero power as a medallion
+ * and the large life orbs. The last sections change the layout by screen size and the champion's portrait by screen
+ * size; they come last because they override the components. */
+
+.match { display: grid; grid-template-rows: auto auto 1fr auto auto auto; justify-items: center; gap: 6px; padding: calc(var(--safe-t) + 12px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 10px) calc(var(--safe-l) + 16px); overflow: hidden; }
+.match > * { position: relative; z-index: 2; }
+
+/* ------------------------------------------------------------------ plates */
+/* a compact plaque; the portrait is big and breaks out of it */
+.plate { --c: var(--you); --el: var(--neutral); width: min(640px, 100%); display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px; min-height: 64px; padding: 4px 16px 4px 6px;
+  border-radius: 6px; border: 2px solid transparent;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55  0 0 0 0 .55  0 0 0 0 .55  0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") padding-box, linear-gradient(180deg, #1e2327 0%, #121518 55%, #0c0e11 100%) padding-box, linear-gradient(180deg, #b8ac94, #4b453b 38%, #2a2621 62%, #8f846e) border-box;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 32px rgba(0, 0, 0, 0.55); transition: box-shadow 0.3s; }
+/* a steel spike at the middle of the plate's board side */
+.pl-orn { position: absolute; left: 50%; width: 46px; height: 15px; transform: translateX(-50%); pointer-events: none; background: linear-gradient(180deg, #d6caae, #6a6252 55%, #3a352d); }
+.plate.top .pl-orn { bottom: -15px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.plate.bottom .pl-orn { top: -15px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.plate.top { --c: var(--foe); }
+.plate::after { content: ''; position: absolute; left: 10%; right: 10%; height: 2px; background: linear-gradient(90deg, transparent, var(--c), transparent); opacity: 0; transition: opacity 0.3s; }
+.plate.top::after { bottom: -1px; }
+.plate.bottom::after { top: -1px; }
+.plate.active { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in srgb, var(--c) 65%, transparent), 0 0 30px color-mix(in srgb, var(--c) 35%, transparent); }
+.plate.active::after { opacity: 1; animation: plateGlow 2s ease-in-out infinite; }
+@keyframes plateGlow { 50% { opacity: 0.35; } }
+.plate.low { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 75, 58, 0.7), 0 0 30px rgba(255, 75, 58, 0.4); }
+.plate.low .pl-face { border-color: var(--danger); box-shadow: 0 0 22px rgba(255, 75, 58, 0.6); }
+.pl-hero { position: relative; width: 80px; height: 80px; margin: -14px 0; }
+.pl-face { position: relative; width: 80px; height: 80px; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid color-mix(in srgb, var(--el) 70%, var(--gold-2)); background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--el) 35%, #1a1420), #0a080d 75%); color: var(--c); display: grid; place-items: center; box-shadow: 0 0 18px color-mix(in srgb, var(--el) 35%, transparent); cursor: default;
+  animation: heroBreath 4.5s ease-in-out infinite; }   /* a breathing rim light in its element, a flash when it is hit or healed */
+.pl-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.pl-face > svg { width: 64%; height: 64%; }
+.pl-face.hit { animation: heroHit 0.55s ease-out, heroBreath 4.5s ease-in-out 0.55s infinite; }
+.pl-face.healed { animation: heroHeal 0.7s ease-out, heroBreath 4.5s ease-in-out 0.7s infinite; }
+.pl-face.target { cursor: pointer; border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255, 75, 58, 0.35), 0 0 26px rgba(255, 75, 58, 0.7); animation: aim 1.1s ease-in-out infinite; }
+@keyframes aim { 50% { box-shadow: 0 0 0 6px rgba(255, 75, 58, 0.15), 0 0 34px rgba(255, 75, 58, 0.9); } }
+@keyframes heroBreath { 50% { box-shadow: 0 0 30px color-mix(in srgb, var(--el) 60%, transparent), 0 0 4px color-mix(in srgb, var(--el) 80%, transparent); } }
+@keyframes heroHit { 0% { filter: brightness(2.2) saturate(0.4); transform: translateX(-4px); box-shadow: 0 0 40px rgba(255, 60, 40, 0.95); } 30% { transform: translateX(4px); } 60% { transform: translateX(-2px); filter: brightness(1.2) sepia(0.5) hue-rotate(-30deg); } }
+@keyframes heroHeal { 0% { filter: brightness(1.6); box-shadow: 0 0 40px rgba(99, 227, 145, 0.95); } }
+@media (prefers-reduced-motion: reduce) { .pl-face, .pl-face.hit, .pl-face.healed { animation: none; } }
+/* life: a red orb on the portrait's corner for both champions (blue reads as mana), the largest number at the plate */
+.pl-life { position: absolute; right: -12px; bottom: -6px; display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 4px; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; text-shadow: 0 1px 3px #000;
+  background: radial-gradient(circle at 40% 30%, #ffb3a0, #d5301c 50%, #5a0a04 90%); box-shadow: 0 0 0 2px #0b0910, 0 4px 10px rgba(0, 0, 0, 0.6); }
+.pl-life.low { animation: lowLife 1s ease-in-out infinite; }
+@keyframes lowLife { 50% { box-shadow: 0 0 0 2px #0b0910, 0 0 18px rgba(255, 60, 40, 0.9); } }
+@media (min-width: 900px) and (min-height: 600px) { .pl-life { min-width: 50px; height: 50px; right: -18px; bottom: -12px; font-size: 25px; -webkit-text-stroke: 1px rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 3px #0b0910, 0 6px 14px rgba(0, 0, 0, 0.6); } }
+/* short windows: smaller and further out, so it no longer covers half the portrait */
+@media (min-width: 761px) and (max-height: 760px) { .pl-life { min-width: 30px; height: 30px; font-size: 15px; right: -15px; bottom: -8px; } }
+/* yours hangs only a little below the plate on short desktop windows, clear of a full hand's cost orbs; on the big
+   portraits it sits on the plate's edge, clear of the hand's first cards */
+@media (min-width: 900px) and (min-height: 600px) and (max-height: 800px) { .plate.bottom .pl-life { bottom: -3px; } }
+@media (min-width: 1200px) and (min-height: 900px) { .plate.bottom .pl-life { bottom: -1px; } }
+.pl-id { display: grid; gap: 3px; min-width: 0; padding-left: 10px; }   /* clear of the life badge on the portrait's corner */
+.pl-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ivory); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the champion's name leads; who plays it is a small tag after it ("House bot", "You") */
+@media (min-width: 761px) { .pl-who { display: inline-block; margin-left: 10px; padding: 1px 7px; vertical-align: 2px; border-radius: 3px; border: 1px solid var(--line); font-family: var(--font-body, inherit); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: var(--muted); } }
+.pl-chips { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; }
+.chip-mini { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px 0 5px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.45); font-size: 11px; color: var(--text); flex: none; }
+.chip-mini svg { width: 12px; height: 12px; color: var(--gold-2); }
+.chip-mini b { font-weight: 600; }
+.chip-mini.buff { border-color: color-mix(in srgb, var(--gold-2) 55%, transparent); color: var(--gold-0); background: rgba(255, 201, 94, 0.1); }
+.cardback { width: 9px; height: 12px; border-radius: 2px; background: linear-gradient(135deg, var(--gold-3), #3a2a14 70%); box-shadow: inset 0 0 0 1px var(--gold-2); }
+/* the deck piles, the foe's fan and your energy crystal carry these on wider screens: no second copy in the chips */
+@media (min-width: 900px) and (min-height: 600px) { .chip-mini.c-deck, .chip-mini.c-hand, .plate.bottom .pl-energy { display: none; } }
+.pl-energy { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.pl-energy i { width: 11px; height: 14px; clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); background: rgba(120, 180, 255, 0.32); }
+.pl-energy i.full { background: linear-gradient(180deg, #c9ecff, #2f8fe0); filter: drop-shadow(0 0 4px #4fb0ff); }
+.pl-energy i.bonus { background: linear-gradient(180deg, #fff1c4, var(--gold-1, #e0a63a)); filter: drop-shadow(0 0 4px rgba(255, 201, 94, 0.9)); }
+.pl-energy span { margin-left: 6px; font-size: 13px; font-weight: 600; color: #9fd8ff; }
+.pl-energy .bonus, .mana-bar .bonus { color: var(--gold-1); text-shadow: 0 0 10px rgba(255, 201, 94, 0.7); }
+.power { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--el) 55%, var(--line-strong));
+  background: radial-gradient(ellipse at 18% 50%, color-mix(in srgb, var(--el) 38%, transparent), transparent 62%), linear-gradient(180deg, rgba(30, 26, 38, 0.95), rgba(12, 10, 16, 0.95)); color: var(--ivory); font-size: 12px; white-space: nowrap; transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s var(--ease-out); }
+.power svg { width: 15px; height: 15px; color: color-mix(in srgb, var(--el) 65%, white); filter: drop-shadow(0 0 4px var(--el)); }
+.pw-cost { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-family: var(--font-display); font-weight: 700; color: #fff; background: radial-gradient(circle at 38% 32%, #c9ecff, #2f8fe0 45%, #0d3a70 80%); }
+.pw-name { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
+.power:not(:disabled):hover { border-color: color-mix(in srgb, var(--el) 70%, white); box-shadow: 0 0 22px color-mix(in srgb, var(--el) 60%, transparent); transform: translateY(-1px); }
+.power:not(:disabled) { box-shadow: 0 0 16px color-mix(in srgb, var(--el) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--el) 25%, transparent); }
+.power:disabled { cursor: default; opacity: 0.62; }
+.power.used { opacity: 0.38; filter: grayscale(0.8); }
+.power.picked { border-color: var(--gold-0); box-shadow: 0 0 24px rgba(255, 201, 94, 0.7); }
+/* one you can't use yet is dimmed, not a ghost: its name and cost stay readable */
+.power:disabled:not(.used) { opacity: 0.82; filter: grayscale(0.5) brightness(0.85); box-shadow: none; }
+.power:disabled:not(.used) .pw-name { color: #b9af9b; }
+/* the hero power as a medallion (wider screens): an element-lit disc with its icon, the cost gem on its rim and its
+   name beside it, as card games show a hero power, instead of a text pill */
+@media (min-width: 900px) and (min-height: 600px) {
+  .power { position: relative; width: 62px; height: 62px; min-height: 0; padding: 0; gap: 0; justify-content: center; border-radius: 50%; border-width: 2px; border-color: color-mix(in srgb, var(--el) 60%, var(--gold-2));
+    background: radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--el) 55%, #2a2236), #0c0a10 80%); }
+  .power svg { width: 28px; height: 28px; }
+  .power .pw-name { position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%); font-size: 11px; letter-spacing: 0.1em; color: color-mix(in srgb, var(--el) 35%, var(--gold-1)); text-shadow: 0 1px 3px #000; pointer-events: none; }
+  .power.used .pw-name, .power:disabled .pw-name { color: var(--muted); }
+  .power .pw-cost { position: absolute; left: -7px; top: -7px; width: 26px; height: 26px; font-size: 14px; box-shadow: 0 0 0 2px #0b0910; }
+}
+.pl-relics { display: flex; gap: 6px; }
+.pl-relics .tcard.small { --w: 40px; }
+.pl-relics .tcard.small .tc-name { display: none; }
+.pl-relics .tcard.small .tc-frame { grid-template-rows: 1fr; }
+.pl-floats { position: absolute; inset: 0; pointer-events: none; }
+.float { position: absolute; left: 50%; top: 20%; transform: translateX(-50%); font-family: var(--font-display); font-weight: 900; font-size: 26px; text-shadow: 0 2px 8px #000, 0 0 16px currentColor; animation: floatUp 1.3s var(--ease-out) forwards; }
+.float.dmg { color: #ff5a4a; }
+.float.heal { color: #7dffb0; }
+@keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
+
+/* ------------------------------------------------------------------ the arena's light, and low life */
+/* a vignette over the arena round the board (under the HUD, which sits above it): the grey hall, grey plates and teal
+   table were one mid-dark tone with nothing drawing the eye */
+.match::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 78% 72% at 50% 46%, transparent 45%, rgba(0, 0, 0, 0.5)); }
+.match.danger::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 170px rgba(210, 20, 10, 0.72); animation: danger 1.3s ease-in-out infinite; }
+@keyframes danger { 50% { box-shadow: inset 0 0 100px rgba(210, 20, 10, 0.4); } }
+@media (prefers-reduced-motion: reduce) { .match.danger::before { animation: none; } }
+
+/* ------------------------------------------------------------------ medallion and narration */
+.hud-center { display: grid; justify-items: center; gap: 4px; text-align: center; min-height: 54px; }
+.medallion { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 30px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: rgba(8, 6, 12, 0.85); font-family: var(--font-display); font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); transition: color 0.3s, border-color 0.3s, background 0.3s; }
+.md-ring { width: 10px; height: 10px; border-radius: 50%; background: var(--you); box-shadow: 0 0 10px var(--you); }
+.medallion[data-side='1'] .md-ring { background: var(--foe); box-shadow: 0 0 10px var(--foe); }
+.medallion.yours { color: #241604; border-color: var(--gold-1); background: linear-gradient(180deg, var(--gold-1), var(--gold-3)); box-shadow: 0 0 26px rgba(255, 201, 94, 0.4); }
+.medallion.yours .md-ring { background: #241604; box-shadow: none; }
+.hud-status { margin: 0; max-width: min(680px, 90vw); min-height: 1.4em; padding: 5px 10px; border-radius: 3px; border-left: 2px solid var(--gold-3); background: rgba(8, 6, 12, 0.78); font-size: 13px; line-height: 1.4; color: #e6dccb; }
+.hud-status:empty { visibility: hidden; }
+.match.aiming .hud-status { color: var(--gold-1); font-weight: 600; }
+@media (min-width: 900px) and (min-height: 600px) { .match.aiming .hud-status { visibility: hidden; } }   /* the aim prompt over your plate says it */
+
+/* ------------------------------------------------------------------ the battlefield */
+/* the board is a size container: units take the largest size that fits two lanes and five slots, up to --u-max.
+   It is also the table: the whole board tilts away from you in 3D, slots lie flat on it, units stand up on it. 32deg
+   in a 1100px perspective is about the taper the 3D camera gives the stone table under it (any steeper, and your
+   front row starts to hide the foe row's attack and health). */
+.battlefield { --tilt: 32deg; --persp: 1100px; --ring: clamp(0px, calc(14cqh - 20px), 40px); --u-max: clamp(72px, 18vh, 160px); container-type: size; transform: perspective(var(--persp)) rotateX(var(--tilt)); transform-origin: 50% 62%; transform-style: preserve-3d; width: min(980px, 100%); display: grid; grid-template-rows: 1fr auto 1fr; align-items: center; gap: 4px; min-height: 0; padding: 4px 0; }
+/* the table: a gilt-rimmed mat on the board's plane (it tilts with the board), with a seat at each end */
+.table-mat { position: absolute; inset: 0 -3%; pointer-events: none; border-radius: 9999px; transform: translateZ(-2px);
+  /* carved stone: grain over the teal slab, an engraved groove inside the rim */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55  0 0 0 0 .55  0 0 0 0 .55  0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), radial-gradient(ellipse at 50% 50%, rgba(26, 46, 52, 0.62) 0%, rgba(11, 18, 22, 0.7) 58%, rgba(7, 10, 13, 0.78) 100%);
+  border: 1px solid rgba(160, 215, 225, 0.4);
+  box-shadow: 0 0 0 6px rgba(10, 8, 14, 0.78), 0 0 0 7px rgba(255, 201, 94, 0.3), 0 34px 70px rgba(0, 0, 0, 0.65), 0 10px 0 -2px rgba(4, 7, 9, 0.9), inset 0 0 70px rgba(0, 0, 0, 0.7), inset 0 2px 0 rgba(200, 235, 240, 0.08); }
+.tm-ring { position: absolute; left: 50%; top: 50%; width: min(34%, 260px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(160, 215, 225, 0.22);
+  background: repeating-conic-gradient(from 0deg, rgba(160, 215, 225, 0.08) 0deg 1deg, transparent 1deg 45deg), radial-gradient(circle, rgba(90, 215, 235, 0.08), transparent 62%); box-shadow: 0 0 0 16px rgba(255, 201, 94, 0.025), inset 0 0 0 12px rgba(255, 201, 94, 0.03), 0 0 40px rgba(255, 201, 94, 0.08); }
+.tm-seat { position: absolute; left: 50%; width: 22%; height: 6px; transform: translateX(-50%); border-radius: 50%; }
+.tm-seat.foe { top: -3px; background: radial-gradient(ellipse, color-mix(in srgb, var(--foe) 80%, transparent), transparent 70%); }
+.tm-seat.you { bottom: -3px; background: radial-gradient(ellipse, color-mix(in srgb, var(--you) 80%, transparent), transparent 70%); }
+.battlefield::before { content: ''; position: absolute; left: 10%; right: 10%; top: 10%; bottom: 10%; border-radius: 24px; background: radial-gradient(ellipse at 50% 50%, rgba(90, 215, 235, 0.28), rgba(40, 140, 160, 0.08) 55%, transparent 75%); pointer-events: none; }   /* a pool of light on the table */
+.tm-runes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.tm-edge { fill: none; stroke: rgba(150, 220, 235, 0.24); }
+.tm-rim { fill: none; stroke: rgba(150, 220, 235, 0.3); stroke-width: 1; }
+.tm-band { fill: none; stroke: rgba(5, 12, 16, 0.88); }
+.tm-glyphs { fill: none; stroke: #92f0ff; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px #3cd4ff) drop-shadow(0 0 8px rgba(60, 212, 255, 0.55));
+  opacity: 0.45; animation: runeQuiet 4.5s ease-in-out infinite; }   /* quiet: the rune ring steps back behind the units and the totals */
+@keyframes runeQuiet { 50% { opacity: 0.3; } }
+/* the table round the board (wider screens): the foe's hand as card backs, the decks as piles, your energy as crystals */
+.foe-hand, .deck-pile, .mana-bar { display: none; }
+@media (min-width: 900px) and (min-height: 600px) {
+  .foe-hand { display: block; position: absolute; left: calc(100% + 150px); top: 2px; width: 0; height: 0; pointer-events: none; }   /* hanging beside the foe's plate, in full view */
+  .foe-hand i { position: absolute; left: -24px; top: 0; width: 48px; height: 68px; border-radius: 5px; transform-origin: 50% -70%; transform: translateX(calc(var(--i) * 14px)) rotate(calc(var(--i) * -5deg));
+    background: radial-gradient(circle at 50% 50%, rgba(255, 201, 94, 0.5) 0 9%, transparent 10%), repeating-linear-gradient(45deg, rgba(255, 201, 94, 0.07) 0 3px, transparent 3px 9px), linear-gradient(160deg, #3b2650, #150c1e 70%);
+    box-shadow: inset 0 0 0 2px #0b0910, inset 0 0 0 3px var(--gold-3), 0 6px 14px rgba(0, 0, 0, 0.6); }
+  .deck-pile { display: grid; place-items: center; position: absolute; right: calc(100% + 18px); top: 50%; width: 48px; height: 66px; transform: translateY(-50%); }
+  .deck-pile i { position: absolute; inset: 0; border-radius: 4px; background: repeating-linear-gradient(45deg, rgba(255, 201, 94, 0.07) 0 3px, transparent 3px 9px), linear-gradient(160deg, #3b2650, #150c1e 70%); box-shadow: inset 0 0 0 2px #0b0910, inset 0 0 0 3px var(--gold-3), 0 3px 8px rgba(0, 0, 0, 0.6); }
+  .deck-pile i:nth-child(2) { transform: translate(-3px, -3px); }
+  .deck-pile i:nth-child(3) { transform: translate(-6px, -6px); }
+  .deck-pile b { position: relative; transform: translate(-6px, -6px); min-width: 30px; padding: 2px 6px; border-radius: 999px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--gold-0); background: rgba(8, 6, 12, 0.88); box-shadow: 0 0 0 1px var(--gold-3); }
+  .deck-pile.low b { color: #ffb4a6; box-shadow: 0 0 0 1px var(--danger), 0 0 12px rgba(255, 75, 58, 0.5); }
+  .deck-pile.empty i { opacity: 0.25; }
+  .plate.top .deck-pile { right: auto; left: calc(100% + 22px); }   /* the foe's deck sits with the foe's hand, clear of the narration */
+  /* your energy as one faceted crystal with its count, the pips beneath */
+  .mana-bar { display: grid; justify-items: center; gap: 6px; position: absolute; left: calc(100% + 18px); top: 50%; transform: translateY(-50%);
+    filter: drop-shadow(0 0 1px var(--gold-2)) drop-shadow(0 0 1px var(--gold-3)) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.6)); }   /* set in gold, like the cards' stat gems */
+  .mana-bar b { display: grid; place-items: center; min-width: 66px; height: 74px; padding: 0 8px; white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; letter-spacing: 0.04em; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    clip-path: polygon(50% 0, 100% 24%, 100% 76%, 50% 100%, 0 76%, 0 24%);
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.45), transparent 32%), radial-gradient(circle at 42% 30%, #c9ecff, #2f8fe0 48%, #0d3a70 88%); filter: drop-shadow(0 0 12px rgba(79, 176, 255, 0.55)); }
+  .mana-bar b .bonus { font-size: 15px; }   /* inline: anything outside the crystal would be clipped */
+  .mana-gems { display: flex; gap: 3px; }
+  .mana-gems i { width: 11px; height: 15px; clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); background: rgba(120, 180, 255, 0.22); }
+  .mana-gems i.full { background: linear-gradient(180deg, #e6f6ff, #3a9cf0 55%, #164e9a); filter: drop-shadow(0 0 5px #4fb0ff); }
+  .mana-gems i.bonus { background: linear-gradient(180deg, #fff3cc, var(--gold-1, #e0a63a)); filter: drop-shadow(0 0 5px rgba(255, 201, 94, 0.9)); }
+}
+/* the targeting arrow (ui/battle/aim.js): gold while it hunts, red on a foe, green on an ally */
+.aim { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; overflow: visible; opacity: 0; transition: opacity 0.15s; --aim: #ffd27a; }
+.aim.on { opacity: 1; }
+.aim[data-mode='foe'] { --aim: #ff5a46; }
+.aim[data-mode='ally'] { --aim: #6fe39a; }
+.aim-glow { fill: none; stroke: #120a04; stroke-width: 17; stroke-linecap: round; opacity: 0.75; }   /* a dark edge under the body, so it reads on any art */
+.aim-line { fill: none; stroke: var(--aim); stroke-width: 11; stroke-linecap: round; stroke-dasharray: 22 10; animation: aimFlow 0.5s linear infinite; filter: drop-shadow(0 0 4px var(--aim)); }
+.aim-head { fill: var(--aim); stroke: #1a0e04; stroke-width: 1.5; filter: drop-shadow(0 0 6px var(--aim)); }
+.aim-ring { fill: none; stroke: var(--aim); stroke-width: 2.5; opacity: 0; }
+.aim:not([data-mode='free']) .aim-ring { opacity: 0.9; animation: aimRing 0.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes aimFlow { to { stroke-dashoffset: -25; } }
+@keyframes aimRing { from { transform: scale(0.6); opacity: 0.95; } to { transform: scale(1.3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .aim-line, .aim-ring { animation: none; } }
+/* the aim prompt (wider screens): what to target, over your plate */
+.aim-prompt { display: none; }
+@media (min-width: 900px) and (min-height: 600px) {
+  .aim-prompt { display: block; position: absolute; left: 50%; bottom: calc(100% + 16px); transform: translateX(-50%); margin: 0; padding: 7px 16px; white-space: nowrap; border-radius: 4px; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: 0.06em; color: var(--gold-0); background: rgba(8, 6, 12, 0.85); box-shadow: inset 0 0 0 1px var(--gold-3), 0 8px 22px rgba(0, 0, 0, 0.55); pointer-events: none; }
+  .aim-prompt:empty { display: none; }
+}
+/* the Underworld's runes burn like its table groove and lava, not Valhalla's ice blue */
+body:has(#arena[data-realm='underworld']) .tm-glyphs { stroke: #ffb27a; filter: drop-shadow(0 0 3px #ff6a1a) drop-shadow(0 0 8px rgba(255, 90, 26, 0.55)); }
+body:has(#arena[data-realm='underworld']) :is(.tm-edge, .tm-rim) { stroke: rgba(255, 170, 120, 0.26); }
+body:has(#arena[data-realm='underworld']) .battlefield::before { background: radial-gradient(ellipse at 50% 50%, rgba(235, 110, 60, 0.25), rgba(160, 50, 20, 0.08) 55%, transparent 75%); }
+@media (prefers-reduced-motion: reduce) { .tm-glyphs { animation: none; } }
+/* the height term leaves the rune ring its band (--ring) and the centre line its margins (wider screens), so lanes
+   never run into either */
+.lane { --u: max(40px, min(var(--u-max), calc((47.5cqh - 26px - var(--ring, 0px)) / 1.22), calc((100cqw - 90px) / 5))); transform-style: preserve-3d; display: flex; justify-content: center; align-items: center; gap: clamp(8px, 1.4vw, 18px); min-height: calc(var(--u) * 1.22 + 12px); padding: 6px 0; }
+/* empty slots are faint etched sockets in the table: the units are what should catch the eye. They light up when you
+   might fill one (a unit in hand under the pointer, or picked) */
+.slot { flex: none; width: var(--u); height: calc(var(--u) * 1.22 * 0.92); align-self: center; border-radius: 48% 48% 14% 14% / 40% 40% 12% 12%; border: 1px solid rgba(255, 201, 94, 0.22); opacity: 0.45; transition: opacity 0.2s;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 201, 94, 0.06), rgba(0, 0, 0, 0.4) 70%); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6); }
+.foe-lane .slot, .my-lane .slot { border-color: rgba(255, 255, 255, 0.09); background: rgba(6, 6, 12, 0.22); box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.45); }
+.match:has(.hand .tcard.t-unit.can:is(:hover, :focus-visible, .picked)) .my-lane .slot { opacity: 1; }
+.foe-lane { align-self: end; }
+.my-lane { align-self: start; }
+.lane-line { height: 2px; width: 70%; justify-self: center; background: linear-gradient(90deg, transparent, var(--gold-3), transparent); opacity: 0.55; box-shadow: 0 0 12px var(--gold-3); }
+/* units stand up off the tilted table, toward the other row: on wider screens the centre line opens by a share of the
+   board, and the units size to what is left */
+@media (min-width: 761px) { .lane-line { margin-block: 2.5cqh; } }
+.unit { animation: unitIn 0.4s var(--ease-out) both; }
+.unit.stay { animation: none; }   /* only a unit new to the board plays its entrance: a redraw doesn't replay it */
+/* a unit stands up off the tilted table, pivoting at its base */
+.lane .unit { --stand: rotateX(calc(var(--tilt, 0deg) * -1)); transform-origin: 50% 92%; transform: var(--stand); }
+/* each unit stands on the table: a soft contact shadow under its base */
+.lane .unit::before { content: ''; position: absolute; left: 6%; right: 6%; bottom: -4%; height: 16%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.7), transparent 70%); pointer-events: none; }
+/* whose unit is whose, at a glance: each stands in a pool of its side's colour (gold rims are rarity, not side) */
+.foe-lane .unit::before { background: radial-gradient(ellipse, rgba(255, 80, 56, 0.55), rgba(0, 0, 0, 0.35) 55%, transparent 72%); }
+.my-lane .unit::before { background: radial-gradient(ellipse, rgba(80, 160, 255, 0.55), rgba(0, 0, 0, 0.35) 55%, transparent 72%); }
+/* keywords sit just above a unit's gems, on one line: at the top, a back-row unit's tags lay on the rune band and a
+   front-row unit's crossed the line between the rows; stacked, they covered the portrait */
+.lane .unit .u-kw { top: auto; bottom: calc(clamp(24px, calc(var(--u, 84px) * 0.3), 38px) + 2px); flex-wrap: nowrap; width: auto; }
+/* units on the table are lit, not silhouettes: brighter art with a rim and a footlight in their element */
+.lane .unit .u-art img { filter: brightness(1.32) contrast(1.06) saturate(1.18); }
+.lane .unit .u-art::before { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 108%, color-mix(in srgb, var(--el) 60%, transparent), transparent 58%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el) 65%, white 15%), inset 0 0 14px color-mix(in srgb, var(--el) 45%, transparent); }
+@keyframes unitIn { from { opacity: 0; transform: var(--stand, rotateX(0deg)) translateY(-14px) scale(0.85); } }
+.unit.can { cursor: pointer; }
+.unit.can .u-ring { box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--ok), 0 0 20px rgba(99, 227, 145, 0.6); }
+.unit.can:hover { transform: var(--stand, rotateX(0deg)) translateY(-6px); }
+.unit.picked { transform: var(--stand, rotateX(0deg)) scale(1.06); }   /* grows in place: lifting, it covered the foe's gems across the lane */
+.unit.picked .u-ring { box-shadow: 0 16px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--gold-0), 0 0 30px rgba(255, 201, 94, 0.85); }
+.unit.target { cursor: pointer; }
+.unit.target .u-ring { box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--danger), 0 0 24px rgba(255, 75, 58, 0.8); animation: targetPulse 1.1s ease-in-out infinite; }
+.unit.target.ally .u-ring { box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--ok), 0 0 24px rgba(99, 227, 145, 0.8); }
+.unit.target:hover { transform: var(--stand, rotateX(0deg)) scale(1.06); }
+@keyframes targetPulse { 50% { filter: brightness(1.25); } }   /* not aimRing: that name is the arrow's ring, which this overrode */
+
+/* ------------------------------------------------------------------ the hand */
+/* The hand sits whole along the bottom edge, fanned; a card lifts and grows when you point at it. */
+.hand { --w: clamp(96px, 17vh, 176px); display: flex; justify-content: center; align-items: flex-start; height: calc(var(--w) * 1.4 + 34px); max-width: 100%; padding: 0 16px; margin-bottom: calc(var(--safe-b) * -1); perspective: 1000px; }
+/* side by side while the hand fits beside the end-turn medallion, so every card's stats and rules show; past that,
+   only as much overlap as it must (stats stay clear). It fans in an arc: each card turned and dropped a little more
+   toward the ends (hover, focus and a pick lift it) */
+.hand .tcard { --w: inherit; margin-left: clamp(calc(var(--w) * -0.24), calc((min(100vw, 1180px) - 320px - var(--n, 1) * var(--w)) / max(var(--n, 1) - 1, 1)), 8px); transform-origin: 50% 120%; transform: rotate(calc(var(--i, 0) * 3deg)) translateY(calc(var(--i, 0) * var(--i, 0) * 2.6px)); animation: dealIn 0.45s var(--ease-out) both; }
+@media (min-width: 1100px) { .hand .tcard { margin-left: clamp(calc(var(--w) * -0.3), calc((min(100vw - 420px, 1320px) - var(--n, 1) * var(--w)) / max(var(--n, 1) - 1, 1)), 10px); } }
+.hand .tcard:first-child { margin-left: 0; }
+.hand .tcard.stay { animation: none; }   /* only a card new to the hand is dealt in */
+@keyframes dealIn { from { opacity: 0; transform: translateY(60px) rotate(0); } }
+/* what you can play glows; what you can't afford keeps its art and greys its cost */
+.hand .tcard.can { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 0 3px #5cff8a, 0 0 16px rgba(92, 255, 138, 0.7); }
+.hand .tcard.dead { filter: none; cursor: default; }
+.hand .tcard.dead .tc-cost { filter: grayscale(1) brightness(0.7); }
+.hand .tcard:hover, .hand .tcard:focus-visible { z-index: 5; transform: translateY(calc(var(--w) * -0.2)) scale(1.12); }
+/* with a mouse, the card under it rises to reading size, above its neighbours and their gems (touch holds to read) */
+@media (pointer: fine) { .hand .tcard:hover { transform: translateY(calc(var(--w) * -0.5)) scale(1.5); z-index: 8; } }
+/* a picked card waits for a target: a short lift, so your plate and life stay in view (hover still reads it full size) */
+.hand .tcard.picked { z-index: 6; transform: translateY(calc(var(--w) * -0.1)) scale(1.05); box-shadow: 0 22px 40px rgba(0, 0, 0, 0.6), 0 0 0 3px var(--gold-0), 0 0 34px rgba(255, 201, 94, 0.85); }
+/* card names and type lines no smaller than legible on a short window (long names keep their size: a floor truncated
+   them) */
+.hand .tcard .tc-name:not(.long) { font-size: max(1.08em, 10px); }
+.hand .tcard .tc-type { font-size: max(0.78em, 8.5px); }
+@media (min-width: 761px) { .hand .tcard .tc-name.long { font-size: max(0.9em, 10px); letter-spacing: 0; padding-inline: 0.6em; } }
+
+/* ------------------------------------------------------------------ the dock: the end-turn medallion and the menu */
+.pick-info { display: none; }
+.dock { position: absolute !important; right: calc(var(--safe-r) + 46px); bottom: calc(var(--safe-b) + 34%); display: grid; justify-items: center; gap: 14px; }
+@media (min-width: 761px) { .dock > .icon-btn { position: fixed; top: calc(var(--safe-t) + 14px); right: calc(var(--safe-r) + 18px); } }   /* the battle menu in the corner, not on the gear's teeth */
+.et-gear { position: absolute; right: -36px; bottom: -36px; width: 176px; height: 176px; z-index: -1; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23d9ad62'/%3E%3Cstop offset='.45' stop-color='%237a5424'/%3E%3Cstop offset='1' stop-color='%23b0803c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M91.0 50.0L98.9 52.4L98.3 58.5L90.0 59.1L86.9 67.8L93.0 73.4L89.8 78.6L82.1 75.6L75.6 82.1L78.6 89.8L73.4 93.0L67.8 86.9L59.1 90.0L58.5 98.3L52.4 98.9L50.0 91.0L40.9 90.0L36.7 97.2L31.0 95.2L32.2 86.9L24.4 82.1L17.6 86.7L13.3 82.4L17.9 75.6L13.1 67.8L4.8 69.0L2.8 63.3L10.0 59.1L9.0 50.0L1.1 47.6L1.7 41.5L10.0 40.9L13.1 32.2L7.0 26.6L10.2 21.4L17.9 24.4L24.4 17.9L21.4 10.2L26.6 7.0L32.2 13.1L40.9 10.0L41.5 1.7L47.6 1.1L50.0 9.0L59.1 10.0L63.3 2.8L69.0 4.8L67.8 13.1L75.6 17.9L82.4 13.3L86.7 17.6L82.1 24.4L86.9 32.2L95.2 31.0L97.2 36.7L90.0 40.9Z' fill='url(%23b)' stroke='%232a1a08' stroke-width='1.2'/%3E%3Ccircle cx='50' cy='50' r='33' fill='%231a1208' opacity='.85'/%3E%3Cg fill='url(%23b)'%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(0 50 50)'/%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(60 50 50)'/%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(120 50 50)'/%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(180 50 50)'/%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(240 50 50)'/%3E%3Crect x='47' y='14' width='6' height='24' rx='2' transform='rotate(300 50 50)'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='15' fill='url(%23b)' stroke='%232a1a08' stroke-width='1.2'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23e8c27a' stroke-opacity='.35' stroke-width='.8'/%3E%3C/svg%3E") center / contain no-repeat; filter: saturate(0.3) brightness(0.58) contrast(1.15) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6)); animation: spin 48s linear infinite; }   /* dark iron: the gold medallion is the only bright part */
+.dock:has(.end-turn.ready) .et-gear { animation-duration: 14s; }
+@media (prefers-reduced-motion: reduce) { .et-gear { animation: none; } }
+.end-turn { position: relative; display: grid; place-items: center; width: 104px; height: 104px; padding: 0; border: 0; border-radius: 50%; color: #241604;
+  background: radial-gradient(circle at 50% 30%, #ffe7a8, #f1b14a 45%, #a86a1c 80%); box-shadow: 0 0 0 3px #0b0910, 0 0 0 5px var(--gold-3), 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 201, 94, 0.4); transition: transform 0.2s var(--ease-out), filter 0.2s; }
+.et-ring { position: absolute; inset: 8px; border-radius: 50%; border: 1px dashed rgba(36, 22, 4, 0.5); }
+.et-label { position: relative; font-size: 15px; letter-spacing: 0.14em; line-height: 1.1; text-align: center; color: #241604; max-width: 70px; }
+.end-turn:hover:not(:disabled) { transform: scale(1.05); filter: brightness(1.08); }
+.end-turn:active:not(:disabled) { transform: scale(0.96); }
+.end-turn:disabled { cursor: default; filter: grayscale(0.8) brightness(0.5); box-shadow: 0 0 0 3px #0b0910, 0 0 0 5px var(--gold-4), 0 12px 30px rgba(0, 0, 0, 0.6); }
+/* nothing left to play: End turn turns green and pulses (it looked the same as a turn with plays left) */
+.end-turn.ready { background: radial-gradient(circle at 50% 30%, #d4ffe0, #43d47e 45%, #17723c 80%); animation: endReadyGreen 1.2s ease-in-out infinite; }
+.end-turn.ready .et-label { color: #06240f; }
+.end-turn.ready .et-ring { animation: spin 8s linear infinite; }
+@keyframes endReadyPill { 50% { box-shadow: 0 0 0 2px #0b0910, 0 0 0 3px var(--gold-1), 0 0 22px rgba(255, 201, 94, 0.8); } }
+@keyframes endReadyGreen { 50% { box-shadow: 0 0 0 3px #0b0910, 0 0 0 5px #8dffb2, 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 54px rgba(67, 212, 126, 0.85); } }
+.match.viewing .dock, .match.viewing .plate .end-turn { display: none; }
+.dock:empty { display: none; }
+/* the stat gems hang below the cards: leave them room above the replay bar */
+.match.viewing .hand { --w: clamp(72px, 12vh, 120px); height: auto; align-items: flex-end; margin-bottom: 0; padding-top: 8px; padding-bottom: 14px; }
+.match.viewing .battlefield { --u-max: clamp(52px, 11vh, 118px); }
+
+/* ------------------------------------------------------------------ fallen feed */
+.killfeed { position: absolute !important; left: calc(var(--safe-l) + 18px); top: 42%; display: grid; gap: 6px; width: 260px; pointer-events: none; }
+.kf { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(40, 10, 8, 0.95), rgba(14, 10, 16, 0.88)); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); border-left: 2px solid var(--danger); font-size: 12px; color: #e8dccb; animation: kfIn 0.4s var(--ease-out); transition: opacity 0.5s, transform 0.5s; }
+.kf.mine { background: linear-gradient(90deg, rgba(10, 20, 40, 0.95), rgba(14, 10, 16, 0.88)); border-left-color: var(--you); }
+.kf.gone { opacity: 0; transform: translateX(-12px); }
+.kf img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold-3); flex: none; }
+.kf svg { width: 14px; height: 14px; color: var(--danger); flex: none; }
+.kf b { color: var(--ivory); font-weight: 600; }
+@keyframes kfIn { from { opacity: 0; transform: translateX(-24px); } }
+
+/* ------------------------------------------------------------------ cinematic banner and flashes */
+.cine { position: absolute !important; left: 0; right: 0; top: 40%; z-index: 8 !important; display: grid; justify-items: center; gap: 8px; opacity: 0; text-align: center; pointer-events: none;
+  padding-block: 26px; background: linear-gradient(180deg, transparent, rgba(5, 4, 8, 0.78) 28%, rgba(5, 4, 8, 0.78) 72%, transparent); }   /* on its own dark band, so it never prints through the units */
+.cine.show { animation: cine 1.9s var(--ease-out) forwards; }
+.cine b { font-size: clamp(34px, 6vw, 72px); letter-spacing: 0.3em; text-indent: 0.3em; color: var(--ivory); text-shadow: 0 0 40px rgba(255, 201, 94, 0.55), 0 4px 18px rgba(0, 0, 0, 0.9); }
+.cine span { font-size: 13px; letter-spacing: 0.24em; text-transform: uppercase; color: #e6dcc8; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9); }
+.cine-line { width: min(560px, 80vw); height: 1px; background: linear-gradient(90deg, transparent, var(--gold-2), transparent); transform: scaleX(0); }
+.cine.show .cine-line { animation: cineLine 1.9s var(--ease-out) forwards; }
+.cine[data-kind='red'] b { color: #ffe0d8; text-shadow: 0 0 40px rgba(255, 75, 58, 0.8), 0 4px 18px rgba(0, 0, 0, 0.9); }
+.cine[data-kind='red'] .cine-line { background: linear-gradient(90deg, transparent, var(--danger), transparent); }
+.cine[data-kind='foe'] b { font-size: clamp(24px, 4vw, 44px); color: #ffd8c8; text-shadow: 0 0 30px rgba(255, 116, 56, 0.6), 0 4px 18px rgba(0, 0, 0, 0.9); }
+.cine[data-kind='foe'] .cine-line { background: linear-gradient(90deg, transparent, var(--foe), transparent); }
+@keyframes cine { 0% { opacity: 0; transform: scale(1.15); } 14% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(0.98); } }
+@keyframes cineLine { 0% { transform: scaleX(0); } 25% { transform: scaleX(1); } 100% { transform: scaleX(1); } }
+.screen-fx { position: absolute !important; inset: 0; overflow: hidden; pointer-events: none; z-index: 1 !important; }
+.screen-fx i { position: absolute; inset: 0; opacity: 0; }
+.fx-victory { background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(255, 201, 94, 0.4) 100%); animation: fxPulse 1.6s ease-out; }
+.fx-defeat { background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(30, 0, 0, 0.6) 100%); animation: fxPulse 1.6s ease-out; }
+@keyframes fxPulse { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ------------------------------------------------------------------ the view dock: replays and spectators */
+.viewbar { width: min(1060px, 100%); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 10px 14px; }
+.vb-badge { flex: none; }
+.vb-steps, .vb-more { display: flex; gap: 6px; align-items: center; }
+.vb-play { width: 52px; height: 52px; }
+.vb-scrub { flex: 1 1 200px; min-width: 140px; accent-color: var(--gold-2); }
+.vb-pos { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; min-width: 120px; text-align: center; }
+.viewbar.live .vb-steps, .viewbar.live .vb-scrub { display: none; }
+
+/* ------------------------------------------------------------------ inspect: one card, full size */
+.inspect { position: absolute !important; inset: 0; z-index: 22 !important; display: grid; place-items: center; align-content: center; gap: 16px; padding: 16px; background: rgba(3, 2, 6, 0.8); backdrop-filter: blur(3px); animation: fadeIn 0.15s ease-out; }
+.inspect-card { --w: min(300px, 74vw, 52vh); animation: rise 0.25s var(--ease-out); pointer-events: none; }
+.inspect .hint { margin: 0; }
+
+/* ------------------------------------------------------------------ battle menu */
+.pause { position: absolute !important; inset: 0; z-index: 20 !important; display: grid; place-items: center; padding: 16px; background: rgba(3, 2, 6, 0.8); animation: fadeIn 0.2s ease-out; }
+.pause-panel { width: min(400px, 100%); animation: rise 0.35s var(--ease-out); }
+.pause-panel .panel-head { color: var(--gold-2); }
+.pause-panel .panel-head > svg { width: 18px; height: 18px; }
+.pause-panel .close { margin-left: auto; }
+.pause-body { display: grid; gap: 10px; }
+.pause-body .hint { margin: 4px 0 0; text-align: center; }
+.pause-gap { width: 100%; height: 1px; margin: 6px 0; border: 0; background: var(--line); }
+
+/* ------------------------------------------------------------------ battle VFX (ui/battle/vfx.js, ui/battle/fx.js) */
+/* flashes, rings, sparks, slashes, bolts, the fallen burning away */
+.vfx-layer { position: absolute !important; inset: 0; z-index: 7 !important; overflow: hidden; pointer-events: none; }
+.vfx-layer > i { position: absolute; pointer-events: none; will-change: transform, opacity; }
+/* a starburst: a white-hot core in the colour, and rays fading outward */
+.vfx-flash { width: calc(150px * var(--s, 1)); aspect-ratio: 1; margin: calc(-75px * var(--s, 1)) 0 0 calc(-75px * var(--s, 1)); border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, #fff 0 7%, color-mix(in srgb, var(--c) 70%, #fff) 14%, color-mix(in srgb, var(--c) 50%, transparent) 32%, transparent 64%);
+  animation: vfxFlash 0.42s ease-out forwards; }
+.vfx-flash::before { content: ''; position: absolute; inset: -22%; border-radius: 50%; background: repeating-conic-gradient(from 8deg, color-mix(in srgb, var(--c) 75%, #fff) 0 2.5deg, transparent 2.5deg 30deg);
+  -webkit-mask-image: radial-gradient(circle, #000 12%, transparent 66%); mask-image: radial-gradient(circle, #000 12%, transparent 66%); }
+.vfx-flash.k-death { animation-duration: 0.8s; }
+.vfx-flash.k-play, .vfx-flash.k-heal { animation: vfxSoft 0.75s ease-out forwards; }
+.vfx-flash.k-play::before, .vfx-flash.k-heal::before { display: none; }   /* no rays: a soft glow */
+@keyframes vfxFlash { 0% { opacity: 1; transform: scale(0.15) rotate(0deg); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25) rotate(14deg); } }
+@keyframes vfxSoft { 0% { opacity: 0; transform: scale(0.4); } 30% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-24px) scale(1.15); } }
+/* a ring thrown flat across the table */
+.vfx-ring { width: calc(130px * var(--s, 1)); aspect-ratio: 1; margin: calc(-65px * var(--s, 1)) 0 0 calc(-65px * var(--s, 1)); border-radius: 50%; border: 3px solid var(--c);
+  box-shadow: 0 0 18px var(--c), inset 0 0 14px var(--c); transform: scaleY(0.42) scale(0.2); animation: vfxRing 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }
+@keyframes vfxRing { to { transform: scaleY(0.42) scale(1.5); opacity: 0; border-width: 1px; } }
+.vfx-spark { width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 2px var(--c); animation: vfxSpark 0.7s cubic-bezier(0.15, 0.7, 0.4, 1) both; }
+@keyframes vfxSpark { 0% { transform: translate(0, 0) scale(1.4); opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) + 40px)) scale(0.3); opacity: 0; } }
+/* an attack's cut across what it struck */
+.vfx-slash { height: 7px; border-radius: 50%; background: linear-gradient(90deg, transparent, var(--c) 22%, #fff 50%, var(--c) 78%, transparent); box-shadow: 0 0 16px var(--c), 0 0 4px #fff;
+  animation: vfxSlash 0.34s ease-out forwards; }
+@keyframes vfxSlash { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 40% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 65%); opacity: 0; } }
+/* a spell's bolt: a comet whose head is its anchor point */
+.vfx-bolt { width: 90px; height: 12px; transform-origin: 100% 50%; border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c) 55%, transparent) 55%, var(--c) 84%, #fff); box-shadow: 0 0 18px var(--c); }
+/* the fallen: a copy of the unit flares, then burns away from its base up */
+@property --burn { syntax: '<percentage>'; inherits: false; initial-value: -30%; }
+.vfx-layer .vfx-ghost { position: absolute; margin: 0; pointer-events: none; animation: none; transform: none; transition: none; }
+.vfx-ghost.go { animation: vfxBurn 0.8s ease-in forwards;
+  -webkit-mask-image: linear-gradient(to top, transparent var(--burn), #000 calc(var(--burn) + 24%)); mask-image: linear-gradient(to top, transparent var(--burn), #000 calc(var(--burn) + 24%)); }
+@keyframes vfxBurn { 0% { --burn: -30%; filter: brightness(1); } 18% { filter: brightness(2.4) saturate(0.5) drop-shadow(0 0 12px #ff8a3a); }
+  100% { --burn: 100%; filter: brightness(1.4) drop-shadow(0 0 8px #ff8a3a); translate: 0 -14px; opacity: 0.3; } }
+/* struck units flash red; healed ones glow green, strengthened ones gold; the changed number pops */
+.unit.vfx-hurt .u-art { animation: vfxHurt 0.55s ease-out; }
+@keyframes vfxHurt { 0%, 25% { filter: brightness(1.5) sepia(1) saturate(6) hue-rotate(-45deg); } }
+.unit.vfx-heal .u-ring { animation: vfxGlowHeal 0.9s ease-out; }
+.unit.vfx-buff .u-ring { animation: vfxGlowBuff 0.9s ease-out; }
+@keyframes vfxGlowHeal { 30% { box-shadow: 0 0 0 3px #7dffb0, 0 0 34px rgba(125, 255, 176, 0.9); } }
+@keyframes vfxGlowBuff { 30% { box-shadow: 0 0 0 3px var(--gold-0), 0 0 34px rgba(255, 201, 94, 0.9); } }
+.unit.vfx-hurt .u-hp, .unit.vfx-heal .u-hp, .unit.vfx-buff .u-atk { animation: vfxNum 0.55s ease-out; }
+@keyframes vfxNum { 0% { scale: 1.8; } }
+@media (prefers-reduced-motion: reduce) { .vfx-flash, .vfx-ring { animation-duration: 0.25s; } .vfx-spark, .vfx-slash, .vfx-bolt { display: none; } .vfx-ghost.go { animation-duration: 0.3s; } }
+
+/* ------------------------------------------------------------------ result */
+/* nearly opaque and blurred: the board must not read through the stats */
+.result { position: absolute !important; inset: 0; z-index: 25 !important; display: grid; place-items: center; overflow: hidden; padding: calc(var(--safe-t) + 20px) 16px calc(var(--safe-b) + 20px); background: radial-gradient(ellipse at 50% 45%, #281c14, #050409 70%); animation: fadeIn 0.6s ease-out; }
+.result[data-outcome='loss'] { background: radial-gradient(ellipse at 50% 45%, #320806, #050203 70%); }
+.result[data-outcome='draw'] { background: radial-gradient(ellipse at 50% 45%, #141e2c, #040509 70%); }
+.res-rays { position: absolute; left: 50%; top: 32%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: repeating-conic-gradient(from 0deg, rgba(255, 210, 120, 0.1) 0deg 5deg, transparent 5deg 15deg); mask-image: radial-gradient(circle, black 8%, transparent 55%); -webkit-mask-image: radial-gradient(circle, black 8%, transparent 55%); animation: spin 70s linear infinite; pointer-events: none; }
+.result[data-outcome='loss'] .res-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 60, 40, 0.07) 0deg 4deg, transparent 4deg 20deg); }
+.result[data-outcome='draw'] .res-rays { background: repeating-conic-gradient(from 0deg, rgba(143, 208, 255, 0.07) 0deg 5deg, transparent 5deg 15deg); }
+.res-inner { position: relative; z-index: 1; display: grid; justify-items: center; gap: 14px; text-align: center; width: min(600px, 100%); max-height: 100%; overflow-y: auto; padding: 60px 70px 10px; margin-top: -60px; box-sizing: content-box; animation: rise 0.6s 0.15s var(--ease-out) both; }
+.res-emblem { display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; color: #241604; background: radial-gradient(circle at 50% 35%, var(--gold-0), var(--gold-3) 70%); box-shadow: 0 0 0 6px rgba(255, 201, 94, 0.18), 0 0 60px rgba(255, 201, 94, 0.5); }
+.res-emblem svg { width: 40px; height: 40px; }
+.result[data-outcome='loss'] .res-emblem { color: #ffd8cc; background: radial-gradient(circle at 50% 35%, #8a2a1c, #2a0806 70%); box-shadow: 0 0 0 6px rgba(255, 75, 58, 0.18), 0 0 50px rgba(255, 75, 58, 0.4); }
+.result[data-outcome='draw'] .res-emblem { color: #10202e; background: radial-gradient(circle at 50% 35%, #eaf6ff, #7fa8c8 70%); box-shadow: 0 0 0 6px rgba(143, 208, 255, 0.18), 0 0 50px rgba(143, 208, 255, 0.35); }
+.res-title { margin: 0; font-size: clamp(44px, 9vw, 92px); letter-spacing: 0.18em; text-indent: 0.18em; line-height: 1; background: linear-gradient(180deg, var(--gold-0) 10%, var(--gold-2) 50%, var(--gold-3) 52%, var(--gold-1)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.8)); }
+.result[data-outcome='loss'] .res-title { background: linear-gradient(180deg, #ffe0d8 10%, #ff7a5c 50%, #a8261a 52%, #ff9a7a); -webkit-background-clip: text; background-clip: text; }
+.result[data-outcome='draw'] .res-title { background: linear-gradient(180deg, #ffffff 10%, #bcd6ea 50%, #7f9bb2 52%, #dcebf6); -webkit-background-clip: text; background-clip: text; }
+.res-detail { margin: 0; color: #d6cdbc; line-height: 1.5; }
+/* the champions' busts behind the result (desktop): yours on the left, the foe's mirrored on the right; the victor lit
+   in gold and rising, the fallen drained grey */
+.res-hero { position: absolute; left: max(-4vw, calc(50% - 300px - 62vh)); bottom: 0; height: 74vh; aspect-ratio: 1; object-fit: cover; object-position: 50% 15%; pointer-events: none; opacity: 0.7; mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); -webkit-mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); animation: heroIn 1.1s var(--ease-out) both; }
+.result[data-outcome='win'] .res-hero { filter: brightness(1.1) saturate(1.15) drop-shadow(0 0 40px rgba(255, 201, 94, 0.55)); }
+.result[data-outcome='loss'] .res-hero { opacity: 0.72; filter: grayscale(0.7) brightness(0.72) sepia(0.35) hue-rotate(-25deg); }
+@keyframes heroIn { from { opacity: 0; transform: translateY(40px) scale(0.96); } }
+@media (max-width: 1099px), (max-height: 700px) { .res-hero { display: none; } }
+@media (prefers-reduced-motion: reduce) { .res-hero { animation: none; } }
+.res-hero.foe { left: auto; right: max(-4vw, calc(50% - 300px - 62vh)); scale: -1 1; }
+.result[data-victor='mine'] .res-hero:not(.foe), .result[data-victor='foe'] .res-hero.foe { opacity: 0.7; filter: brightness(1.1) saturate(1.15) drop-shadow(0 0 40px rgba(255, 201, 94, 0.55)); }
+.result[data-victor='mine'] .res-hero.foe, .result[data-victor='foe'] .res-hero:not(.foe) { opacity: 0.45; filter: grayscale(0.85) brightness(0.55) sepia(0.35) hue-rotate(-25deg); }
+/* the result card grows on big screens (it sat as a narrow column in the middle of 1920) */
+@media (min-width: 1500px) and (min-height: 900px) { .res-inner { zoom: 1.2; } }
+@media (min-width: 1800px) and (min-height: 1000px) { .res-inner { zoom: 1.32; } }
+/* the numbers stand free between two gold rules, their labels on one line so the values line up */
+.res-stats { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-block: 1px solid rgba(255, 201, 94, 0.32); overflow: hidden; }
+.res-stats .tile { background: none; }
+.res-stats .tile + .tile { box-shadow: -1px 0 0 rgba(255, 201, 94, 0.14); }
+.res-stats .tile b { font-size: 30px; }
+.res-stats .tile > span { white-space: nowrap; font-size: 11.5px; color: #cfc6b4; }
+.res-mvp { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; text-align: left; width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 3px; background: rgba(10, 8, 14, 0.6); }
+.res-mvp > div:last-child { display: grid; gap: 4px; }
+.res-mvp .ccard .cplate, .res-mvp .ccard .kind { display: none; }
+.res-mvp b { font-size: 18px; }
+.res-actions { width: 100%; display: grid; justify-items: center; gap: 12px; margin-top: 6px; }
+.res-primary .btn { min-width: 260px; }
+.res-secondary { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.res-secondary .btn { width: 100%; padding: 0 12px; }
+.res-links { display: flex; gap: 18px; justify-content: center; }
+.share { width: 100%; display: grid; gap: 6px; text-align: left; }
+.share-row { display: flex; gap: 8px; }
+.share-row .input { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; user-select: text; }
+/* the face-off: both champions, a VS seal between, the victor lit and the fallen drained. Where the busts show
+   (desktop) it is their names round the seal: the small cards repeated the busts */
+.res-mvp.res-vs { grid-template-columns: 1fr auto 1fr; gap: 12px; padding: 10px 16px 8px; text-align: center; }
+.res-vs .fo-side { display: grid; justify-items: center; align-content: start; gap: 6px; margin: 0; transition: filter 0.4s; }
+.res-vs .fo-side .ccard { width: clamp(60px, 10vh, 112px); }   /* by height: the result fits a short window without scrolling */
+.res-vs figcaption { display: grid; gap: 3px; }
+.res-vs figcaption b { font-size: 17px; }
+.res-vs .fo-seal { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; font-style: normal; font-size: 19px; font-weight: 900; letter-spacing: 0.06em; text-indent: 0.06em; color: #241604;
+  background: radial-gradient(circle at 50% 35%, var(--gold-0), var(--gold-3) 72%); box-shadow: 0 0 0 4px rgba(10, 8, 14, 0.9), 0 0 0 5px rgba(255, 201, 94, 0.55), 0 0 28px rgba(255, 201, 94, 0.45); }
+.res-vs .fo-side.won .ccard { box-shadow: 0 0 0 2px var(--gold-0), 0 0 36px rgba(255, 201, 94, 0.75); animation: foWin 0.8s 0.5s var(--ease-out) both; }
+.res-vs .fo-side.won figcaption b { color: var(--gold-0); }
+.res-vs .fo-side.lost { filter: grayscale(0.9) brightness(0.55); }
+.res-vs .fo-side.lost .ccard { animation: foFall 0.8s 0.5s var(--ease-out) both; }
+@keyframes foWin { from { scale: 1; } to { scale: 1.07; } }
+@keyframes foFall { from { scale: 1; } to { scale: 0.93; translate: 0 6px; } }
+@media (max-width: 760px) { .res-mvp.res-vs { gap: 6px; padding: 12px 8px 10px; } .res-vs .fo-seal { width: 42px; height: 42px; font-size: 15px; } .res-vs figcaption b { font-size: 15px; } }
+@media (prefers-reduced-motion: reduce) { .res-vs .fo-side .ccard { animation: none; } }
+.res-vs .ccard .gem { top: 5px; right: 5px; width: 12px; height: 12px; border-width: 1.5px; }   /* a small rarity gem, clear of the champion's head */
+@media (min-width: 1100px) and (min-height: 701px) {
+  .res-mvp.res-vs { border: 0; background: none; padding: 4px 0 0; }
+  .result:has(.res-hero:not([hidden])) .res-vs .fo-side .ccard { display: none; }
+  .res-vs figcaption b { font-size: 22px; letter-spacing: 0.06em; }
+}
+
+/* ------------------------------------------------------------------ layout by screen size */
+@media (max-height: 760px) {
+  .res-inner { gap: 10px; }
+  .res-emblem { width: 56px; height: 56px; }
+  .res-emblem svg { width: 28px; height: 28px; }
+  .res-title { font-size: clamp(40px, 10vh, 72px); }
+  .res-stats .tile { padding: 8px 10px; }
+  .res-mvp { grid-template-columns: 56px 1fr; padding: 8px 12px; }
+  .res-actions .btn { --h: 44px; }
+  .res-primary .btn { --h: 50px; }
+}
+@media (max-height: 820px) and (min-width: 761px) {
+  .battlefield { --u-max: clamp(60px, 15vh, 130px); }
+  .hand { --w: clamp(96px, 17vh, 146px); }
+  .hud-center { min-height: 46px; }
+  .plate { min-height: 56px; }
+  .pl-hero, .pl-face { width: 72px; height: 72px; }
+  .pl-hero { margin: -10px 0; }
+  .end-turn { width: 90px; height: 90px; }
+  .et-gear { right: -31px; bottom: -31px; width: 152px; height: 152px; }
+}
+@media (min-width: 1181px) {
+  /* the medallion and narration leave their row for the top-left corner, beside the enemy plate: the board gets
+     that row's height */
+  .match { grid-template-rows: auto 1fr auto auto auto; }
+  .hud-center { position: absolute !important; left: calc(var(--safe-l) + 24px); top: calc(var(--safe-t) + 18px); width: calc((100vw - 640px) / 2 - 48px); max-width: 300px; justify-items: start; text-align: left; }
+  .hud-status { max-width: 100%; }
+  .killfeed { top: calc(50% + 70px); width: 230px; }
+}
+@media (max-width: 1100px) and (min-width: 761px) { .dock { bottom: calc(var(--safe-b) + 40%); } .killfeed { display: none; } }
+@media (max-width: 760px) {
+  .match { gap: 4px; padding: calc(var(--safe-t) + 8px) 8px calc(var(--safe-b) + 6px); }
+  .plate { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px 8px; min-height: 54px; padding: 6px 8px 6px 6px; border-radius: 30px 8px 8px 30px; }
+  /* End turn sits in your plate, under the hero power; the menu sits at the end of the enemy's plate */
+  .plate.bottom { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .plate.bottom .pl-hero, .plate.bottom .pl-id { grid-row: span 2; }
+  .plate.bottom .power, .plate.bottom .end-turn { grid-column: 3; }
+  .plate .end-turn { width: auto; height: 36px; padding: 0 14px; border-radius: 999px; box-shadow: 0 0 0 2px #0b0910, 0 0 0 3px var(--gold-3), 0 6px 16px rgba(0, 0, 0, 0.5); }
+  .plate .end-turn:disabled { box-shadow: 0 0 0 2px #0b0910, 0 0 0 3px var(--gold-4); }
+  .plate .end-turn .et-ring { display: none; }
+  .plate .end-turn .et-label { max-width: none; font-size: 10.5px; white-space: nowrap; }
+  .plate .end-turn.ready { animation: endReadyPill 1.6s ease-in-out infinite; }
+  .plate .icon-btn { width: 38px; height: 38px; }
+  .pl-relics { display: none; }
+  .pl-hero, .pl-face { width: 52px; height: 52px; }
+  .pl-hero { margin: -4px 0; }
+  .pl-life { min-width: 26px; height: 26px; font-size: 13px; right: -6px; bottom: -4px; }
+  .pl-name { font-size: 12px; letter-spacing: 0.03em; }   /* tighter, so an eleven-letter name fits beside the hero power */
+  .pl-who { display: none; }
+  /* chips two by two rather than slide under the hero power (they wrapped 3 + 1 beside End turn) */
+  .pl-chips { display: grid; grid-template-columns: repeat(2, max-content); gap: 3px 4px; }
+  .chip-mini { height: 18px; padding: 0 5px 0 4px; font-size: 10px; }
+  .pl-energy i { width: 8px; height: 11px; }
+  .power { min-height: 34px; padding: 0 8px 0 3px; }
+  .pw-cost { width: 26px; height: 26px; font-size: 12px; }
+  .pw-name { font-size: 9.5px; letter-spacing: 0.04em; max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
+  .hud-center { min-height: 44px; }
+  .hud-status { font-size: 11px; }
+  .battlefield, .match.viewing .battlefield { --u-max: 84px; }
+  /* phone gaps are 10px, not 18: the width term can give units more */
+  .lane { gap: 10px; --u: max(40px, min(var(--u-max), calc((50cqh - 26px) / 1.22), calc((100cqw - 52px) / 5))); }
+  .battlefield { --ring: 0px; --tilt: 14deg; --persp: 1500px; }
+  /* no hover on a phone: the whole hand shows, and scrolls sideways */
+  .hand { -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent); mask-image: linear-gradient(90deg, #000 86%, transparent); --w: 85px; height: auto; align-items: flex-end; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 16px 6px calc(var(--safe-b) + 14px); margin-bottom: 0; scrollbar-width: none; perspective: none; }
+  .pick-info { display: block; margin: 2px 8px 0; padding: 6px 10px; min-height: 1.3em; border-radius: 3px; border-left: 2px solid var(--gold-2); background: rgba(8, 6, 12, 0.82); font-size: 12.5px; line-height: 1.35; color: #e6dccb; text-align: center; }
+  .pick-info b { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.04em; color: var(--gold-1); }
+  .pick-info:empty { display: none; }
+  .match.viewing .pick-info { display: none; }
+  .match.viewing .hand .tcard { --w: 88px; }
+  .et-gear { display: none; }
+  .pl-orn { width: 30px; height: 10px; }
+  .plate.top .pl-orn { bottom: -10px; }
+  .plate.bottom .pl-orn { top: -10px; }
+  .table-mat { inset: 0 -1%; border-radius: 60px / 50%; }
+  .u-kw { display: none; }
+  .hand .tcard { --w: 85px; margin-left: 7px; transform: none; }   /* four across; the gems stand ~4px past each card, clear of the next card's */
+  /* on a phone the hand shows each card's name and its first rules line; hold a card to read it all */
+  .hand .tcard .tc-type { display: none; }
+  .hand .tcard .tc-text { display: block; margin: 0.15em 0.4em 0; padding: 0; background: none; border: 0; font-size: 1.02em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hand .tcard .tc-text p + p, .hand .tcard .tc-text:empty { display: none; }
+  /* the name plate stands above the attack and health gems (at 1.5em they sat on its ends) */
+  .hand .tcard .tc-frame { grid-template-rows: 1fr auto auto; padding-bottom: 2.3em; }
+  .hand .tcard .tc-name { margin: 0; padding: 0.3em 0.7em; border-radius: 0; white-space: normal; line-height: 1.05; }
+  .hand .tcard .tc-name:not(.long) { font-size: 1.12em; letter-spacing: 0.02em; }
+  .hand .tcard .tc-name.long { font-size: 1.02em; text-overflow: clip; letter-spacing: 0; }
+  .hand .tcard :is(.tc-atk, .tc-hp) { bottom: -0.75em; }   /* and the gems hang a little lower, into the hand's bottom padding */
+  .hand .tcard:hover, .hand .tcard:focus-visible { transform: translateY(-8px); }
+  .hand .tcard.picked { transform: translateY(-16px); }
+  .killfeed { display: none; }
+  /* neighbouring units' gems don't collide, and no rune glyphs over the units */
+  .u-atk { left: 0; }
+  .u-hp { right: 0; }
+  .tm-glyphs { display: none; }
+  .vb-steps .icon-btn.sm { width: 34px; height: 34px; }
+  .vb-play { width: 44px; height: 44px; }
+  .res-stats { grid-template-columns: repeat(2, 1fr); }
+  .res-mvp { grid-template-columns: 72px 1fr; }
+  .res-actions .btn { --h: 44px; }
+  .res-primary { width: 100%; }
+  .res-primary .btn { min-width: 0; width: 100%; }
+  .res-secondary { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* ------------------------------------------------------------------ the champion's portrait by screen size */
+/* desktop with room to spare: a framed hero portrait breaking out of its plate (a little less than it could, so yours
+   stays clear of the table's rune ring), not an icon */
+@media (min-width: 1200px) and (min-height: 900px) {
+  .pl-hero, .pl-face { width: 110px; height: 122px; }
+  .plate.top .pl-hero { margin: -6px 0 -48px; }
+  .plate.bottom .pl-hero { margin: -44px 0 -10px; }
+  .pl-face { border-radius: 50% 50% 14% 14% / 42% 42% 10% 10%; border-width: 3px; border-color: color-mix(in srgb, var(--el) 55%, var(--gold-1)); box-shadow: 0 0 0 2px #0b0910, 0 0 0 4px color-mix(in srgb, var(--gold-2) 70%, transparent), 0 14px 30px rgba(0, 0, 0, 0.65), 0 0 24px color-mix(in srgb, var(--el) 40%, transparent); }
+  .pl-face img { object-position: 50% 14%; }
+  @keyframes heroBreath { 50% { box-shadow: 0 0 0 2px #0b0910, 0 0 0 4px color-mix(in srgb, var(--gold-2) 70%, transparent), 0 14px 30px rgba(0, 0, 0, 0.65), 0 0 42px color-mix(in srgb, var(--el) 70%, transparent); } }
+}
+/* laptop heights: the champion keeps a framed portrait too, smaller than on tall screens */
+@media (min-width: 1100px) and (min-height: 700px) and (max-height: 899px) {
+  .pl-hero, .pl-face { width: 92px; height: 104px; }
+  .plate.top .pl-hero { margin: -4px 0 -38px; }
+  .plate.bottom .pl-hero { margin: -38px 0 -4px; }
+  .pl-face { border-radius: 50% 50% 14% 14% / 42% 42% 10% 10%; border-width: 3px; border-color: color-mix(in srgb, var(--el) 55%, var(--gold-1)); }
+  .pl-face img { object-position: 50% 14%; }
+}

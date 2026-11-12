@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Tessaract",
+  "short_name": "Tessaract",
+  "description": "A trading card game made with Tessaract: on-chain ERC-6699 stats make the champions, every match replays, and LitNode settles it.",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#050409",
+  "theme_color": "#050409",
+  "lang": "en",
+  "categories": ["games"],
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

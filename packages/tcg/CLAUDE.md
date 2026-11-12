@@ -1,0 +1,21 @@
+# Rapture SDK: TCG kit (contributors)
+
+Read `plugin/skills/tcg/SKILL.md` and its `references/`: it is the product's own guide. The parts that matter when changing the kit itself:
+- the "Rules that keep matches replayable" section;
+- the "Extending the TCG kit" section.
+
+Checks before committing:
+- `pnpm typecheck` and `pnpm test`.
+- `pnpm web templates/starter.game.json` after any change to `src/core` or `src/client`. CI fails when `web/engine` is stale.
+- This package is `@rapture-sdk/tcg` (formerly Tessaract). It lives in the theforge monorepo at `sdk/packages/tcg` and is published with the rest of `sdk/` to github.com/strodanodev/rapture-sdk. The old github.com/strodanodev/tessaract mirror is frozen. Games built on it (Rapture TCG, Rapture Chess) are separate products there and depend on the published SDK.
+- Keep the old names working: the `tessaract` and `deckwright` commands, the `tessaract-*` meta tags, `engine/tessaract.js`, and the `tessaract.*` and `deckwright.*` storage keys (renaming a key loses players' saved data).
+- `claude plugin validate ../..` (the marketplace, at the SDK root) and `claude plugin validate ./plugin` after editing the plugin.
+- Champion stats go through `normalizeStats` (`src/core/champion.ts`) everywhere; a missing champion or stat is 0, as LitNode hydrates it.
+- Balance changes: `pnpm sim <game> --matches 1000` with both `--decks suggested` and `--decks random` for declared-deck games; every fun target must pass (`--strict`), and bump the `rulesetId`.
+- New effects and keywords live in `src/core/effects.ts` (one entry each); never special-case an op elsewhere.
+- The meta loop (`src/meta`: profile, Gauntlet, daily puzzle) never changes rules. Rewards are champion stats and declared decks, so every match replays under the game's `rulesetId`.
+- If you change Gauntlet tuning, re-check the stage-by-stage win rates with a normal-bot player before shipping.
+- Add the release to `CHANGELOG.md`.
+- After any change to `src/arena3d`, run `pnpm arena3d`; CI fails when `web/arena3d.js` is stale.
+- Measure web changes with `node scripts/profile-web.mjs <url> --runs 5` (software WebGL: the CSS fallback path) and `--gpu` (the 3D arena). Keep long tasks after the title near zero on the fallback path.
+- Bump `version` in both `package.json` and `plugin/.claude-plugin/plugin.json` (and the marketplace entry, `../../.claude-plugin/marketplace.json`) when releasing.
