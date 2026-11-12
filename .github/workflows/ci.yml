@@ -1,7 +1,8 @@
 name: CI
 
-# The Rapture SDK's checks: the TCG kit (packages/tcg) and Rapture Studio (apps/studio), built against the kit in
-# this repo. The private monorepo runs the same checks (scripts/check.sh rapture-sdk) before it publishes this mirror.
+# The Rapture SDK's checks: the TCG kit (packages/tcg), Rapture Studio (apps/studio), built against the kit in this
+# repo, and every other package's own `pnpm run check`. The private monorepo runs the same checks
+# (scripts/check.sh rapture-sdk) before it publishes this mirror.
 on:
   push:
     branches: [main]
@@ -81,3 +82,27 @@ jobs:
       - name: Tests
         working-directory: apps/studio
         run: node --test "test/*.test.mjs"
+
+  packages:
+    name: other packages (each package's own check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: packages/tcg/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: pnpm install --frozen-lockfile && pnpm run check, in every package that has a "check" script
+        run: |
+          ran=0
+          for d in packages/*/ apps/*/; do
+            case "$d" in packages/tcg/|apps/studio/) continue ;; esac
+            grep -q '"check"[[:space:]]*:' "$d/package.json" 2>/dev/null || continue
+            echo "::group::$d"
+            (cd "$d" && pnpm install --frozen-lockfile && pnpm run check)
+            echo "::endgroup::"
+            ran=$((ran + 1))
+          done
+          echo "$ran package(s) checked"
