@@ -12,7 +12,7 @@
  * Cost control:
  *   - a frame governor steps the resolution down (1.5x, 1x, 0.75x of CSS pixels) when the average drops under 45 fps
  *     and reports failure if even the lowest step can't hold 24 fps, so the client falls back to the CSS arena;
- *   - behind the battle (mood "battle") it draws every other frame: the level is dimmed there and barely moves;
+ *   - behind the battle (mood "battle") it draws every other frame: the camera is still there and the level barely moves;
  *   - a hidden page draws nothing.
  */
 import * as THREE from 'three';
@@ -24,6 +24,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import type { BoardLayout } from './board';
 
 export type Mood = 'menu' | 'battle';
 export interface SkyColors { top: number; bottom: number; glow: number; fog: number; fogDensity: number }
@@ -40,6 +41,14 @@ export class Stage {
   readonly keyLight = new THREE.DirectionalLight(0xfff1dc, 2.2);
   readonly rimLight = new THREE.SpotLight(0x8fb4ff, 40, 40, Math.PI / 5, 0.6, 1.4);
   readonly hemi = new THREE.HemisphereLight(0x2a2f45, 0x080608, 0.5);
+  /**
+   * The battle board's own key light: a spot from the player's side, on only in battle, so the board stays readable
+   * while the hall round it is dimmed (the rim light, from behind, edges its far side). In the scene from the start,
+   * dark: adding a light later would recompile every material.
+   */
+  readonly boardKey = new THREE.SpotLight(0xffffff, 0, 34, 0.42, 0.55, 1.1);
+  /** The board light's strength in battle (the realm sets it with its colour). */
+  boardKeyPower = 0;
   readonly floorPlate: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>;
   private readonly composer: EffectComposer;
   private fxaa: ShaderPass | null = null;
@@ -71,7 +80,7 @@ export class Stage {
   private readonly menuTarget = new THREE.Vector3(0, 3.3, 0);   // aimed lower: the frame was 40% empty sky
   /** In battle the camera aims 1.2 m in front of the table, so the table sits under the HTML board (above mid-screen). */
   private readonly battleTarget = new THREE.Vector3(0, 0.6, 1.2);
-  private readonly battleSpot = new THREE.Vector3();
+  private readonly battleSpot = new THREE.Vector3(0, 11.5, 13.5);
   private ratioStep: number;
   private mood: Mood = 'menu';
   /** The title camera's heading: the realm sets it so the camera faces a statue across the dais (see Realm). */
@@ -92,8 +101,16 @@ export class Stage {
   private width = 1;
   private height = 1;
   private dpr = 1;
-  /** The battle board's box on screen (CSS px), from the page: the realm fits the 3D table under it. */
-  board: { x: number; y: number; w: number; h: number } | null = null;
+  /** Where the battle board is on screen and how it is laid out, from the page: the realm builds the 3D board to it. */
+  board: BoardLayout | null = null;
+  /** The realm's board is up under the HTML one (risen, fitted, the camera arrived): the hall dims round it. */
+  boardUp = false;
+  /** Called when boardUp changes: the page then drops its drawn table mat, or puts it back. */
+  onBoard: ((up: boolean) => void) | null = null;
+  /** Counts every change to the board's layout or the viewport: the realm rebuilds the board when it moves on. */
+  boardVersion = 0;
+  private dim = 0;
+  private skipped = 0;
   /** The page is hidden: draw nothing. */
   hidden = false;
   /** Called when even the lowest resolution can't hold the frame rate: the client drops back to the CSS arena. */
@@ -140,7 +157,9 @@ export class Stage {
     this.rimLight.position.set(-6, 8, -9);
     const a0 = new THREE.PointLight(0x38a8ff, 18, 14, 1.8), a1 = new THREE.PointLight(0xff6a2a, 18, 14, 1.8);
     a0.position.set(-5.5, 1.6, 5.5); a1.position.set(5.5, 1.6, -5.5);
-    this.scene.add(this.keyLight, this.keyLight.target, this.rimLight, this.rimLight.target, this.hemi, a0, a1);
+    this.boardKey.position.set(4.5, 10.5, 10);
+    this.boardKey.target.position.set(0, 0.74, 0);
+    this.scene.add(this.keyLight, this.keyLight.target, this.rimLight, this.rimLight.target, this.hemi, a0, a1, this.boardKey, this.boardKey.target);
 
     // the dais the cards are fought over: a dark polished plate the realm sizes
     this.floorPlate = new THREE.Mesh(new THREE.CircleGeometry(9.05, 64), new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.62, metalness: 0.35, envMapIntensity: 0.18 }));
@@ -171,18 +190,22 @@ export class Stage {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.4, 1.0);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
-    // FXAA on the tone-mapped image, so edges don't stairstep on a 1x display (phones render at 2x and up, and skip it)
-    if (!opts.coarse) { this.fxaa = new ShaderPass(FXAAShader); this.composer.addPass(this.fxaa); }
+    // FXAA on the tone-mapped image, so edges don't stairstep at 1x (phones too: they start a resolution step down,
+    // at 1x of CSS pixels, where the board's rim and recesses would otherwise show their stairs under the crisp HTML)
+    this.fxaa = new ShaderPass(FXAAShader);
+    this.composer.addPass(this.fxaa);
     // grading after tone mapping, in display space: the shadows take the realm's hue, the edges fall away, a fine grain
     this.grade = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, tint: { value: new THREE.Color(1, 1, 1) }, vig: { value: 0.32 }, grain: { value: 0.025 }, time: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, tint: { value: new THREE.Color(1, 1, 1) }, vig: { value: 0.32 }, grain: { value: 0.025 }, time: { value: 0 }, focus: { value: new THREE.Vector4(0.5, 0.5, 0.5, 0.5) }, dim: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform vec3 tint; uniform float vig, grain, time; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform vec3 tint; uniform vec4 focus; uniform float vig, grain, time, dim; varying vec2 vUv;
         void main(){ vec4 c = texture2D(tDiffuse, vUv);
           float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
           c.rgb = mix(c.rgb, c.rgb * tint, (1.0 - smoothstep(0.0, 0.45, l)) * 0.7);
           vec2 d = (vUv - 0.5) * vec2(1.0, 0.85);
           c.rgb *= mix(1.0 - vig, 1.0, smoothstep(0.78, 0.22, length(d)));
+          // in battle the hall falls back round the board (an ellipse round it on screen); the board keeps its light
+          c.rgb *= 1.0 - dim * smoothstep(0.95, 1.5, length((vUv - focus.xy) / focus.zw));
           float n = fract(sin(dot(vUv * 731.0 + fract(time) * 17.0, vec2(12.9898, 78.233))) * 43758.5453);
           c.rgb += (n - 0.5) * grain;
           gl_FragColor = c; }`,
@@ -204,6 +227,7 @@ export class Stage {
   /** The canvas's CSS size and the device pixel ratio, from the page. */
   setSize(width: number, height: number, dpr: number): void {
     this.width = Math.max(1, width); this.height = Math.max(1, height); this.dpr = dpr || 1;
+    this.boardVersion++;
     this.resize();
   }
 
@@ -306,6 +330,27 @@ export class Stage {
 
   // ------------------------------------------------------------------ camera and frames
   setMood(m: Mood): void { this.mood = m; this.resize(); }
+
+  /**
+   * The battle camera where it comes to rest, for this viewport: the board is built for this view, not for wherever
+   * the camera is on its way there.
+   */
+  battleCamera(): THREE.PerspectiveCamera {
+    const c = new THREE.PerspectiveCamera(this.fovFor('battle'), this.width / this.height, this.camera.near, this.camera.far);
+    c.position.copy(this.battleSpot);
+    c.lookAt(this.battleTarget);
+    c.updateMatrixWorld(true);
+    return c;
+  }
+  /** The camera has reached its battle spot. */
+  get arrived(): boolean { return this.mood === 'battle' && this.camera.position.distanceToSquared(this.battleSpot) < 0.01; }
+  /** Portrait phones open the field of view so the arena still fills the frame; the title looks down a longer lens. */
+  private fovFor(mood: Mood): number { const a = this.width / this.height; return a < 1 ? Math.min(72, 42 / a) : mood === 'menu' ? 29 : 42; }
+
+  /** The ellipse on screen (CSS px) the hall is dimmed round in battle: the board's. */
+  setFocus(cx: number, cy: number, rx: number, ry: number): void {
+    (this.grade.uniforms.focus.value as THREE.Vector4).set(cx / this.width, 1 - cy / this.height, Math.max(0.01, rx / this.width), Math.max(0.01, ry / this.height));
+  }
   quake(): void { this.shakeLeft = 0.3; }
 
   /**
@@ -411,9 +456,8 @@ export class Stage {
     // ambient occlusion at half resolution: soft contact shading needs no more, and it halves the cost
     this.gtao?.setSize(Math.max(1, Math.round((w * ratio) / 2)), Math.max(1, Math.round((h * ratio) / 2)));
     this.camera.aspect = w / h;
-    // portrait phones: open the field of view so the arena still fills the frame
     // the title looks down the hall through a longer lens, so the statues fill the frame instead of the empty floor
-    this.camera.fov = this.camera.aspect < 1 ? Math.min(72, 42 / this.camera.aspect) : this.mood === 'menu' ? 29 : 42;
+    this.camera.fov = this.fovFor(this.mood);
     // the title screen on a wide screen: slide the picture right, clear of the menu column (as Rapture Chess does)
     const shift = this.mood === 'menu' && this.camera.aspect > 1.25 ? Math.round(w * 0.12) : 0;
     if (shift) this.camera.setViewOffset(w, h, -shift, 0, w, h); else this.camera.clearViewOffset();
@@ -427,7 +471,7 @@ export class Stage {
     }
   }
 
-  /** Menu: a slow, low circle round the dais, looking across the arena. Battle: high over the dais, barely drifting. */
+  /** Menu: a slow, low circle round the dais, looking across the arena. Battle: high over the dais, still. */
   private place(dt: number, t: number): void {
     if (this.mood === 'menu') {
       // a slow, eased sweep of +-10 degrees round the heading, not a full orbit: the statue across the dais stays framed
@@ -440,9 +484,10 @@ export class Stage {
     } else {
       // steep, so the dais under the HTML table is seen nearly as the table is (it tilts 26deg on screen)
       // a lower, three-quarter view: the arena's statues and spires stand as silhouettes round the table instead of
-      // flattening into slabs seen from above (the table is fitted under the board from wherever the camera is)
-      this.battleSpot.set(this.still ? 0 : Math.sin(t * 0.12) * 0.5, 11.5, 13.5);
-      this.camera.position.lerp(this.battleSpot, Math.min(1, dt * 2));
+      // flattening into slabs seen from above. It comes to rest and stays: the board is modelled to line up with the
+      // HTML units from exactly here (a drifting camera made the table slide over its own shadow to keep up)
+      if (this.camera.position.distanceToSquared(this.battleSpot) < 0.0004) this.camera.position.copy(this.battleSpot);
+      else this.camera.position.lerp(this.battleSpot, Math.min(1, dt * 3.5));
     }
     this.camera.lookAt(this.mood === 'menu' ? this.menuTarget : this.battleTarget);
     if (this.shakeLeft > 0) {
@@ -488,15 +533,21 @@ export class Stage {
       // behind the battle the level is dimmed and nearly still: half the frames are plenty
       const skip = this.mood === 'battle' && (this.frame++ & 1) === 1;
       this.govern(dt, !skip);
-      if (skip) return;
+      if (skip) { this.skipped = dt; return; }
+      const step = Math.min(0.1, dt + this.skipped);   // the time since the last drawn frame, so nothing eases at half speed
+      this.skipped = 0;
       const t0 = performance.now();
       this.renderer.info.reset();
       this.sky.material.uniforms.time.value = t;
       this.motes.material.uniforms.time.value = t;
       this.bursts.material.uniforms.time.value = t;
       this.clock = t;
-      for (const fn of this.updaters) fn(dt, t);
-      this.place(dt, t);
+      for (const fn of this.updaters) fn(step, t);
+      this.place(step, t);
+      const ease = Math.min(1, step * 3);
+      this.boardKey.intensity += ((this.mood === 'battle' ? this.boardKeyPower : 0) - this.boardKey.intensity) * ease;
+      this.dim += ((this.boardUp ? 0.5 : 0) - this.dim) * ease;
+      this.grade.uniforms.dim.value = this.dim;
       this.grade.uniforms.time.value = t;
       this.composer.render(dt);
       // the bursts' overlay: while one lives, and once more after to clear it

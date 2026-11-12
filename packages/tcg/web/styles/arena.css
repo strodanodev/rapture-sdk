@@ -101,6 +101,8 @@ canvas.ar-fx { position: absolute; inset: 0; width: 100%; height: 100%; display:
 /* battle: dim the level so the board reads */
 .ar-shade { inset: 0; background: rgba(4, 3, 7, 0.4); opacity: 0; transition: opacity 0.6s; }
 #arena[data-mood='battle'] .ar-shade { opacity: 1; }
+/* the 3D arena's modelled board is up: it dims the hall round the board itself, and the board keeps its light */
+#arena.board3d .ar-shade { opacity: 0; }
 #arena[data-mood='battle'] .ar-brazier.b3, #arena[data-mood='battle'] .ar-brazier.b4 { opacity: 0; }
 
 /* a hit on a champion shakes the whole level a little */
