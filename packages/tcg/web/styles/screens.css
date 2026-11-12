@@ -189,6 +189,18 @@ a.menu-item:hover { text-decoration: none; }
   .champ-detail .seg button { min-height: 36px; }
 }
 @media (max-height: 700px) and (min-width: 901px) { .cd-card { display: none; } }
+/* phones: the detail panel is compact enough that the battlefield and House Bot choices show above the Enter dock */
+@media (max-width: 560px) {
+  .champ-grid { min-height: calc(88px * 7 / 5 + 18px) !important; grid-auto-columns: 88px !important; grid-auto-rows: calc(88px * 7 / 5) !important; }
+  .cd-body { gap: 5px; padding-top: 4px; }
+  .cd-body > .epithet, .cd-body > .hint { display: none; }
+  .cd-name { font-size: 19px; }
+  .cd-power { padding: 6px 10px; gap: 1px; }
+  .cd-power .eyebrow { display: none; }
+  .cd-power p { grid-auto-flow: column; justify-content: start; gap: 8px; align-items: baseline; }
+  .champ-detail .field { gap: 4px; }
+  .champ-detail .seg button { min-height: 34px; }
+}
 @media (max-width: 900px) {
   .select-wrap { grid-template-columns: 1fr; overflow-y: auto; padding: 4px 14px calc(var(--safe-b) + 20px); }
   .champ-grid { overflow: visible; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }

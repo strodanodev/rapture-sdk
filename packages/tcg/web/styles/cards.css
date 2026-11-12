@@ -42,6 +42,7 @@
 .tcard:not(.t-unit) .tc-text.xlong { font-size: 0.98em; line-height: 1.1; }
 /* units: the attack and health gems sit over the box's lower corners, so the words keep clear of that band */
 .tcard.t-unit .tc-text { padding-bottom: 1.55em; }
+.tcard.t-unit .tc-frame { grid-template-rows: 52% auto auto 1fr; }   /* units keep the smaller art window: with the gem band, three rules lines ran up into the type line */
 .tc-text .trig { color: color-mix(in srgb, var(--el) 55%, white); font-weight: 600; }
 .tc-text p { margin: 0; }
 /* the gems: cut stones and a forged boss set in gold, in the kit's own metals (they were glossy web-button orbs) */
