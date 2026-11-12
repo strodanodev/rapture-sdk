@@ -44,10 +44,11 @@
 .tcard.t-unit .tc-text { padding-bottom: 1.55em; }
 .tc-text .trig { color: color-mix(in srgb, var(--el) 55%, white); font-weight: 600; }
 .tc-text p { margin: 0; }
+/* the gems: cut stones and a forged boss set in gold, in the kit's own metals (they were glossy web-button orbs) */
 .tc-cost, .tc-atk, .tc-hp { position: absolute; z-index: 3; display: grid; place-items: center; width: 2.6em; height: 2.6em; font-family: var(--font-display); font-weight: 700; font-size: 1.3em; color: #fff; text-shadow: 0 1px 3px #000; }
-.tc-cost { top: -0.35em; left: -0.35em; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #c9ecff, #2f8fe0 45%, #0d3a70 80%); box-shadow: 0 0 0 2px #0b0910, 0 0 0 3.5px color-mix(in srgb, var(--rar) 80%, white), 0 4px 10px rgba(0, 0, 0, 0.6); }
-.tc-atk { bottom: -0.35em; left: -0.35em; clip-path: polygon(50% 0, 100% 30%, 82% 100%, 18% 100%, 0 30%); background: radial-gradient(circle at 40% 30%, #ffe2a0, #d9982f 50%, #6a4010 90%); }
-.tc-hp { bottom: -0.35em; right: -0.35em; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: radial-gradient(circle at 40% 30%, #ffb3a0, #d5301c 50%, #5a0a04 90%); }
+.tc-cost { top: -0.35em; left: -0.35em; border-radius: 50%; background: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.6), transparent 30%), conic-gradient(from 22deg, #1f5fb0, #4a98e6 12.5%, #174a8e 25%, #3a86d8 37.5%, #1c58a6 50%, #57a4ee 62.5%, #164684 75%, #3680d0 87.5%, #1f5fb0); box-shadow: inset 0 0 0 1.5px #f3d68f, inset 0 0 0 3px #7d5518, inset 0 -4px 6px rgba(0, 0, 0, 0.35), 0 0 0 2px #0b0910, 0 0 0 3.5px color-mix(in srgb, var(--rar) 80%, white), 0 4px 10px rgba(0, 0, 0, 0.6); }
+.tc-atk { bottom: -0.35em; left: -0.35em; clip-path: polygon(50% 0, 100% 30%, 82% 100%, 18% 100%, 0 30%); background: radial-gradient(circle at 50% 57%, #564c60 0, #221d29 39%, transparent 41%), linear-gradient(160deg, #fbe7b4, #cf9a3a 35%, #7b5417 65%, #e6bd6a); }
+.tc-hp { bottom: -0.35em; right: -0.35em; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: radial-gradient(circle at 34% 26%, rgba(255, 235, 225, 0.6), transparent 30%), conic-gradient(from 22deg, #a81f14, #e4503a 12.5%, #7c120a 25%, #d23c28 37.5%, #96190f 50%, #ee6048 62.5%, #6e0e08 75%, #c83422 87.5%, #a81f14); box-shadow: inset 0 0 0 1.5px #f3d68f, inset 0 0 0 3px #7d5518, inset 0 -4px 6px rgba(0, 0, 0, 0.35); }
 /* the rarity gem sits in the art's top-right corner (as on champion cards), never over the name */
 .tc-gem { position: absolute; z-index: 2; right: 0.7em; top: 0.7em; width: 0.9em; height: 0.9em; transform: rotate(45deg); background: radial-gradient(circle at 35% 30%, white, var(--rar) 55%, color-mix(in srgb, var(--rar) 50%, black)); box-shadow: 0 0 8px var(--rar); }
 .tcard .foil, .ccard .foil { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; opacity: 0; mix-blend-mode: color-dodge; transition: opacity 0.3s;
@@ -76,8 +77,8 @@ button.tcard:disabled { cursor: default; filter: saturate(0.4) brightness(0.6); 
 .tc-art img.render { object-position: 50% 45%; }
 .u-art .glyph { width: 58%; height: 58%; filter: drop-shadow(0 0 10px currentColor); }
 .u-atk, .u-hp { position: absolute; bottom: 0; z-index: 2; display: grid; place-items: center; width: clamp(24px, calc(var(--u, 84px) * 0.3), 38px); height: clamp(24px, calc(var(--u, 84px) * 0.3), 38px); font-family: var(--font-display); font-weight: 700; font-size: clamp(12px, calc(var(--u, 84px) * 0.15), 19px); color: #fff; text-shadow: 0 1px 3px #000; }
-.u-atk { left: -4px; clip-path: polygon(50% 0, 100% 30%, 82% 100%, 18% 100%, 0 30%); background: radial-gradient(circle at 40% 30%, #ffe2a0, #d9982f 50%, #6a4010 90%); }
-.u-hp { right: -4px; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: radial-gradient(circle at 40% 30%, #ffb3a0, #d5301c 50%, #5a0a04 90%); }
+.u-atk { left: -4px; clip-path: polygon(50% 0, 100% 30%, 82% 100%, 18% 100%, 0 30%); background: radial-gradient(circle at 50% 57%, #564c60 0, #221d29 39%, transparent 41%), linear-gradient(160deg, #fbe7b4, #cf9a3a 35%, #7b5417 65%, #e6bd6a); }
+.u-hp { right: -4px; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; background: radial-gradient(circle at 34% 26%, rgba(255, 235, 225, 0.6), transparent 30%), conic-gradient(from 22deg, #a81f14, #e4503a 12.5%, #7c120a 25%, #d23c28 37.5%, #96190f 50%, #ee6048 62.5%, #6e0e08 75%, #c83422 87.5%, #a81f14); box-shadow: inset 0 0 0 1.5px #f3d68f, inset 0 0 0 3px #7d5518, inset 0 -4px 6px rgba(0, 0, 0, 0.35); }
 .u-atk.up, .u-hp.up { color: #fff; text-shadow: 0 0 6px #3fff8a, 0 0 2px #0a3a18, 0 1px 2px #000; }   /* white with a green glow: pale green on gold was unreadable */
 .u-hp.hurt { color: #ffd0c8; }
 .u-name { position: absolute; left: 14%; right: 14%; bottom: 0; height: 18px; display: none; }

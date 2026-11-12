@@ -44,7 +44,7 @@
 @media (prefers-reduced-motion: reduce) { .pl-face, .pl-face.hit, .pl-face.healed { animation: none; } }
 /* life: a red orb on the portrait's corner for both champions (blue reads as mana), the largest number at the plate */
 .pl-life { position: absolute; right: -12px; bottom: -6px; display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 4px; border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; text-shadow: 0 1px 3px #000;
-  background: radial-gradient(circle at 40% 30%, #ffb3a0, #d5301c 50%, #5a0a04 90%); box-shadow: 0 0 0 2px #0b0910, 0 4px 10px rgba(0, 0, 0, 0.6); }
+  background: radial-gradient(circle at 34% 26%, rgba(255, 235, 225, 0.6), transparent 30%), conic-gradient(from 22deg, #a81f14, #e4503a 12.5%, #7c120a 25%, #d23c28 37.5%, #96190f 50%, #ee6048 62.5%, #6e0e08 75%, #c83422 87.5%, #a81f14); box-shadow: 0 0 0 2px #0b0910, 0 4px 10px rgba(0, 0, 0, 0.6); }
 .pl-life.low { animation: lowLife 1s ease-in-out infinite; }
 @keyframes lowLife { 50% { box-shadow: 0 0 0 2px #0b0910, 0 0 18px rgba(255, 60, 40, 0.9); } }
 @media (min-width: 900px) and (min-height: 600px) { .pl-life { min-width: 50px; height: 50px; right: -18px; bottom: -12px; font-size: 25px; -webkit-text-stroke: 1px rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 3px #0b0910, 0 6px 14px rgba(0, 0, 0, 0.6); } }
@@ -75,7 +75,7 @@
 .power { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--el) 55%, var(--line-strong));
   background: radial-gradient(ellipse at 18% 50%, color-mix(in srgb, var(--el) 38%, transparent), transparent 62%), linear-gradient(180deg, rgba(30, 26, 38, 0.95), rgba(12, 10, 16, 0.95)); color: var(--ivory); font-size: 12px; white-space: nowrap; transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s var(--ease-out); }
 .power svg { width: 15px; height: 15px; color: color-mix(in srgb, var(--el) 65%, white); filter: drop-shadow(0 0 4px var(--el)); }
-.pw-cost { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-family: var(--font-display); font-weight: 700; color: #fff; background: radial-gradient(circle at 38% 32%, #c9ecff, #2f8fe0 45%, #0d3a70 80%); }
+.pw-cost { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-family: var(--font-display); font-weight: 700; color: #fff; background: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.6), transparent 30%), conic-gradient(from 22deg, #1f5fb0, #4a98e6 12.5%, #174a8e 25%, #3a86d8 37.5%, #1c58a6 50%, #57a4ee 62.5%, #164684 75%, #3680d0 87.5%, #1f5fb0); }
 .pw-name { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
 .power:not(:disabled):hover { border-color: color-mix(in srgb, var(--el) 70%, white); box-shadow: 0 0 22px color-mix(in srgb, var(--el) 60%, transparent); transform: translateY(-1px); }
 .power:not(:disabled) { box-shadow: 0 0 16px color-mix(in srgb, var(--el) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--el) 25%, transparent); }
