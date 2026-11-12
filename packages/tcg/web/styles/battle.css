@@ -120,7 +120,7 @@
 .medallion[data-side='1'] .md-ring { background: var(--foe); box-shadow: 0 0 10px var(--foe); }
 .medallion.yours { color: #241604; border-color: var(--gold-1); background: linear-gradient(180deg, var(--gold-1), var(--gold-3)); box-shadow: 0 0 26px rgba(255, 201, 94, 0.4); }
 .medallion.yours .md-ring { background: #241604; box-shadow: none; }
-.hud-status { margin: 0; max-width: min(680px, 90vw); min-height: 1.4em; padding: 6px 14px 6px 12px; border-radius: 2px; border: 1px solid rgba(255, 201, 94, 0.18); border-left: 2px solid var(--gold-2); background: linear-gradient(90deg, rgba(22, 16, 28, 0.94), rgba(8, 6, 12, 0.74)); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 240, 210, 0.05); font-size: 13px; font-style: italic; line-height: 1.4; color: #efe6d4; }   /* the chronicle of the last moves: a framed line, not a debug box */
+.hud-status { margin: 0; max-width: min(680px, 90vw); min-height: 1.4em; padding: 6px 14px 6px 12px; border-radius: 2px; border: 1px solid rgba(255, 201, 94, 0.18); border-left: 2px solid var(--gold-2); background: linear-gradient(90deg, rgba(22, 16, 28, 0.94), rgba(8, 6, 12, 0.74)); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 240, 210, 0.05); font-size: 13px; line-height: 1.4; color: #efe6d4; }   /* the chronicle of the last moves: a framed line, not a debug box */
 .hud-status:empty { visibility: hidden; }
 .match.aiming .hud-status { color: var(--gold-1); font-weight: 600; }
 @media (min-width: 900px) and (min-height: 600px) { .match.aiming .hud-status { visibility: hidden; } }   /* the aim prompt over your plate says it */
