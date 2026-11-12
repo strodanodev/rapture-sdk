@@ -549,11 +549,13 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
   .plate.top .pl-orn { bottom: -10px; }
   .plate.bottom .pl-orn { top: -10px; }
   .table-mat { inset: 0 -1%; border-radius: 60px / 50%; }
+  /* the board is as tall as its two rows need, centred in the space left, not stretched into an empty oval */
+  .battlefield { align-self: center; height: min(100%, calc((100vw - 68px) / 5 * 2.44 + 92px)); }
   .u-kw { display: none; }
-  .hand .tcard { --w: 85px; margin-left: 7px; transform: none; }   /* four across; the gems stand ~4px past each card, clear of the next card's */
+  .hand .tcard { --w: 85px; aspect-ratio: 5 / 8.4; margin-left: 7px; transform: none; }   /* four across; the gems stand ~4px past each card, clear of the next card's */
   /* on a phone the hand shows each card's name and its first rules line; hold a card to read it all */
   .hand .tcard .tc-type { display: none; }
-  .hand .tcard .tc-text { margin: 0.15em 0.4em 0; padding: 0; background: none; border: 0; font-size: 0.98em; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }   /* up to two lines: one line cut rules mid-word ("Summon Co") */
+  .hand .tcard .tc-text { margin: 0.15em 0.4em 0; padding: 0; background: none; border: 0; font-size: 0.98em; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }   /* up to three lines: one line cut rules mid-word ("Summon Co") */
   .hand .tcard .tc-text p + p, .hand .tcard .tc-text:empty { display: none; }
   /* the name plate stands above the attack and health gems (at 1.5em they sat on its ends) */
   .hand .tcard .tc-frame { grid-template-rows: 1fr auto auto; padding-bottom: 2.3em; }
