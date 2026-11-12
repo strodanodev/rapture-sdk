@@ -56,6 +56,12 @@
 html, body { margin: 0; height: 100%; background: var(--bg-0); color: var(--text); font-family: var(--font-body); font-size: 15px; overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
 body { position: fixed; inset: 0; user-select: none; -webkit-user-select: none; }
 button, input, select { font: inherit; color: inherit; }
+/* scrollbars in the game's gold, thin and without arrow buttons, instead of the system's grey ones */
+:root { scrollbar-color: rgba(214, 170, 92, 0.6) transparent; }
+* { scrollbar-width: thin; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(214, 170, 92, 0.6); }
 button { cursor: pointer; touch-action: manipulation; }
 a { color: var(--gold-1); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }

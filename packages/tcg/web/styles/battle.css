@@ -272,6 +272,7 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
 .hand .tcard .tc-name:not(.long) { font-size: max(1.08em, 10px); }
 .hand .tcard .tc-type { font-size: max(0.78em, 8.5px); }
 @media (min-width: 761px) { .hand .tcard .tc-name.long { font-size: max(0.9em, 10px); letter-spacing: 0; padding-inline: 0.6em; } }
+.hand-more { display: none; }   /* the "more cards" chip is for phones, whose hand scrolls (see the phone layout) */
 
 /* ------------------------------------------------------------------ the dock: the end-turn medallion and the menu */
 .pick-info { display: none; }
@@ -417,8 +418,9 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
 .result[data-outcome='draw'] .res-title { background: linear-gradient(180deg, #ffffff 10%, #bcd6ea 50%, #7f9bb2 52%, #dcebf6); -webkit-background-clip: text; background-clip: text; }
 .res-detail { margin: 0; color: #d6cdbc; line-height: 1.5; }
 /* the champions' busts behind the result (desktop): yours on the left, the foe's mirrored on the right; the victor lit
-   in gold and rising, the fallen drained grey */
-.res-hero { position: absolute; left: max(-4vw, calc(50% - 300px - 62vh)); bottom: 0; height: 74vh; aspect-ratio: 1; object-fit: cover; object-position: 50% 15%; pointer-events: none; opacity: 0.7; mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); -webkit-mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); animation: heroIn 1.1s var(--ease-out) both; }
+   in gold and rising, the fallen drained grey. Lighten: an art's own dark backdrop falls back into the result's (a
+   black square behind a wireframe champion stood as a dark box on the red) while the figure, halo and lines stay */
+.res-hero { mix-blend-mode: lighten; position: absolute; left: max(-4vw, calc(50% - 300px - 62vh)); bottom: 0; height: 74vh; aspect-ratio: 1; object-fit: cover; object-position: 50% 15%; pointer-events: none; opacity: 0.7; mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); -webkit-mask-image: radial-gradient(ellipse 50% 58% at 50% 45%, #000 40%, transparent 78%); animation: heroIn 1.1s var(--ease-out) both; }
 .result[data-outcome='win'] .res-hero { filter: brightness(1.1) saturate(1.15) drop-shadow(0 0 40px rgba(255, 201, 94, 0.55)); }
 .result[data-outcome='loss'] .res-hero { opacity: 0.72; filter: grayscale(0.7) brightness(0.72) sepia(0.35) hue-rotate(-25deg); }
 @keyframes heroIn { from { opacity: 0; transform: translateY(40px) scale(0.96); } }
@@ -555,11 +557,17 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
   /* the name plate stands above the attack and health gems (at 1.5em they sat on its ends) */
   .hand .tcard .tc-frame { grid-template-rows: 1fr auto auto; padding-bottom: 2.3em; }
   .hand .tcard .tc-name { margin: 0; padding: 0.3em 0.7em; border-radius: 0; white-space: normal; line-height: 1.05; }
-  .hand .tcard .tc-name:not(.long) { font-size: 1.12em; letter-spacing: 0.02em; }
-  .hand .tcard .tc-name.long { font-size: 1.02em; text-overflow: clip; letter-spacing: 0; }
+  /* no smaller than legible: at 85 px a card's em is 6.2 px, which left rules at 6.4 px and names at 7 px */
+  .hand .tcard .tc-name:not(.long) { font-size: max(1.12em, 9.5px); letter-spacing: 0.02em; }
+  .hand .tcard .tc-name.long { font-size: max(1.02em, 8.5px); text-overflow: clip; letter-spacing: 0; }
+  .hand .tcard .tc-text { font-size: max(1.02em, 8.5px); }
   .hand .tcard :is(.tc-atk, .tc-hp) { bottom: -0.75em; }   /* and the gems hang a little lower, into the hand's bottom padding */
   .hand .tcard:hover, .hand .tcard:focus-visible { transform: translateY(-8px); }
   .hand .tcard.picked { transform: translateY(-16px); }
+  /* the cards past the hand's edge, counted in a gold chip over it (a tap scrolls to them) */
+  .hand-more { position: absolute !important; z-index: 6 !important; right: calc(var(--safe-r) + 4px); bottom: calc(var(--safe-b) + 92px); display: grid; place-items: center; min-width: 34px; height: 30px; padding: 0 9px; border: 0; border-radius: 999px;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #241604; background: linear-gradient(180deg, var(--gold-0), var(--gold-2)); box-shadow: 0 0 0 2px #0b0910, 0 6px 14px rgba(0, 0, 0, 0.6); }
+  .hand-more[hidden] { display: none; }
   .killfeed { display: none; }
   /* neighbouring units' gems don't collide, and no rune glyphs over the units */
   .u-atk { left: 0; }
