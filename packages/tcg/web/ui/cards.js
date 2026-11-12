@@ -57,7 +57,7 @@ export function createCards(app) {
   /** A full card. `tag` "button" makes it clickable; `small` is the relic size. */
   function cardFace(def, { tag = "div", small = false, cost = def.cost } = {}) {
     const text = describe(def);
-    const el = h(tag, { class: `tcard t-${def.type}${small ? " small" : ""}`, data: { rarity: def.rarity ?? "common", el: def.element ?? "neutral" }, style: `--el:${app.elementColor(def.element)}`, title: keywordHelp(def) || undefined, ...(tag === "button" ? { type: "button" } : {}) },
+    const el = h(tag, { class: `tcard t-${def.type}${small ? " small" : ""}`, data: { rarity: def.rarity ?? "common", el: def.element ?? "neutral", ...(def.kind ? { kind: def.kind } : {}) }, style: `--el:${app.elementColor(def.element)}`, title: keywordHelp(def) || undefined, ...(tag === "button" ? { type: "button" } : {}) },
       h("div", { class: "tc-frame" },
         artBox(def, "tc-art"),
         h("div", { class: def.name.length > 12 ? "tc-name long" : "tc-name", text: def.name }),

@@ -116,6 +116,13 @@ button.tcard:disabled { cursor: default; filter: saturate(0.4) brightness(0.6); 
 .ccard .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .ccard .art > svg { width: 50%; }
 .ccard .art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(8, 6, 12, 0.95)); }
+/* Mortals: the collection draws them as wireframe figures on a dark grid. A pool of the card's element light behind
+   the figure and a brighter line make that read as their style (it read as a missing texture). The art is untouched. */
+.tcard[data-kind='Mortal'] .tc-art::before, .ccard[data-rarity='common'] .art::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(ellipse 72% 62% at 50% 40%, color-mix(in srgb, var(--el) 46%, transparent), transparent 72%), linear-gradient(180deg, transparent 52%, color-mix(in srgb, var(--el) 26%, transparent)); }
+.tcard[data-kind='Mortal'] .tc-art img, .ccard[data-rarity='common'] .art img { filter: brightness(1.22) contrast(1.06); }
+.ccard .art { isolation: isolate; }   /* its layers stack among themselves, under the name plate */
+.ccard .art::after { z-index: 2; }
 .ccard .gem { position: absolute; top: 8px; right: 8px; z-index: 2; width: 20px; height: 20px; transform: rotate(45deg); border: 2px solid rgba(255, 255, 255, 0.75); background: radial-gradient(circle at 35% 30%, white, var(--el) 45%, color-mix(in srgb, var(--el) 50%, black)); box-shadow: 0 0 12px var(--el); }
 .ccard .kind { position: absolute; top: 8px; left: 8px; z-index: 2; font-size: 9px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; padding: 3px 7px; border-radius: 2px; color: #120d04; background: var(--rar); }
 .ccard .cplate { position: relative; z-index: 1; margin-top: -34px; padding: 8px 10px 10px; }
