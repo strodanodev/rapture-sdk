@@ -548,7 +548,7 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
   .pl-orn { width: 30px; height: 10px; }
   .plate.top .pl-orn { bottom: -10px; }
   .plate.bottom .pl-orn { top: -10px; }
-  .table-mat { inset: 0 -1%; border-radius: 60px / 50%; }
+  .table-mat { inset: 0 -1%; border-radius: 30px; }   /* squarer corners: on the short phone board, round ends cut across the outer slots */
   /* the board is as tall as its two rows need, centred in the space left, not stretched into an empty oval */
   .battlefield { align-self: center; height: min(100%, calc((100vw - 68px) / 5 * 2.44 + 92px)); }
   .u-kw { display: none; }
