@@ -535,10 +535,10 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
   .hud-status { font-size: 11px; }
   .battlefield, .match.viewing .battlefield { --u-max: 84px; }
   /* phone gaps are 10px, not 18: the width term can give units more */
-  .lane { gap: 10px; --u: max(40px, min(var(--u-max), calc((50cqh - 26px) / 1.22), calc((100cqw - 52px) / 5))); }
+  .lane { gap: 6px; --u: max(40px, min(var(--u-max), calc((50cqh - 26px) / 1.22), calc((100cqw - 36px) / 5))); }
   .battlefield { --ring: 0px; --tilt: 14deg; --persp: 1500px; }
   /* no hover on a phone: the whole hand shows, and scrolls sideways */
-  .hand { -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent); mask-image: linear-gradient(90deg, #000 86%, transparent); --w: 85px; height: auto; align-items: flex-end; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 16px 6px calc(var(--safe-b) + 14px); margin-bottom: 0; scrollbar-width: none; perspective: none; }
+  .hand { -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent); mask-image: linear-gradient(90deg, #000 86%, transparent); --w: 100px; height: auto; align-items: flex-end; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 16px 6px calc(var(--safe-b) + 14px); margin-bottom: 0; scrollbar-width: none; perspective: none; }
   .pick-info { display: block; margin: 2px 8px 0; padding: 6px 10px; min-height: 1.3em; border-radius: 3px; border-left: 2px solid var(--gold-2); background: rgba(8, 6, 12, 0.82); font-size: 12.5px; line-height: 1.35; color: #e6dccb; text-align: center; }
   .pick-info b { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.04em; color: var(--gold-1); }
   .pick-info:empty { display: none; }
@@ -550,9 +550,9 @@ body:has(#arena[data-realm='underworld']) .battlefield::before { background: rad
   .plate.bottom .pl-orn { top: -10px; }
   .table-mat { inset: 0 -1%; border-radius: 30px; }   /* squarer corners: on the short phone board, round ends cut across the outer slots */
   /* the board is as tall as its two rows need, centred in the space left, not stretched into an empty oval */
-  .battlefield { align-self: center; height: min(100%, calc((100vw - 68px) / 5 * 2.44 + 92px)); }
+  .battlefield { align-self: center; height: min(100%, calc((100vw - 52px) / 5 * 2.44 + 96px)); }
   .u-kw { display: none; }
-  .hand .tcard { --w: 85px; aspect-ratio: 5 / 8.4; margin-left: 7px; transform: none; }   /* four across; the gems stand ~4px past each card, clear of the next card's */
+  .hand .tcard { --w: 100px; aspect-ratio: 5 / 8.2; margin-left: 8px; transform: none; }   /* three and a half across, large enough to read; the rest scroll in (the fade and the count say so) */
   /* on a phone the hand shows each card's name and its first rules line; hold a card to read it all */
   .hand .tcard .tc-type { display: none; }
   .hand .tcard .tc-text { margin: 0.15em 0.4em 0; padding: 0; background: none; border: 0; font-size: 0.98em; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }   /* up to three lines: one line cut rules mid-word ("Summon Co") */
