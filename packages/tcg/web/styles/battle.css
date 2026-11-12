@@ -83,8 +83,8 @@
 .power.used { opacity: 0.38; filter: grayscale(0.8); }
 .power.picked { border-color: var(--gold-0); box-shadow: 0 0 24px rgba(255, 201, 94, 0.7); }
 /* one you can't use yet is dimmed, not a ghost: its name and cost stay readable */
-.power:disabled:not(.used) { opacity: 0.82; filter: grayscale(0.5) brightness(0.85); box-shadow: none; }
-.power:disabled:not(.used) .pw-name { color: #b9af9b; }
+.power:disabled:not(.used) { opacity: 0.96; filter: saturate(0.6) brightness(0.92); box-shadow: 0 0 0 1px rgba(255, 201, 94, 0.28), inset 0 0 12px rgba(0, 0, 0, 0.45); }   /* waiting on energy: still a lit button, only cooler */
+.power:disabled:not(.used) .pw-name { color: #d2c8b3; }
 /* the hero power as a medallion (wider screens): an element-lit disc with its icon, the cost gem on its rim and its
    name beside it, as card games show a hero power, instead of a text pill */
 @media (min-width: 900px) and (min-height: 600px) {
