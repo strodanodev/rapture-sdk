@@ -35,6 +35,16 @@ export function matchScreen(app) {
   const foeLane = h("div", { class: "lane foe-lane", aria: { label: "Opponent units" } });
   const myLane = h("div", { class: "lane my-lane", aria: { label: "Your units" } });
   const hand = h("div", { class: "hand", aria: { label: "Your hand" } });
+  // phones: the hand scrolls sideways, four cards to a screen; a chip at its edge counts the cards past it (it read as
+  // the whole hand), and a tap scrolls to them (styled for phones only)
+  const handMore = h("button", { class: "hand-more", type: "button", hidden: true, aria: { label: "More cards in your hand" }, on: { click: () => hand.scrollBy({ left: hand.clientWidth * 0.75, behavior: "smooth" }) } });
+  const markHandMore = () => {
+    const edge = hand.getBoundingClientRect().right;
+    const past = [...hand.children].filter((c) => c.getBoundingClientRect().left + c.offsetWidth / 2 > edge).length;
+    handMore.hidden = !past;
+    handMore.textContent = past ? `+${past}` : "";
+  };
+  hand.addEventListener("scroll", markHandMore, { passive: true });
   // phones show only card names in the hand: this strip reads out the picked card's rules (styled for phones only)
   const pickInfo = h("p", { class: "pick-info", aria: { live: "polite" } });
   const endBtn = h("button", { class: "end-turn", type: "button", on: { click: () => act(endTurn()) } }, h("span", { class: "et-ring" }), h("span", { class: "et-label display", text: "End turn" }));
@@ -73,9 +83,9 @@ export function matchScreen(app) {
     lastBoard = key;
     app.arena.setBoard(r);
   };
-  addEventListener("resize", () => requestAnimationFrame(fitBoard));
+  addEventListener("resize", () => requestAnimationFrame(() => { fitBoard(); markHandMore(); }));
   el = h("section", { class: "match", aria: { label: "Battle" } },
-    overlays.fx, foeP.el, h("div", { class: "hud-center" }, medallion, status), board, meP.el, pickInfo, hand, dock, overlays.feed, overlays.cine, viewbar.el, result.el);
+    overlays.fx, foeP.el, h("div", { class: "hud-center" }, medallion, status), board, meP.el, pickInfo, hand, handMore, dock, overlays.feed, overlays.cine, viewbar.el, result.el);
   const aim = createAim(el);   // the targeting arrow from whatever is picked (see ui/battle/aim.js)
   const bfx = createBattleFx(el, app.arena, game);   // what each move looks like (see ui/battle/fx.js)
   const menu = createBattleMenu(app, el, { session: () => session, ctx: () => ctx, viewing, blocked: () => result.open });
@@ -236,7 +246,7 @@ export function matchScreen(app) {
       const lines = app.cards.describe(picked);
       pickInfo.replaceChildren(h("b", { text: picked.name }), lines.length ? ` · ${lines.join(" · ")}` : "");
     } else pickInfo.textContent = watching || s.turnNo > 3 ? "" : "Tap a card to play it · hold it to read it";   // a first-turns hint, not a fixture
-    requestAnimationFrame(() => { ring.refresh(); fitBoard(); aim.update(pick ? el.querySelector(".hand .tcard.picked, .unit.picked, .power.picked") : null); });   // after layout: the rune circle, the 3D table, the arrow
+    requestAnimationFrame(() => { ring.refresh(); fitBoard(); aim.update(pick ? el.querySelector(".hand .tcard.picked, .unit.picked, .power.picked") : null); markHandMore(); });   // after layout: the rune circle, the 3D table, the arrow, the hand's "more" chip
 
     endBtn.disabled = !myTurn;
     endBtn.classList.toggle("ready", myTurn && !moves.some((m) => m.op !== Op.End));
