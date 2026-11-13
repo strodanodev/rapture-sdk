@@ -1,25 +1,28 @@
 // PackShopV2 keeper: as soon as a sealed pack's drand round is out, prove it and deal the pack, so every pull is fixed
-// within seconds and no buyer ever pays to deal someone else's pack. Dealing is cheap (~0.3M gas per drand round
-// proven, ~70k per pack). With --open it also mints dealt packs nobody opened after OPEN_AFTER seconds (the costly
-// part, ~4.4M gas a pack). When the chain clock lags real time (PackShopV2's only residual trust), it posts drand's
-// latest round to the shop: buyPack never binds a round at or below one already proven there.
+// within seconds and no buyer pays to deal someone else's pack. Dealing is cheap (~0.3M gas per drand round proven,
+// ~70k per pack). With --open it also mints dealt packs nobody opened after OPEN_AFTER seconds (the costly part,
+// ~4.5M gas a pack). When the chain clock lags real time (PackShopV2's one residual trust), it posts drand's latest
+// round to the shop: buyPack never binds a round at or below one already proven there.
 //
-//   KEEPER_KEY=0x… node scripts/keeper.mjs            Liteforge (deployments/liteforge.json)
-//   node scripts/keeper.mjs --local                    local dev node (an unlocked Hardhat account, no key)
-//   flags: --once (one pass and exit)  --open (also mint stale dealt packs)
-//   env:   POLL_MS (default 3000), OPEN_AFTER (default 600 s), MAX_DEAL (default 20 packs a transaction)
+//   KEEPER_KEY=0x… node scripts/keeper.mjs --config my-drop/mint.config.json          the config's network
+//   node scripts/keeper.mjs --config my-drop/mint.config.json --network local          local node (unlocked account 9, no key)
+//   flags: --once (one pass and exit)  --open (also mint stale dealt packs)  --network <name>
+//   env:   POLL_MS (default 3000), OPEN_AFTER (default 600 s), MAX_DEAL (default 20 packs a transaction), RPC_URL
 //
-// The key is read from the environment and never printed. Any wallet can keep: dealing is permissionless.
-import { ethers, readJson, provider } from "./lib/chain.mjs";
+// The shop's address comes from deployments/<network>.json next to the config (scripts/deploy.js writes it). The key is
+// read from the environment and never printed. Any funded wallet can keep: dealing is permissionless.
+import { ethers, parseArgs, networkInfo, provider, loadConfigOrExit, deploymentOrExit, DRAND_EVMNET } from "./lib/chain.mjs";
 
-const args = new Set(process.argv.slice(2));
-const LOCAL = args.has("--local");
+const args = parseArgs();
+const cfg = loadConfigOrExit(args.config || process.env.MINT_CONFIG || "mint.config.json");
+if (cfg.mode !== "packs") { console.error("the keeper is for a packs shop (mode \"packs\"); a fixed-price minter needs none"); process.exit(1); }
+const NET = args.network || cfg.network;
+const LOCAL = NET === "local";
 const POLL_MS = Number(process.env.POLL_MS ?? 3000);
 const OPEN_AFTER = Number(process.env.OPEN_AFTER ?? 600);
 const MAX_DEAL = BigInt(process.env.MAX_DEAL ?? 20);
-const BEACONS = ["https://api.drand.sh", "https://api2.drand.sh", "https://api3.drand.sh"];
-const GENESIS = 1727521075n;
-const PERIOD = 3n;
+const GENESIS = BigInt(DRAND_EVMNET.genesis);
+const PERIOD = BigInt(DRAND_EVMNET.period);
 const CLOCK_WARN_S = 6;   // well inside REVEAL_DELAY x period (13-15 s)
 const POST_EVERY = 3n;    // rounds (~9 s) between lag posts: a new pack then binds at least 2 rounds past real time
 const PHASE_DEALT = 3n;
@@ -41,7 +44,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 async function signatureOf(round) {
-  for (const base of BEACONS) {
+  for (const base of DRAND_EVMNET.urls) {
     try {
       const r = await fetch(`${base}/v2/beacons/evmnet/rounds/${round}`, { signal: AbortSignal.timeout(6000) });
       if (!r.ok) continue;
@@ -53,17 +56,12 @@ async function signatureOf(round) {
 }
 
 async function connect() {
-  if (LOCAL) {
-    const cfg = readJson("../web/assets/rapture/packshop.local.json");
-    if (cfg.version !== 2) throw new Error("packshop.local.json is not a v2 config: run npm run local-setup-v2");
-    const p = new ethers.JsonRpcProvider(cfg.rpc, cfg.chainId, { staticNetwork: true });
-    return { shop: new ethers.Contract(cfg.packShop, ABI, await p.getSigner(9)), p };
-  }
-  const dep = readJson("deployments/liteforge.json");
-  if (!dep.packShopV2?.address) throw new Error("deployments/liteforge.json has no packShopV2: run scripts/launch-v2.js first");
+  const dep = deploymentOrExit(cfg, NET);
+  const net = networkInfo(NET);
+  const p = provider(net);
+  if (LOCAL) return { shop: new ethers.Contract(dep.shop, ABI, await p.getSigner(9)), p };
   if (!process.env.KEEPER_KEY) throw new Error("set KEEPER_KEY (any funded wallet; dealing is permissionless)");
-  const p = provider(dep);
-  return { shop: new ethers.Contract(dep.packShopV2.address, ABI, new ethers.Wallet(process.env.KEEPER_KEY, p)), p };
+  return { shop: new ethers.Contract(dep.shop, ABI, new ethers.Wallet(process.env.KEEPER_KEY, p)), p };
 }
 
 async function dealPass(shop) {
@@ -110,15 +108,15 @@ async function clockCheck(shop, p) {
 }
 
 const { shop, p } = await connect();
-log(`keeping PackShopV2 ${await shop.getAddress()} (${LOCAL ? "local" : "liteforge"})${args.has("--open") ? ", minting stale packs" : ""}`);
+log(`keeping PackShopV2 ${await shop.getAddress()} on ${NET}${args.open ? ", minting stale packs" : ""}`);
 for (;;) {
   try {
     await dealPass(shop);
-    if (args.has("--open")) await openPass(shop);
+    if (args.open) await openPass(shop);
     if (!LOCAL) await clockCheck(shop, p);
   } catch (e) {
     log("pass failed:", e.shortMessage || e.message);
   }
-  if (args.has("--once")) break;
+  if (args.once) break;
   await sleep(POLL_MS);
 }

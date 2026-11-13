@@ -1,0 +1,18 @@
+{
+  "note": "Chains the scripts know. explorer is a Blockscout base URL (verify.mjs submits there); null until it is known. The old Caldera RPC and explorer are gone.",
+  "liteforge": {
+    "chainId": 4441,
+    "name": "LitVM Liteforge",
+    "rpc": "https://rpc.testnet.liteforge.zeeve.net/",
+    "explorer": null,
+    "currency": { "name": "zkLTC", "symbol": "zkLTC", "decimals": 18 },
+    "getLogsMaxBlocks": 2000
+  },
+  "local": {
+    "chainId": 31338,
+    "name": "Local Hardhat",
+    "rpc": "http://127.0.0.1:8547",
+    "explorer": null,
+    "currency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "network": "liteforge",
+  "collection": {
+    "minter": "0x0000000000000000000000000000000000000001",
+    "cards": null,
+    "tokenIdBase": "0"
+  },
+  "templates": "templates.json",
+  "mode": "fixed",
+  "owner": null,
+  "fixed": {
+    "price": "0.001",
+    "maxPerWallet": 20,
+    "supply": 100,
+    "lock": true
+  }
+}

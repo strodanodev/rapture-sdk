@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-ethers");
 const { subtask } = require("hardhat/config");
 const { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } = require("hardhat/builtin-tasks/task-names");
+const NETWORKS = require("./scripts/lib/networks.json");
 
 /**
  * LitVM Liteforge (chain 4441) is an Arbitrum Nitro chain with EVM Shanghai: no Cancun opcodes, so OpenZeppelin is
@@ -22,10 +23,10 @@ module.exports = {
     // `pnpm node` sets HARDHAT_TICK_MS so blocks also arrive on a timer. Chain 31338 on port 8547, so this dev chain
     // never collides with another local chain in the wallet or on the machine.
     hardhat: { chainId: 31338, ...(process.env.HARDHAT_TICK_MS ? { mining: { auto: true, interval: Number(process.env.HARDHAT_TICK_MS) } } : {}) },
-    local: { url: "http://127.0.0.1:8547", chainId: 31338 },
+    local: { url: NETWORKS.local.rpc, chainId: NETWORKS.local.chainId },
     liteforge: {
-      url: process.env.LITVM_RPC_URL || "https://rpc.testnet.liteforge.zeeve.net/",
-      chainId: 4441,
+      url: process.env.LITVM_RPC_URL || NETWORKS.liteforge.rpc,
+      chainId: NETWORKS.liteforge.chainId,
       accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
     },
   },

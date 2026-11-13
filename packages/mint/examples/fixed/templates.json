@@ -1,0 +1,346 @@
+{
+  "note": "Ten placeholder cards, two of each kind, that satisfy the reference collection's rules. Replace them with your collection's cards (step 1 writes them, or scripts/export-templates.mjs reads them from chain). The hashes are placeholders, not real art.",
+  "templates": [
+    {
+      "id": 0,
+      "template": {
+        "kind": 0,
+        "traits": {
+          "faction": 0,
+          "alignment": 0,
+          "element": 0,
+          "frame": 0,
+          "bodyparts": 0,
+          "strength": 16051,
+          "agility": 20102,
+          "resilience": 14152,
+          "intelligence": 18203
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x55538e1ce6d369efd9c6ee0d5cb1adad49da97fba876fa4d91121767424063b8",
+          "art": "0x1772f194f3cd5219eddb560d875aea0075f79795a7eb01e58ada03c2550415bc",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0xb6f35794eb71b7fb91d4956a21956a3f32533550238e5c2759d0935e62390beb",
+          "avatarPlain": "0xc28b8bc680935c0f29ad79af059679e5ef2c431fcf1bbd3f5b46bd335a51aab2",
+          "soul": "0x8c79f103dbb015dd49dbfd7e24836b4f197f1fdba0e85c7772d2077b24d394fb",
+          "kit": 0,
+          "name": "Ash Wanderer",
+          "epithet": "of the Long Road"
+        }
+      }
+    },
+    {
+      "id": 1,
+      "template": {
+        "kind": 0,
+        "traits": {
+          "faction": 1,
+          "alignment": 1,
+          "element": 1,
+          "frame": 0,
+          "bodyparts": 16842753,
+          "strength": 17028,
+          "agility": 21079,
+          "resilience": 15129,
+          "intelligence": 19180
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x276a9a04bd0ffa9d1db7ce30c220dd1c27467f70c4f17bff830f1d254143ac8e",
+          "art": "0x57d00635e0be0d42c4fb9cfa3ff34e8c61bc3b1f4288e5e2d5285d14550a9c8d",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0xe55e6138d2a574057479e79b48a7747b07e2aea235f2d97cbddb01fbfd8b9ab5",
+          "avatarPlain": "0xa2f0d58c58afd401299e2de3539cd2765cb5c6e4ae95af6d2ed4677912763fe3",
+          "soul": "0xd9b5e8358e5c5a0746d8ed04c03db8ff15a96e58e5166abae5284f65061ad7de",
+          "kit": 0,
+          "name": "Copper Scout",
+          "epithet": "the Quick"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "template": {
+        "kind": 1,
+        "traits": {
+          "faction": 0,
+          "alignment": 2,
+          "element": 2,
+          "frame": 1,
+          "bodyparts": 131074,
+          "strength": 22005,
+          "agility": 16055,
+          "resilience": 20106,
+          "intelligence": 24157
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x26c5a4180112443d49bcf8064f3ed86a7765ceb0c0158312e15a59d32d26a5c5",
+          "art": "0x79c909a4e4ecdde8a56c67bf18720dc593333a2a10bab34f56d0ac1be312be5f",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0xdddb01eb9bb2da83b571abcd26803e6d8bff98aadfb3fd25b937da3265a9d7c5",
+          "avatarPlain": "0x4a68e6e17ad7db50329b68a2f66e063f02e8039ed0cc674b0f193d8a011f734b",
+          "soul": "0xb0e1642f747d133b3fa3a7f0ae023999470608d4188b13169550a821379287c9",
+          "kit": 0,
+          "name": "Tide Warden",
+          "epithet": "Keeper of the Shore"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "template": {
+        "kind": 1,
+        "traits": {
+          "faction": 1,
+          "alignment": 255,
+          "element": 3,
+          "frame": 1,
+          "bodyparts": 16777475,
+          "strength": 22982,
+          "agility": 17032,
+          "resilience": 21083,
+          "intelligence": 25134
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x1cc4b2ff32413d0c087422ef8bab60a8615ecf9cdeda5d9e19603d9da0578720",
+          "art": "0x34cec386057211c7783008d37b263b2ccd590d89bbc8e47803066fe6f0a07dcf",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0x953d256ceda5e6329a15cf0061a6042d2bd6513727d350f5bc01e081c3119207",
+          "avatarPlain": "0xaad144dfe03714c4aa5b0b85ec387bc744a6eef46167e4217a32c959b0a927dc",
+          "soul": "0xfc07c1205a82a921d60997e1221766aacaacbecfc0cebd145c898727984db97b",
+          "kit": 0,
+          "name": "Iron Regent",
+          "epithet": "the Unbent"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "template": {
+        "kind": 2,
+        "traits": {
+          "faction": 0,
+          "alignment": 0,
+          "element": 0,
+          "frame": 2,
+          "bodyparts": 65536,
+          "strength": 29959,
+          "agility": 24009,
+          "resilience": 28060,
+          "intelligence": 22110
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x6d2636498fc0641ef23aa4a23fa51d6e30e855a98813823d9408d0b2413c6a76",
+          "art": "0xe25f881a9a583a75414a3beb57aecce6b3deabda7d36ed8d1c915ac15bfff68f",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0x033319d0f631c248812dc76008b814b91a95ef3af1c7cce02041ccce145f155c",
+          "avatarPlain": "0x9cbfaf09e96b95ff634cf878d08a54f504a5a5a999ba0e9c0816a57becbb57d2",
+          "soul": "0x6e5ae39fb632857c5bf7eb9ac6e606b6c402546f42483e4f26220018fe009252",
+          "kit": 5,
+          "name": "Ember Oracle",
+          "epithet": "who Reads the Coals"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "template": {
+        "kind": 2,
+        "traits": {
+          "faction": 1,
+          "alignment": 1,
+          "element": 1,
+          "frame": 2,
+          "bodyparts": 16908545,
+          "strength": 30936,
+          "agility": 24986,
+          "resilience": 29037,
+          "intelligence": 23087
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0xf76f2950a7aa1bfb120eabef77f0eb1d811af618141eeafae8d6710caddee3c3",
+          "art": "0x77ec442e4721350f47b64052e1c54fbde016091648b4d6ff64bff93e3a43ba73",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0xe24bb553a0b98a08debbc9c4677911a312d29614ef42ca164e7018239a0d23ac",
+          "avatarPlain": "0x34e6389c7505948e8517df346cd874a6098c89c37f24486f935fb279de01567e",
+          "soul": "0x81aa374bee1644896516cd292a44453ca792542d43b146c086b533d180690b93",
+          "kit": 1,
+          "name": "Glass Seer",
+          "epithet": "of Clear Sight"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "template": {
+        "kind": 3,
+        "traits": {
+          "faction": 0,
+          "alignment": 2,
+          "element": 2,
+          "frame": 3,
+          "bodyparts": 0,
+          "strength": 37913,
+          "agility": 29963,
+          "resilience": 34014,
+          "intelligence": 38065
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x0ddbbe7333e4a080ea3c27507172caf9ef45ae707595f0356b29b6dc671f7d4c",
+          "art": "0xb2a671e4c6493c4378f726e2f988c5d84dcf1901ba40252ce257aa18cc7fad58",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0x6f7983a804235d8ac96085f0731aa2674ff6a114b682243cf0553a7a9360a7ce",
+          "avatarPlain": "0xd94c12eb72a8bced685feeeb7a103d0984ba91973b82d01217b7ad237f434c45",
+          "soul": "0x1c6988329deacc303195d5f541b91377cb2de74dfd7f670bc58c6025702e20ca",
+          "kit": 0,
+          "name": "Stone Colossus",
+          "epithet": "the Unmoved"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "template": {
+        "kind": 3,
+        "traits": {
+          "faction": 1,
+          "alignment": 255,
+          "element": 3,
+          "frame": 3,
+          "bodyparts": 65792,
+          "strength": 38890,
+          "agility": 30940,
+          "resilience": 34991,
+          "intelligence": 39042
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x31ee38b382319b4f341753ba7d2de7f58406820acf9b057d4eb1d3d5362a041b",
+          "art": "0x25845c4903e85043eabc61148e301ef361968aab4e9ee6ccff563ffff9abefe7",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0xaef47946f640c461142a896c987984fc1706192b8852cabd581b0b2938019ab8",
+          "avatarPlain": "0xba4b9ade516d3591d8f5e2ce712f588fc54a5541d1591cb7fe49610ffd3645f7",
+          "soul": "0xf0a946bb42712932cd2a6c5cba255249895ce659702d0ba2f00830df3e751f6c",
+          "kit": 0,
+          "name": "Moss Giant",
+          "epithet": "of the Deep Wood"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "template": {
+        "kind": 4,
+        "traits": {
+          "faction": 0,
+          "alignment": 0,
+          "element": 0,
+          "frame": 0,
+          "bodyparts": 131072,
+          "strength": 47867,
+          "agility": 51918,
+          "resilience": 39968,
+          "intelligence": 44019
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0xe1d12e2e5164fd17a2f594bfa990dbc447c8f50ead85012be7930c08fe72b9cc",
+          "art": "0xa992a24318556c15b6a54a1aa920b23612bb750a37f488abfcac215a4cd7e2f0",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0x7ac660ae65c81d720e2fc2ac7a555e55923e143a6df521daa6e46ae6be814809",
+          "avatarPlain": "0xe94134c210d42f98e5203479ce487ee4e46bf8d3545b1d5cef190f0365457fa5",
+          "soul": "0xdbce75953705b3e81018f215ecabef0c4a69014b4f874afb45d9e8424fe9fd07",
+          "kit": 4,
+          "name": "Storm Sovereign",
+          "epithet": "Lord of Thunder"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "supply": 10,
+      "template": {
+        "kind": 4,
+        "traits": {
+          "faction": 1,
+          "alignment": 1,
+          "element": 1,
+          "frame": 0,
+          "bodyparts": 16777473,
+          "strength": 48844,
+          "agility": 36894,
+          "resilience": 40945,
+          "intelligence": 44996
+        },
+        "styleSource": {
+          "chainId": 0,
+          "collection": "0x0000000000000000000000000000000000000000",
+          "tokenId": 0
+        },
+        "design": {
+          "designHash": "0x6ff19ce93602f4834dff50430a1cb6a7e79b0efcc1bde3d4ff29ccb506cb90ae",
+          "art": "0x045c27fa48cfffd1b2a32d258e69493fc42ba0d2e9b5e453a6365b10b9df1973",
+          "turntable": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "overridesHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "avatar": "0x24e05cc62e9f1fc334117b8852f29e2394cda1498030ab4571a2e08a037bf44e",
+          "avatarPlain": "0xb94de5761f7f095434c7baf9967b3fa5c962e084d2ac83d425056363df008dd0",
+          "soul": "0x78cc78edbc4e0d3c22f3e9ba13c1f3fa49a1ccc665fb02b0054d3f50892e2ac9",
+          "kit": 5,
+          "name": "Dawn Keeper",
+          "epithet": "the First Light"
+        }
+      }
+    }
+  ]
+}

@@ -21,10 +21,11 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "check": "hardhat test && node scripts/check-config.mjs examples/fixed/mint.config.json examples/rapture/mint.config.json",
+    "check-config": "node scripts/check-config.mjs",
+    "check": "hardhat test && node scripts/check-config.mjs examples/fixed/mint.config.json examples/packs/mint.config.json examples/rapture/mint.config.json",
     "node": "node scripts/local-node.js",
-    "deploy": "hardhat run scripts/deploy.js",
     "deploy:local": "hardhat run scripts/deploy.js --network local",
+    "deploy:liteforge": "hardhat run scripts/deploy.js --network liteforge",
     "verify": "node scripts/verify.mjs",
     "keeper": "node scripts/keeper.mjs",
     "site-config": "node scripts/site-config.mjs",
