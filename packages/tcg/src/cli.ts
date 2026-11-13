@@ -6,7 +6,7 @@
 import { PKG_VERSION } from './tools/paths';
 
 const COMMANDS: Record<string, [() => Promise<unknown>, string]> = {
-  create: [() => import('./tools/create'), 'scaffold a new game project            create <dir> [--title "My TCG"]'],
+  create: [() => import('./tools/create'), 'scaffold a new game project            create <dir> [--title "My TCG"] [--template tcg|board]'],
   new: [() => import('./tools/new-game'), 'add a game config from the template     new <id> [--title] [--out games]'],
   snapshot: [() => import('./tools/snapshot'), 'read an NFT collection from chain        snapshot <address> --chain liteforge | --rpc <url>'],
   import: [() => import('./tools/import-collection'), 'turn a collection into a card set        import <cards.json> --id <id>'],

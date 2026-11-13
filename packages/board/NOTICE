@@ -1,0 +1,15 @@
+Rapture SDK: the board-game template, @rapture-sdk/board
+Copyright 2026 LitVM Games
+
+Licensed under the Apache License, Version 2.0 (see the LICENSE at the root of the Rapture SDK).
+
+Built from the reusable parts of Rapture Chess. Rapture characters, names, avatars, arena models and artwork are
+(c) LitVM Games, all rights reserved, and are not part of this template: its pieces are procedural and its arena neutral.
+
+Vendored code, copied byte for byte and pinned by sha256 in each folder's MANIFEST.json:
+- vendor/litnode/: LitNode (https://github.com/strodanodev/litnode), Apache-2.0. The title bundler, the conformance
+  suite, the title sandbox and the protocol modules they and the relay test use.
+- src/vendor/tcg/: the Rapture SDK TCG kit (packages/tcg), Apache-2.0. The wallet and holdings layer (web/lib) and the
+  arcade-shell client (src/client/shell.ts).
+
+The sample game uses chess.js (BSD-2-Clause), bundled into the built ruleset and the site.

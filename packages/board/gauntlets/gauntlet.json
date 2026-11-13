@@ -1,0 +1,24 @@
+{
+  "$comment": "LitNode gauntlet config for this board game (node/gauntlet.js). For every match of the title a node hosts with this file, it spawns relay/server.mts for that match alone: the node mints the seat tickets, proxies wss://<wsAddr>/<room> to the process, and the process posts the ledger to the node's /ledger and exits. Copy this file, set cwd to your checkout of the game (pnpm install done at its root), then in the node's environment: GAUNTLETS=<your rulesetId>=<absolute path to your copy>, RULESETS=<checkout>/rulesets/<your rulesetId>.js, and RELAY_KEYS=<the public key scripts/relay-key.mjs prints> so a match the loser never signs still settles. BOARD_TC is the time control (<minutes>+<increment seconds>, or none); the rest are milliseconds. The GAUNTLET_* variables are set by the node per match.",
+  "command": "${node}",
+  "args": [
+    "node_modules/tsx/dist/cli.mjs",
+    "relay/server.mts"
+  ],
+  "cwd": "/absolute/path/to/your/game",
+  "env": {
+    "BOARD_TC": "5+3",
+    "BOARD_FIRST_MOVE_MS": "30000",
+    "BOARD_TURN_MS": "60000",
+    "BOARD_DISCONNECT_MS": "60000",
+    "BOARD_SIGN_MS": "20000"
+  },
+  "portRange": [
+    7880,
+    7899
+  ],
+  "readyMs": 30000,
+  "ttlMs": 1800000,
+  "ticketTtlMs": 900000,
+  "settledGraceMs": 5000
+}
