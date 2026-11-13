@@ -13,14 +13,6 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: { evmVersion: "shanghai", optimizer: { enabled: true, runs: 200 }, viaIR: true },
-    // The renderer is a read path (tokenURI is a view; agentConfig runs once per mint): optimise it for size, so it
-    // stays under the 24 KB contract limit.
-    overrides: {
-      "contracts/ChampionMetadata.sol": {
-        version: "0.8.28",
-        settings: { evmVersion: "shanghai", optimizer: { enabled: true, runs: 1 }, viaIR: true },
-      },
-    },
   },
   networks: {
     // `pnpm node` runs this chain on port 8547 as chain 31338, so it never collides with another local chain.

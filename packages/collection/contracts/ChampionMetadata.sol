@@ -7,6 +7,7 @@ import {IERC6699} from "./vendor/rapture/interfaces/IERC6699.sol";
 import {Origin, Design} from "./vendor/rapture/interfaces/Rapture.sol";
 import {IChampionMetadata} from "./interfaces/IChampionMetadata.sol";
 import {IChampionView, Champion} from "./interfaces/IChampion.sol";
+import {ChampionJson} from "./ChampionJson.sol";
 
 /// @title ChampionMetadata: each champion's character.json, built on chain. No metadata server, no pinning service.
 ///
@@ -25,7 +26,6 @@ import {IChampionView, Champion} from "./interfaces/IChampion.sol";
 contract ChampionMetadata is IChampionMetadata {
     using Strings for uint256;
 
-    string public constant SCHEMA = "rapture-sdk/champion/1";
     uint8 internal constant SEALED = 255;
 
     /// A trait's attribute label ("" hides it) and the names of its values (value i -> values[i]; a value without a
@@ -43,6 +43,8 @@ contract ChampionMetadata is IChampionMetadata {
     uint8 public constant FRAME = 4;
     uint8 public constant KIT = 5;
 
+    /// The stateless JSON pieces (split out to keep this contract under the size limit).
+    ChampionJson public immutable json;
     IChampionView public collection;
     address public admin;
     string public imageBase;   // e.g. ipfs://<CID>/
@@ -75,8 +77,10 @@ contract ChampionMetadata is IChampionMetadata {
     error Locked();
     error BadText();
 
-    constructor(address admin_, string memory imageBase_, string memory artExt_) {
+    constructor(address admin_, ChampionJson json_, string memory imageBase_, string memory artExt_) {
         if (admin_ == address(0)) revert ZeroAddress();
+        if (address(json_).code.length == 0) revert NoCode();
+        json = json_;
         admin = admin_;
         _setImageBase(imageBase_, artExt_);
     }
@@ -198,11 +202,11 @@ contract ChampionMetadata is IChampionMetadata {
         string memory bio = _bio(d.epithet);
         return string.concat(
             '{"name":"', d.name, '","bio":"', bio, '","description":"', bio, '",',
-            withLocations ? _locations(d) : "",
-            _style(s), ',"boundaries":{"equipmentSlots":', _list(_equipmentSlots), '},',
-            _avatarJson(d),
-            _attributes(c, s, d, collection.originOf(tokenId)), ',',
-            _block(c, tokenId, d), '}'
+            withLocations ? json.locations(imageBase, artExt, d) : "",
+            json.style(s), ',"boundaries":{"equipmentSlots":', _list(_equipmentSlots), "},",
+            json.avatar(d, _list(_avatarRequires)),
+            _attributes(c, s, d, collection.originOf(tokenId)), ",",
+            json.collectionBlock(collection.name(), collection.setId(), tokenId, c, d), "}"
         );
     }
 
@@ -212,42 +216,6 @@ contract ChampionMetadata is IChampionMetadata {
         if (bytes(epithet).length == 0) return tagline;
         if (bytes(tagline).length == 0) return epithet;
         return string.concat(epithet, ". ", tagline);
-    }
-
-    function _locations(Design memory d) internal view returns (string memory) {
-        string memory anim = d.avatar == bytes32(0) ? "" : string.concat('"animation_url":"', imageBase, _hex(d.avatar), '.glb",');
-        return string.concat(
-            '"image":"', imageBase, _hex(d.art), '.', artExt, '",', anim,
-            '"external_url":"', imageBase, _hex(d.designHash), '.json",'
-        );
-    }
-
-    function _style(IERC6699.CoreStats memory s) internal pure returns (string memory) {
-        uint256 total = uint256(s.strength) + s.agility + s.resilience + s.intelligence;
-        if (total == 0) total = 1;
-        return string.concat(
-            '"style":{"combatWeights":{"aggression":', _milli(uint256(s.strength) * 1000 / total),
-            ',"tempo":', _milli(uint256(s.agility) * 1000 / total),
-            ',"defense":', _milli(uint256(s.resilience) * 1000 / total),
-            ',"economy":', _milli(uint256(s.intelligence) * 1000 / total),
-            '},"frameReactions":{"retreatBelowHealth":0.25,"engageAbove":0.6}}'
-        );
-    }
-
-    /// The avatar GLB (by hash: its location is animation_url) and the SOUL.MD, when the design has them.
-    function _avatarJson(Design memory d) internal view returns (string memory out) {
-        if (d.avatar != bytes32(0)) {
-            string memory plain = d.avatarPlain == bytes32(0) ? "" : string.concat(
-                ',"plain":{"file":"', _hex(d.avatarPlain), '.glb","sha256":"', uint256(d.avatarPlain).toHexString(32), '"}'
-            );
-            out = string.concat(
-                '"avatar":{"schema":"erc6699-avatar/1","format":"model/gltf-binary","file":"', _hex(d.avatar),
-                '.glb","sha256":"', uint256(d.avatar).toHexString(32), '","requires":', _list(_avatarRequires), plain, '},'
-            );
-        }
-        if (d.soul != bytes32(0)) {
-            out = string.concat(out, '"soul":{"format":"text/markdown","file":"', _hex(d.soul), '.md","keccak256":"', uint256(d.soul).toHexString(32), '"},');
-        }
     }
 
     function _attributes(Champion memory c, IERC6699.CoreStats memory s, Design memory d, Origin memory o) internal view returns (string memory) {
@@ -271,27 +239,6 @@ contract ChampionMetadata is IChampionMetadata {
         return string.concat('"attributes":[', a, "]");
     }
 
-    function _block(Champion memory c, uint256 tokenId, Design memory d) internal view returns (string memory) {
-        string memory head = string.concat(
-            '"collection":{"schema":"', SCHEMA, '","name":"', collection.name(),
-            '","setId":', uint256(collection.setId()).toString(),
-            ',"tokenId":"', tokenId.toString(), '","index":', uint256(c.index).toString(),
-            ',"kind":', uint256(c.kind).toString(), ',"faction":', uint256(c.faction).toString(),
-            ',"alignment":', uint256(c.alignment).toString(), ',"element":', uint256(c.element).toString(),
-            ',"frame":', uint256(c.frame).toString()
-        );
-        string memory parts = string.concat(
-            ',"parts":[', uint256(c.bodyparts & 0xff).toString(), ',', uint256((c.bodyparts >> 8) & 0xff).toString(),
-            ',', uint256((c.bodyparts >> 16) & 0xff).toString(), ',', uint256((c.bodyparts >> 24) & 0xff).toString(),
-            '],"kit":', uint256(d.kit).toString()
-        );
-        return string.concat(
-            head, parts,
-            ',"design":{"hash":"', uint256(d.designHash).toHexString(32), '","file":"', _hex(d.designHash),
-            '.json","art":"', uint256(d.art).toHexString(32), '","overrides":"', uint256(d.overridesHash).toHexString(32), '"}}'
-        );
-    }
-
     function _attr(string memory acc, string memory label, string memory value) internal pure returns (string memory) {
         if (bytes(label).length == 0) return acc;
         string memory piece = string.concat('{"trait_type":"', label, '","value":"', value, '"}');
@@ -313,25 +260,6 @@ contract ChampionMetadata is IChampionMetadata {
         out = "[";
         for (uint256 i = 0; i < xs.length; i++) out = string.concat(out, i == 0 ? '"' : ',"', xs[i], '"');
         out = string.concat(out, "]");
-    }
-
-    function _hex(bytes32 v) internal pure returns (string memory) {
-        bytes memory out = new bytes(64);
-        bytes16 digits = "0123456789abcdef";
-        for (uint256 i = 0; i < 32; i++) {
-            uint8 b = uint8(v[i]);
-            out[2 * i] = digits[b >> 4];
-            out[2 * i + 1] = digits[b & 0x0f];
-        }
-        return string(out);
-    }
-
-    function _milli(uint256 m) internal pure returns (string memory) {
-        if (m >= 1000) return "1.000";
-        string memory frac = m.toString();
-        if (m < 10) frac = string.concat("00", frac);
-        else if (m < 100) frac = string.concat("0", frac);
-        return string.concat("0.", frac);
     }
 
     // ------------------------------------------------------------------ setters' checks
