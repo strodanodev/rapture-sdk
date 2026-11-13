@@ -6,9 +6,8 @@ import { cspFor } from "../web/lib/config.js";
 export function vercelConfig(site) {
   return {
     $schema: "https://openapi.vercel.sh/vercel.json",
-    framework: null,
-    buildCommand: null,
-    installCommand: null,
+    framework: null,          // "Other", as forge.litvm.games: no build script, Vercel serves web/ as it is
+    installCommand: "",       // skip the install: the only dependency is the tests' ethers (Vercel docs: "An empty string value will cause the Install Command to be skipped")
     outputDirectory: "web",
     headers: [
       {
