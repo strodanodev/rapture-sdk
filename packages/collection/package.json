@@ -42,11 +42,11 @@
     "typecheck": "tsc -p tsconfig.json",
     "pycheck": "node scripts/pycheck.mjs",
     "check": "pnpm run compile && pnpm run typecheck && pnpm run test && pnpm run pycheck",
-    "node": "hardhat node --port 8547",
-    "local-registry": "hardhat run scripts/local-registry.js --network local",
-    "deploy": "hardhat run scripts/deploy.js",
-    "mint": "hardhat run scripts/mint.js",
-    "verify": "node scripts/verify.mjs",
+    "chain": "hardhat node --port 8549",
+    "local-registry": "hardhat run scripts/local-registry.js",
+    "deploy-collection": "hardhat run scripts/deploy.js",
+    "mint-cards": "hardhat run scripts/mint.js",
+    "verify-collection": "node scripts/verify.mjs",
     "build-metadata": "node src/cli.js build"
   },
   "devDependencies": {

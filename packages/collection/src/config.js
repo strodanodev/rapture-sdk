@@ -30,7 +30,7 @@ export const DEFAULT_SLOTS = ['head', 'body', 'mainhand', 'offhand', 'trinket'];
  * }} TokenSource
  * @typedef {{
  *   file: string, dir: string, name: string, symbol: string, setId: number, maxSupply: number,
- *   registry: Record<string, string>, identity: string | null, admin: string | null, json: string | null,
+ *   registry: Record<string, string>, identity: string | null, admin: string | null, json: string | null, minters: string[],
  *   images: { base: string, ext: string }, info: { description: string, image: string, externalLink: string },
  *   rules: Rules, bands: { min: number[], max: number[] }, vocab: Vocabulary, tokens: TokenSource[]
  * }} CollectionConfig
@@ -161,6 +161,12 @@ export function normalizeConfig(raw, path) {
     externalLink: checkJsonText('info.externalLink', raw.info?.externalLink ?? '', 0, 512),
   };
 
+  const minters = /** @type {unknown[]} */ (raw.minters ?? ['deployer']);
+  if (!Array.isArray(minters)) throw new Error('minters: expected a list of addresses (or "deployer")');
+  for (const m of minters) {
+    if (m !== 'deployer' && (typeof m !== 'string' || !ADDRESS.test(m))) throw new Error(`minters: not an address: ${m}`);
+  }
+
   let tokens = raw.tokens ?? [];
   if (typeof tokens === 'string') tokens = readJson(resolve(dir, tokens));
   if (!Array.isArray(tokens)) throw new Error('tokens: expected a list, or the path of a JSON file holding one');
@@ -170,6 +176,7 @@ export function normalizeConfig(raw, path) {
     identity: optAddr(raw.identity, 'identity'),
     admin: optAddr(raw.admin, 'admin'),
     json: optAddr(raw.json, 'json'),
+    minters: /** @type {string[]} */ (minters),
     images, info, rules, bands: { min, max }, vocab, tokens,
   };
 }

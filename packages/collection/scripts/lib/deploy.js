@@ -23,7 +23,7 @@ export function collectionArgs(cfg, at) {
 /**
  * @param {any} ethers  hre.ethers
  * @param {CollectionConfig} cfg
- * @param {{ registry: string, admin?: string, json?: string | null, log?: (m: string) => void }} opts
+ * @param {{ registry: string, admin?: string, json?: string | null, minters?: string[], log?: (m: string) => void }} opts
  */
 export async function deployCollection(ethers, cfg, opts) {
   const log = opts.log ?? (() => {});
@@ -69,6 +69,14 @@ export async function deployCollection(ethers, cfg, opts) {
   if (info.description || info.image || info.externalLink) await wait(metadata.setCollectionInfo(info.description, info.image, info.externalLink));
   if (admin.toLowerCase() !== signer.address.toLowerCase()) await wait(metadata.transferAdmin(admin));
   log('metadata bound and vocabulary written');
+  // MINTER roles ("deployer" = this signer); only the collection admin can grant them
+  const minters = (opts.minters ?? cfg.minters).map((m) => (m === 'deployer' ? signer.address : m));
+  if (admin.toLowerCase() === signer.address.toLowerCase()) {
+    for (const m of minters) await wait(collection.setMinter(m, true));
+    if (minters.length) log(`minters: ${minters.join(', ')}`);
+  } else if (minters.length) {
+    log(`the admin ${admin} grants minters with collection.setMinter(<address>, true): ${minters.join(', ')}`);
+  }
   return { json, metadata, collection, record, admin };
 }
 

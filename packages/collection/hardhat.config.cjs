@@ -15,9 +15,9 @@ module.exports = {
     settings: { evmVersion: "shanghai", optimizer: { enabled: true, runs: 200 }, viaIR: true },
   },
   networks: {
-    // `pnpm node` runs this chain on port 8547 as chain 31338, so it never collides with another local chain.
+    // `pnpm chain` runs the local chain on port 8549 (PackShop's dev chain uses 8547) as chain 31338.
     hardhat: { chainId: 31338 },
-    local: { url: "http://127.0.0.1:8547", chainId: 31338 },
+    local: { url: process.env.LOCAL_RPC_URL || "http://127.0.0.1:8549", chainId: 31338 },
     liteforge: {
       url: LITEFORGE_RPC,
       chainId: 4441,
