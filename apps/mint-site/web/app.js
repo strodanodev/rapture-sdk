@@ -56,7 +56,7 @@ export function cardFace(site, templateId, { finish = null, caption = null } = {
 function header(site, page, wallet, say) {
   const nav = [["index", "Home", "index.html"]];
   if (site.mint.mode === "fixed") nav.push(["mint", "Mint", "mint.html"]);
-  else nav.push(["packs", "Packs", "packs.html"]);
+  else nav.push(["packs", "Packs", "packs/index.html"]);
   nav.push(["library", "My cards", "library.html"]);
   const button = el("button", { class: "wallet-button", type: "button" });
   const menu = el("div", { class: "wallet-menu", hidden: true },

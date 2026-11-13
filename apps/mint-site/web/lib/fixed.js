@@ -1,9 +1,9 @@
 // Mint site — FixedPriceMinter client: read the price, the catalogue's editions and the buyer's limit, and mint cards.
-// Same conventions as packshop.js, whose transaction path it shares (estimate + 25%, explicit fee caps, receipt wait,
+// Same conventions as the other shop clients, whose transaction path it shares (lib/shop.js) (estimate + 25%, explicit fee caps, receipt wait,
 // revert decoding): money is bigint wei, token ids are decimal strings, every failure is a ShopError/WalletError
 // whose .message is fit to show a buyer and whose .code / .reason a UI can branch on.
 import { FIXED_SELECTORS, encodeCall, toBigInt, isAddress, uintAt, uintBoundAt, boolAt, decodeEditions, decodeMinted, decodeUintArray } from "./abi.js";
-import { rpcFor, formatZkltc, ShopError, transact, asShopError, revertError, exclusive, needWallet, findEvent, readWords, readRaw, decoding } from "./packshop.js";
+import { rpcFor, formatZkltc, ShopError, transact, asShopError, revertError, exclusive, needWallet, findEvent, readWords, readRaw, decoding } from "./shop.js";
 import { LITEFORGE } from "./wallet.js";
 
 /** Cards one transaction may mint (FixedPriceMinter.MAX_PER_TX). */
@@ -23,7 +23,7 @@ const MESSAGES = {
   EnforcedPause: "Minting is paused right now. Try again soon.",
   NotMinter: "The minter cannot mint cards right now: its minting permission is missing. Nothing was charged. Please tell the team.",
 };
-/** A decoded revert (packshop.js revertError: it carries .selector) in this module's wording for the fixed-price
+/** A decoded revert (shop.js revertError: it carries .selector) in this module's wording for the fixed-price
  *  reasons. Errors this module wrote itself keep their more precise message. */
 function reword(e) {
   if (e instanceof ShopError && "selector" in e && e.reason && MESSAGES[e.reason]) e.message = MESSAGES[e.reason];
@@ -32,7 +32,7 @@ function reword(e) {
 
 /**
  * The minter config this module works on, from a validated site config: { chainId, chainName, rpc, explorer, faucet,
- * currency, packShop (the minter's address: the name packshop.js uses for "the shop contract") }.
+ * currency, shop (the minter's address) }.
  */
 export function fixedConfig(site) {
   const m = site?.mint;
@@ -40,7 +40,7 @@ export function fixedConfig(site) {
     throw new ShopError("not_configured", "This site does not sell at a fixed price (site.config.json mint.mode is not \"fixed\").");
   }
   const c = site.chain ?? {};
-  return { chainId: c.id, chainName: c.name ?? `chain ${c.id}`, rpc: c.rpc, explorer: c.explorer ?? null, faucet: c.faucet ?? null, currency: c.currency ?? LITEFORGE.nativeCurrency, packShop: m.address };
+  return { chainId: c.id, chainName: c.name ?? `chain ${c.id}`, rpc: c.rpc, explorer: c.explorer ?? null, faucet: c.faucet ?? null, currency: c.currency ?? LITEFORGE.nativeCurrency, shop: m.address };
 }
 
 /**
@@ -144,7 +144,7 @@ export async function mint(wallet, cfg, templateId, quantity = 1, opts = {}) {
       const cost = s.price * BigInt(q);
       await requireFunds(wallet, cfg, q, cost);
       const data = encodeCall(FIXED_SELECTORS.mint, ["uint256", "uint256"], [id, q]);
-      const { txHash, receipt } = await transact(wallet, cfg, { to: cfg.packShop, data, value: cost }, opts);
+      const { txHash, receipt } = await transact(wallet, cfg, { to: cfg.shop, data, value: cost }, opts);
       const me = String(wallet.address).toLowerCase();
       const ev = findEvent(receipt, cfg, "Minted", decodeMinted, (e) => e.to === me && e.templateId === id, txHash);
       return { tokenIds: ev.tokenIds.map(String), templateId: id, txHash };

@@ -9,7 +9,7 @@ import { vercelConfig } from "./vercel.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const site = JSON.parse(fs.readFileSync(path.join(ROOT, "web", "site.config.json"), "utf8"));
-const { problems } = validateSiteConfig(site);
+const { problems } = validateSiteConfig(site, { packs: fs.existsSync(path.join(ROOT, "web", "packs", "lib", "packshop.js")) });
 if (problems.length) {
   console.error(`web/site.config.json:\n  ${problems.join("\n  ")}`);
   process.exit(1);

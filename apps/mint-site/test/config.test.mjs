@@ -1,8 +1,8 @@
 // lib/config.js: the one config file (validation, CSP, wallet chain, art paths) and the committed template's state.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { validateSiteConfig, cspFor, walletChain, cardArt, loadSiteConfig, DRAND_HOSTS } from "../web/lib/config.js";
+import { readFileSync, existsSync } from "node:fs";
+import { validateSiteConfig, cspFor, walletChain, cardArt, loadSiteConfig, DRAND_HOSTS, PACKS_MISSING } from "../web/lib/config.js";
 import { vercelConfig } from "../scripts/vercel.mjs";
 
 const TEMPLATE = JSON.parse(readFileSync(new URL("../web/site.config.json", import.meta.url), "utf8"));
@@ -48,6 +48,19 @@ test("validation names every problem instead of guessing", () => {
   const traversal = clone();
   traversal.branding.logo = "../secrets.svg";
   assert.ok(validateSiteConfig(traversal).problems.some((p) => /branding.logo/.test(p)));
+});
+
+test("mint.mode \"packs\" needs the pack module: without web/packs/ it is refused with a clear reason", async () => {
+  const packs = clone();
+  packs.mint.mode = "packs";
+  assert.deepEqual(validateSiteConfig(packs).problems, [], "with the pack module it is a valid config");
+  const { problems } = validateSiteConfig(packs, { packs: false });
+  assert.deepEqual(problems, [PACKS_MISSING]);
+  assert.match(PACKS_MISSING, /PackShop v2 isn't published in this kit yet/);
+  const hasModule = existsSync(new URL("../web/packs/lib/packshop.js", import.meta.url));
+  const serve = async () => new Response(JSON.stringify({ ...packs, mint: { ...packs.mint, address: ADDR } }), { status: 200 });
+  if (hasModule) assert.equal((await loadSiteConfig("x", { fetch: serve })).mint.mode, "packs");
+  else await assert.rejects(loadSiteConfig("x", { fetch: serve }), /isn't published in this kit yet/);
 });
 
 test("cspFor: same-origin everything plus exactly the RPC, the drand mirrors (packs only) and the IPFS gateway", () => {

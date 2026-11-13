@@ -15,7 +15,8 @@ const arg = process.argv.indexOf("--config");
 const file = arg > 0 ? path.resolve(process.argv[arg + 1]) : path.join(WEB, "site.config.json");
 const problems = [];
 const site = JSON.parse(fs.readFileSync(file, "utf8"));
-const v = validateSiteConfig(site);
+// the pack module (web/packs/): Rapture's private build has it, the public kit does not yet
+const v = validateSiteConfig(site, { packs: fs.existsSync(path.join(WEB, "packs", "lib", "packshop.js")) });
 problems.push(...v.problems);
 for (const w of v.warnings) console.log(`warning: ${w}`);
 
