@@ -1,0 +1,47 @@
+{
+  "source": "https://api.drand.sh/v2/beacons/evmnet",
+  "fetchedAt": "2026-10-18T23:34:58.704Z",
+  "info": {
+    "public_key": "07e1d1d335df83fa98462005690372c643340060d205306a9aa8106b6bd0b3820557ec32c2ad488e4d4f6008f89a346f18492092ccc0d594610de2732c8b808f0095685ae3a85ba243747b1b2f426049010f6b73a0cf1d389351d5aaaa1047f6297d3a4f9749b33eb2d904c9d9ebf17224150ddd7abd7567a9bec6c74480ee0b",
+    "period": 3,
+    "genesis_time": 1727521075,
+    "genesis_seed": "cd7ad2f0e0cce5d8c288f2dd016ffe7bc8dc88dbb229b3da2b6ad736490dfed6",
+    "chain_hash": "04f1e9062b8a81f848fded9c12306733282b2727ecced50032187751166ec8c3",
+    "scheme": "bls-bn254-unchained-on-g1",
+    "beacon_id": "evmnet"
+  },
+  "rounds": [
+    {
+      "round": 21614141,
+      "signature": "0x047ad559b49871f175d644e100fc831a739e55b0054fe2accd47cdd6c172607707a68be5b400b4f87b6c219ac6003da741b185c2180a2914b7d08d4b4755a0cd"
+    },
+    {
+      "round": 21614142,
+      "signature": "0x2c326cacc0b6426e028fd3478d067aa8680956450f417fe512f0549e0be106e8049adb00b28666d69880121846cf07e8c68ee0f752001d08e51918e16ac46e64"
+    },
+    {
+      "round": 21614143,
+      "signature": "0x0ad805e9b1ad77c96572d9f1f6f001463fb6339001c5206efeec854a55138f48207deff454b29160a111a0bc1bb9fe9fe03f89f9ad2edd96d1a7cbf9df6ca10a"
+    },
+    {
+      "round": 21614144,
+      "signature": "0x2c8711681615c0acb7ef0d4463519f3bd24aba0cf20892b739d494acddfbd6050de75d9a40de55264415916fc3e63c35a874001a30d2c5405aaadb23d4952a01"
+    },
+    {
+      "round": 21614145,
+      "signature": "0x1627782354e97ca9af516fbdac7d3dd4f309d1459397d85ace2c570711d50bd600983bea9fa10bb63c85c0ebd76c58c13bf7f5e23765b30ff9fda3b0f116c44c"
+    },
+    {
+      "round": 21614146,
+      "signature": "0x2b1b66e1830b492a3902452ffb8b02fe69ac839b17b7cfb88f4e7fc56c8d64c52ca6d2e858a32d6e5efc08548b5a063b274ff8fd5e8301e743f64272f198d3b3"
+    },
+    {
+      "round": 21614147,
+      "signature": "0x20627d78f7b2b42a560605eb9971ecb7d9c02f6f7f2f5f1f02a727678064a29a1cf5a6ce17f6533c7b7b7b5a5a34a2a7ee28547b4244d9ff62d4e7b91000e92a"
+    },
+    {
+      "round": 21614148,
+      "signature": "0x222519889f1bbcb10d01559886fe2b9b59bea8f382a5464348bff04f37712b0c0403a4554ae652477e6821ff51a53979c6829bf63231f0e6594b571d01aab603"
+    }
+  ]
+}

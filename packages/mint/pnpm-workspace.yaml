@@ -1,0 +1,6 @@
+# pnpm 11+ reads project settings here, not package.json#pnpm.
+# Don't nested-install on every `pnpm <script>`; `pnpm install` is run explicitly.
+verifyDepsBeforeRun: false
+# keccak's install script only builds an optional native addon; its pure-JS fallback is used without it.
+allowBuilds:
+  keccak: false
