@@ -50,8 +50,10 @@ git clone https://github.com/strodanodev/litnode ../litnode
 cd ../litnode && npm install && cd -
 ```
 
-Put the LitNode checkout somewhere permanent: where it sits can change your buildHash (see "Why a buildHash
-changes when the rules don't" below).
+You need the checkout to register the title and run a node. The board template bundles without it. If you build a
+title against the checkout (`rapture title --litnode`, or the board template's `--litnode`), put it somewhere
+permanent, because where it sits can change your buildHash (see "Why a buildHash changes when the rules don't"
+below).
 
 **The RPC.** Liteforge's working endpoint is `https://rpc.testnet.liteforge.zeeve.net/`. The old Caldera endpoint is
 dead (HTTP 404). LitNode 0.12.1 still ships Caldera as `rpc` in `contracts/deployed.testnet.json`:
@@ -97,14 +99,23 @@ Projects still installed from the frozen Tessaract repo call the same command `t
 ### The board game (`@rapture-sdk/board`)
 
 ```bash
-pnpm title                       # LITNODE_DIR=../LITNODE/litnode by default
+rapture create my-board-game --template board    # once: scaffold from the template (chess is the sample)
+cd my-board-game
+pnpm title                                       # scripts/build-title.mjs [--out rulesets] [--litnode <dir>]
 ```
 
-This is Rapture Chess's two-pass builder (`scripts/build-title.mjs`):
+The `rulesetId` lives in `board.config.ts`. The sample's is `board-chess.v1`. `pnpm title` builds in two passes
+(`scripts/build-title.mjs`):
 
-1. esbuild inlines your ruleset module and its dependencies into one import-free file, `titles/<rulesetId>.mjs`.
-2. LitNode's own `tools/bundle-title.mjs` takes that file. It runs from inside the LitNode checkout, runs the
-   conformance suite on the result, and writes `rulesets/<rulesetId>.js` and `.json`.
+1. esbuild inlines `src/litnode/title.entry.ts` (your rules, the board config and, for the sample, chess.js) into
+   one import-free file, `titles/<rulesetId>.mjs`. `titles/` is git-ignored.
+2. LitNode's own `tools/bundle-title.mjs` takes that file, runs the conformance suite in LitNode's sandbox, and
+   writes `rulesets/<rulesetId>.js` and `.json`.
+
+Step 2 needs **no LitNode checkout**. It runs LitNode 0.12.1's bundler, conformance suite and sandbox, vendored in
+`vendor/litnode` and pinned by sha256 in `vendor/litnode/MANIFEST.json`. `--litnode <dir>` (or `LITNODE_DIR`) runs
+a checkout's copy instead, for a newer LitNode, but that changes the bytes (see below). The template's
+`.gitattributes` already keeps `rulesets/*.js` and `*.json` as `-text`. Commit `rulesets/` once you register.
 
 ### Any title, by hand
 
@@ -143,14 +154,17 @@ the same thing:
 - Rapture TCG's `rapture-duel.v4.js` carries the pnpm store path of its SDK install
   (`node_modules/.pnpm/tessaract@https+++codeload._d9d1…/…`). Moving the game from the frozen Tessaract install to
   `@rapture-sdk/tcg` changes the hash even if no rule moves.
-- Rapture Chess's second pass runs inside the LitNode checkout, so `rapture-chess.v2.js` opens with
+- Rapture Chess's second pass runs inside a LitNode checkout, so `rapture-chess.v2.js` opens with
   `// ../../CHESS/titles/rapture-chess.v2.mjs`: the game's path as seen from LitNode. Moving either checkout moves
   the hash.
+- The board template fixes this for its own builds. Its second pass runs inside the vendored `vendor/litnode`, so
+  the artifact always opens with `// ../../titles/<rulesetId>.mjs`, and the same source gives the same buildHash on
+  any machine. With `--litnode <dir>` the path is the outside checkout's again, and so is the hash.
 
 The rules that follow:
 
 1. **Rebuild a title from the same install path**: the same project folder, the same working folder, the same
-   LitNode folder (for the board builder) and the same SDK install source. Better still, don't rebuild a registered
+   LitNode folder (when you build against a checkout) and the same SDK install source. Better still, don't rebuild a registered
    build at all. Commit the artifact and serve the committed bytes, as Rapture Chess keeps `rapture-chess.v1.js`
    pinned while v2 is current.
 2. **Any rules change gets a new `rulesetId`** (`my-game.v1` → `my-game.v2`). LitNode would accept a rules change
@@ -214,7 +228,7 @@ cd ../litnode
 npm run host -- init --operator my-studio-node \
   --rpc https://rpc.testnet.liteforge.zeeve.net/ \
   --rulesets "C:/games/my-game/rulesets/my-game.v1.js" \
-  --gauntlets "my-game.v1=C:/games/my-game/gauntlet.json" \
+  --gauntlets "my-game.v1=C:/node-config/my-game.gauntlet.json" \
   --gauntlet-gateway-port 8478 \
   --relay-keys <relay public key> \
   --tunnel quick
@@ -231,20 +245,28 @@ variables, so set them there when you use it):
 ```ini
 RPC=https://rpc.testnet.liteforge.zeeve.net/
 RULESETS=C:/games/my-game/rulesets/my-game.v1.js
-GAUNTLETS=my-game.v1=C:/games/my-game/gauntlet.json
+GAUNTLETS=my-game.v1=C:/node-config/my-game.gauntlet.json
 GAUNTLET_GATEWAY_PORT=8478
 RELAY_KEYS=<relay public key>
 ```
 
 - **`RULESETS`**: comma-separated paths to the artifacts. Old builds a node already holds are kept automatically.
 - **`GAUNTLETS=<rulesetId>=<config.json>`**: the match server the node spawns for each match it hosts. Copy
-  the template's config: `templates/gauntlet.json` for the card game (set `cwd` and `TCG_GAME`), or
-  `gauntlets/rapture-chess.json` for the board game. `cwd` is your game checkout with `pnpm install` done. The
-  node spawns `command` and `args` there on a free port from `portRange` and kills it `settledGraceMs` after the
-  match settles, or at `ttlMs`.
+  the template's config and set `cwd` to your game checkout with `pnpm install` done. The node spawns `command`
+  and `args` there on a free port from `portRange` and kills it `settledGraceMs` after the match settles, or at
+  `ttlMs`.
+  - **Card game:** `templates/gauntlet.json`. Also set `TCG_GAME` to your game file.
+  - **Board game:** `gauntlets/gauntlet.json`. It runs `relay/server.mts`, with `BOARD_TC` (the time control:
+    `5+3`, meaning minutes + increment seconds, or `none`) and `BOARD_FIRST_MOVE_MS`, `BOARD_TURN_MS`,
+    `BOARD_DISCONNECT_MS` and `BOARD_SIGN_MS`.
+- **`RELAY_KEYS`** (board game): `pnpm relay-key` creates `.relay-key.json` (git-ignored, keep it private) and
+  prints this line. The relay reads the key from `.relay-key.json` in its `cwd`, or from `BOARD_RELAY_KEY` /
+  `BOARD_RELAY_KEY_FILE`. Since a match server doesn't inherit the operator's environment (next point), set either
+  variable in the gauntlet config, not in the shell.
 - **Environment for the match server.** Since LitNode 0.12.0, a match server inherits only the OS basics (`PATH`,
   `TEMP`, `HOME` and the like), never the operator's environment. Any other variable it reads (`TCG_RPC`,
-  `TCG_STATS_CONTRACT`, …) goes in the config's `env`, or by name in `inheritEnv`. The node adds the match itself:
+  `TCG_STATS_CONTRACT`, `BOARD_RELAY_KEY`, …) goes in the config's `env`, or by name in `inheritEnv`. The node adds
+  the match itself:
   `GAUNTLET_MATCH_ID`, `GAUNTLET_ROOM`, `GAUNTLET_PORT`, `GAUNTLET_SECRET`, `GAUNTLET_SEATS`,
   `GAUNTLET_PUBLIC_URL`, `GAUNTLET_NODE_URL`, `GAUNTLET_MODE`, `GAUNTLET_PLACED_MODE`, `GAUNTLET_SEED`,
   `GAUNTLET_BUILD` and `GAUNTLET_RULESET`.
