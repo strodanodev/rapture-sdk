@@ -1,4 +1,4 @@
-// Helpers shared by the plain-node scripts (keeper, verify, site-config, export-templates, check-config): ethers, the
+// Helpers shared by the plain-node scripts (verify, site-config, export-templates, check-config): ethers, the
 // known networks, the mint config and command-line flags. No Hardhat runtime.
 import { createRequire } from "node:module";
 

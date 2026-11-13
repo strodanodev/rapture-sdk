@@ -52,8 +52,8 @@ export function fromQuantity(hex) {
 }
 
 // ------------------------------------------------------------------ encoding
-// Static words (uint<N>, address, bool) plus the three dynamic shapes PackShopV2 takes: uint<N>[] (pack rounds, token
-// ids), bytes and bytes[] (drand signatures). A dynamic argument is an offset in the head and its data in the tail.
+// Static words (uint<N>, address, bool) plus the dynamic shapes a shop takes: uint<N>[] (token ids, rounds), bytes and
+// bytes[] (signatures). A dynamic argument is an offset in the head and its data in the tail.
 export function encodeUint(v, bits = 256) {
   const n = toBigInt(v);
   if (n < 0n || n >= 1n << BigInt(bits)) throw new AbiError(`${String(v)} does not fit in uint${bits}`);

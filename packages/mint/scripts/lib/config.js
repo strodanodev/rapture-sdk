@@ -42,7 +42,8 @@ function readTemplates(file) {
 }
 
 /**
- * The rules the reference collection enforces at mint time (PackShopV2._validate without the chain's stat bands).
+ * The rules the reference collection enforces at mint time (StudioMinter._check and CardDesign's charset), without
+ * the chain's stat bands unless given.
  * bands: optional [[min, max] x 5] read from the minter (bandOf). Returns a list of problems ([] = fine).
  */
 function templateProblems(t, i, bands = null) {
