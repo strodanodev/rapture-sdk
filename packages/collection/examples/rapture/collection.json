@@ -1,0 +1,38 @@
+{
+  "_note": "Rapture ARC 1 as a ChampionCollection configuration: the vocabulary, stat bands and rules of Rapture's Studio Test set (RaptureCards + StudioMinter on Liteforge). Rapture's live contracts are not this template: this file shows how its card model maps onto it. The token art and avatars are referenced by path into the theforge monorepo (apps/forge-site) and are (c) LitVM Games; nothing is copied here, and the paths resolve only inside that monorepo.",
+  "name": "Rapture Cards",
+  "symbol": "RAPTURE",
+  "setId": 1,
+  "maxSupply": 0,
+  "registry": {
+    "liteforge": "0xBeEe6cFAD12346124eb3d51b716fce00B7f11949"
+  },
+  "images": { "base": "", "ext": "webp" },
+  "info": {
+    "description": "Rapture ARC 1: every card is an ERC-6699 champion, playable in Rapture TCG, Rapture Chess and on LitNode.",
+    "image": "",
+    "externalLink": "https://forge.litvm.games"
+  },
+  "tagline": "The Rapture has begun.",
+  "traits": {
+    "kind": {
+      "label": "Kind",
+      "values": ["Mortal", "King", "Demigod", "Titan", "God"],
+      "bands": [[12000, 22000], [16000, 26000], [22000, 32000], [28000, 40000], [36000, 52000]]
+    },
+    "faction": { "label": "Faction", "values": ["Alliance", "Horde"] },
+    "alignment": { "label": "Alignment", "values": ["Good", "Corrupted", "Feral"], "sealed": "Sealed" },
+    "element": { "label": "Element", "values": ["Earth", "Lava", "Metal", "Water"] },
+    "frame": { "label": "Frame", "values": ["Glass", "Obsidian", "Pearl", "Smoke"] },
+    "kit": { "label": "Kit", "values": ["Hermes", "Ares", "Hecate", "Riki", "Hephaestus"], "kinds": ["Demigod", "God"] },
+    "parts": [
+      { "label": "Head", "max": 3 },
+      { "label": "Facet", "max": 1 },
+      { "label": "Circuit", "max": 2 },
+      { "label": "Body Type", "max": 1 }
+    ]
+  },
+  "avatar": { "required": true, "requires": ["EXT_meshopt_compression", "KHR_mesh_quantization"] },
+  "equipmentSlots": ["head", "body", "mainhand", "offhand", "trinket"],
+  "tokens": "tokens.json"
+}

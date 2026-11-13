@@ -1,0 +1,28 @@
+{
+  "name": "Starter Champions",
+  "symbol": "STARTER",
+  "setId": 1,
+  "maxSupply": 1000,
+  "registry": {
+    "liteforge": "0x38DF2543e039E775D3f674f7414df43e4eF2f883"
+  },
+  "images": { "base": "", "ext": "png" },
+  "info": {
+    "description": "A starter collection made with the Rapture SDK: every token is a playable ERC-6699 champion.",
+    "image": "",
+    "externalLink": ""
+  },
+  "tagline": "A champion of the Starter set.",
+  "traits": {
+    "kind": { "label": "Rank", "values": ["Squire", "Knight", "Hero"], "bands": [[100, 300], [250, 550], [500, 900]] },
+    "faction": { "label": "House", "values": ["Dawn", "Dusk"] },
+    "alignment": { "label": "Oath", "values": ["Sworn", "Free"] },
+    "element": { "label": "Element", "values": ["Fire", "Frost", "Storm"] },
+    "frame": { "label": "", "values": [] },
+    "kit": { "label": "Relic", "values": ["Lantern", "Horn"], "kinds": ["Hero"] },
+    "parts": [{ "label": "Helm", "max": 2 }, { "label": "Cloak", "max": 1 }]
+  },
+  "avatar": { "required": false, "requires": ["KHR_draco_mesh_compression"] },
+  "equipmentSlots": ["head", "body", "mainhand", "offhand", "trinket"],
+  "tokens": "tokens.json"
+}
