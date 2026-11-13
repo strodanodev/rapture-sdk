@@ -1,0 +1,10 @@
+{
+  "_note": "Rapture's champion avatars (theforge monorepo, apps/forge-site/web/assets/rapture/avatars, (c) LitVM Games): the export Rapture Chess runs with scripts/export-avatars.py. Output goes to this package's out/ (git-ignored); nothing is copied into the SDK.",
+  "src": "../../../../../../apps/forge-site/web/assets/rapture/avatars",
+  "out": "../../../out/rapture-avatars",
+  "plain": "../../../out/rapture-avatars/plain",
+  "keep_clips": ["idle", "attack", "hit", "death"],
+  "drop_objects": ["Icosphere"],
+  "draco": { "level": 6, "position": 12, "normal": 8, "texcoord": 10 },
+  "images": "NONE"
+}

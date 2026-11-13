@@ -1,0 +1,8 @@
+{
+  "collection": "../collection.json",
+  "out": "../../../out/starter-renders",
+  "engine": ["BLENDER_EEVEE_NEXT", "BLENDER_EEVEE", "CYCLES"],
+  "samples": 16,
+  "resolution": [500, 700],
+  "format": "PNG"
+}
