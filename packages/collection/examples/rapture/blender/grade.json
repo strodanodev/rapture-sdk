@@ -1,0 +1,10 @@
+{
+  "_note": "The Forge's cinematic re-grade (apps/forge-site/scripts/grade_cinematic.py): the linear HDR bakes export_web.py keeps in apps/forge-site/bake/ (main checkout only).",
+  "inputs": "../../../../../../apps/forge-site/bake/BK_*_hdr.npz",
+  "out": "../../../out/rapture-grade",
+  "npz_key": "hdr",
+  "npz_flip": true,
+  "view": "AgX",
+  "look": "AgX - Punchy",
+  "grade": { "exposure": 0.0, "white_balance": [1.0, 1.0, 1.0], "saturation": 1.0, "contrast": 1.0, "shadow_lift": 0.0 }
+}

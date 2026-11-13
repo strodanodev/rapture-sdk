@@ -1,0 +1,6 @@
+{
+  "_note": "Rapture Chess's chrome CHESS logo, rendered on a green screen (games/rapture-chess/renders/chess-logo.jpg, made by its own render step; (c) LitVM Games): the keying build-lockup.py and The Forge's title_assets.py do.",
+  "items": [
+    { "src": "../../../../../../games/rapture-chess/renders/chess-logo.jpg", "out": "../../../out/rapture-key/chess-logo.webp", "mode": "green", "width": 900, "pad": 10 }
+  ]
+}

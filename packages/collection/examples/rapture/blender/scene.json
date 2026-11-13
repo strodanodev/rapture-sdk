@@ -1,0 +1,11 @@
+{
+  "_note": "The Forge hall's web export (apps/forge-site/scripts/export_web.py, step 9): the baked BK_ atlases, FX meshes and markers plus the game camera. forge_hall_web.blend is written by export_web.py and exists only in the main theforge checkout (git-ignored, (c) LitVM Games).",
+  "blend": "../../../../../../apps/forge-site/forge_hall_web.blend",
+  "out": "../../../out/rapture-forge-hall.glb",
+  "prefixes": ["BK_", "FX_", "FXM_"],
+  "objects": ["Cam_Hall"],
+  "images": "WEBP",
+  "image_quality": 88,
+  "cameras": true,
+  "draco": false
+}
