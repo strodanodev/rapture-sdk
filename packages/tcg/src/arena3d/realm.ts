@@ -76,7 +76,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0e0302, 0x1c0504],
     practical: { color: 0xff5a1a, intensity: 34 },
     // scorched basalt over a bed of embers, black iron and copper, spiked, under a furnace-warm light
-    board: { stone: [/basalt/, /rock/], top: 0x5c5a5e, under: 0x120b0a, ember: 0x2c0a02, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xfff0e2, power: 210 }, spikes: true },
+    board: { stone: [/basalt/, /rock/], top: 0x76747a, under: 0x120b0a, ember: 0x2c0a02, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 290 }, spikes: true },
   },
 };
 
@@ -195,6 +195,9 @@ export class Realm {
       stone: cut(b.top, 0.82), under: cut(b.under, 1, b.ember, true), iron: metal(b.iron, 0.55, 0.3), trim: metal(b.trim, 0.3, 0.2),
       glow: new THREE.MeshStandardMaterial({ color: 0x050608, emissive: b.glow, emissiveIntensity: 1.25 }), base: stone(b.base), spikes: b.spikes,
     };
+    // the board stands clear of the hall's fog: in the Underworld the thick red fog washed its stone flat and red (most of
+    // all on phones, where the camera sits further back), so the board keeps its own colours at any distance
+    for (const m of [this.boardStyle.stone, this.boardStyle.under, this.boardStyle.iron, this.boardStyle.trim, this.boardStyle.glow]) (m as THREE.MeshStandardMaterial).fog = false;
     this.stage.boardKey.color.set(b.key.color);
     this.stage.boardKeyPower = b.key.power;
     if (this.table) disposeBoard(this.table);
