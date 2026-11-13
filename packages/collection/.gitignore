@@ -1,0 +1,18 @@
+node_modules/
+cache/
+artifacts/
+out/
+renders/
+*.log
+.DS_Store
+# local-chain deployments are throwaway; liteforge.json is the public record and is committed
+deployments/hardhat.json
+deployments/local.json
+verification/hardhat/
+verification/local/
+# a key must never sit in this folder
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc

@@ -1,0 +1,61 @@
+{
+  "name": "@rapture-sdk/collection",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Step 1 of the Rapture SDK: launch an NFT collection whose tokens are playable ERC-6699 champions. An ERC-721 template that mirrors every token into the canonical ERC6699Registry, a metadata and IPFS pipeline, a Blender harness and an optional Meshy generator.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strodanodev/rapture-sdk.git",
+    "directory": "packages/collection"
+  },
+  "homepage": "https://github.com/strodanodev/rapture-sdk/tree/main/packages/collection#readme",
+  "bugs": {
+    "url": "https://github.com/strodanodev/rapture-sdk/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "rapture-collection": "src/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "contracts",
+    "src",
+    "scripts",
+    "blender",
+    "tools",
+    "examples",
+    "hardhat.config.cjs",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "compile": "hardhat compile --quiet",
+    "test": "hardhat test",
+    "typecheck": "tsc -p tsconfig.json",
+    "pycheck": "node scripts/pycheck.mjs",
+    "check": "pnpm run compile && pnpm run typecheck && pnpm run test && pnpm run pycheck",
+    "chain": "hardhat node --port 8549",
+    "local-registry": "hardhat run scripts/local-registry.js",
+    "deploy-collection": "hardhat run scripts/deploy.js",
+    "mint-cards": "hardhat run scripts/mint.js",
+    "verify-collection": "node scripts/verify.mjs",
+    "build-metadata": "node src/cli.js build"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.1.3",
+    "@openzeppelin/contracts": "5.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.19.1",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.29.1",
+    "typescript": "^5.9.3"
+  }
+}

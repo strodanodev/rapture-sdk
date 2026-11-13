@@ -1,0 +1,13 @@
+Rapture SDK: the collection kit, @rapture-sdk/collection
+Copyright 2026 LitVM Games
+
+The collection kit's contracts, scripts, Blender harness, tools, examples and documentation in this folder are
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+contracts/vendor/rapture/interfaces/IERC6699.sol and contracts/test/ERC6699Registry.sol are copies of LitNode's
+ERC-6699 interface and registry (MIT), kept as published. contracts/test/compat/PackShop.sol is Rapture's PackShop v1,
+compiled only by the compatibility test.
+
+Rapture names, characters, card art, avatars, arena models and brand marks are (c) LitVM Games, all rights reserved,
+and are not part of this package. The Rapture example configuration (examples/rapture) refers to them by path and
+address only. The starter example's images are generated single-colour placeholders.

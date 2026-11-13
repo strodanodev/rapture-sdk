@@ -1,0 +1,12 @@
+{
+  "_note": "Rapture's own card art came from its Studio pipeline (not in this repo). This renders the two example tokens with the built-in card, to show the vocabulary driving a template; bind a real card .blend with \"template\" and \"bind\".",
+  "collection": "../collection.json",
+  "out": "../../../out/rapture-renders",
+  "samples": 16,
+  "resolution": [500, 700],
+  "format": "WEBP",
+  "bind": {
+    "text": { "CardName": "name", "CardEpithet": "epithet" },
+    "colors": { "CardFrame": { "field": "element", "input": "Base Color", "values": { "Earth": [0.45, 0.35, 0.2], "Lava": [0.9, 0.3, 0.08], "Metal": [0.7, 0.72, 0.75], "Water": [0.15, 0.45, 0.85] } } }
+  }
+}

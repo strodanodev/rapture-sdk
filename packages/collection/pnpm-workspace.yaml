@@ -1,0 +1,7 @@
+# pnpm 11+ reads project settings here, not package.json#pnpm.
+# keccak's install script only builds an optional native addon; its pure-JS fallback is what runs, so it is declined
+# explicitly (an undecided build script fails a frozen install with ERR_PNPM_IGNORED_BUILDS).
+allowBuilds:
+  keccak: false
+# Don't nested-install on every `pnpm <script>`; `pnpm install` is run explicitly.
+verifyDepsBeforeRun: false

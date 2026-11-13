@@ -1,0 +1,15 @@
+{
+  "_note": "The Forge's hall props, as apps/forge-site/scripts/meshy_gen.py generated them (prompts only). Run with your own MESHY_API_KEY: python tools/meshy_gen.py --config examples/rapture/meshy.json --dry-run",
+  "out": "../../out/rapture-meshy",
+  "style": "Stylized-realistic fantasy game prop, clean readable silhouette, painterly PBR textures, single standalone object, no ground plane, no background.",
+  "texture_resolution": "2k",
+  "assets": {
+    "hearth": { "polys": 8000, "prompt": "Dome-shaped blacksmith forge furnace built from dark stone bricks, arched front fire opening, three copper metal bands around the dome, round bronze emblem above the opening.", "texture": "dark soot-stained stone bricks, polished copper bands, bronze emblem, glowing orange embers inside the opening" },
+    "anvil": { "polys": 3000, "prompt": "Heavy iron blacksmith anvil with a pointed horn, mounted on a rough rectangular granite block base.", "texture": "dark forged iron with worn shiny top face, grey granite block" },
+    "barrel": { "polys": 2000, "prompt": "Viking wooden barrel with three iron hoops and a band of carved Norse runes.", "texture": "dark oak staves, black iron hoops, carved runes" },
+    "crystals": { "polys": 1500, "prompt": "Cluster of six tall hexagonal magic crystals growing from a small rock base.", "texture": "pale white translucent crystal, grey stone base" },
+    "axe": { "polys": 1500, "prompt": "Norse bearded battle axe, wooden haft wrapped in leather, steel blade engraved with runes.", "texture": "steel blade with engraved runes, dark wood haft, brown leather wrap" },
+    "column": { "polys": 4000, "prompt": "Tall Greek Corinthian column, fluted marble shaft, ornate acanthus capital with gilded details, square plinth base.", "texture": "cream white marble with subtle veins, gold leaf on the capital" },
+    "tools": { "polys": 1200, "prompt": "Blacksmith hammer and long iron tongs lying crossed together.", "texture": "dark iron heads, worn wooden hammer handle" }
+  }
+}
