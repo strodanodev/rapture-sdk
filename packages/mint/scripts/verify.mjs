@@ -4,7 +4,7 @@
 //   pnpm compile && node scripts/verify.mjs --config my-drop/mint.config.json [--network local]
 //   VERIFY_CONFIRM=liteforge node scripts/verify.mjs --config my-drop/mint.config.json          (submits)
 //
-// For the shop (and the EvmnetRegistry, when the deploy created it) it reads eth_getCode and compares it with the
+// For the shop (and any helper contract the deploy created and listed in alsoVerify) it reads eth_getCode and compares it with the
 // compiled runtime code, immutables masked and the metadata hash included, so a match means the sources and settings
 // are exactly these. It checks the ABI-encoded constructor arguments against the creation transaction, then writes
 // verification/<network>/<Contract>.standard-input.json, .constructor-args.txt and result.json: the minimal standard
@@ -16,11 +16,13 @@ import { fileURLToPath } from "node:url";
 import { ethers, parseArgs, networkInfo, provider, loadConfigOrExit, deploymentOrExit } from "./lib/chain.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCES = {
-  FixedPriceMinter: "contracts/FixedPriceMinter.sol",
-  PackShopV2: "contracts/PackShopV2.sol",
-  EvmnetRegistry: "contracts/vendor/bls-solidity/src/demos/EvmnetRegistry.sol",
-};
+/** artifacts/<source path>/<Name>.json for a contract name, wherever its source lives. */
+function artifactOf(name) {
+  const root = path.join(ROOT, "artifacts");
+  const hits = fs.existsSync(root) ? fs.readdirSync(root, { recursive: true }).filter((f) => path.basename(f) === `${name}.json`) : [];
+  if (hits.length !== 1) throw new Error(hits.length ? `${name} is ambiguous in artifacts/` : `no artifact for ${name}: run pnpm compile first`);
+  return path.join(root, hits[0]);
+}
 
 const args = parseArgs();
 const cfg = loadConfigOrExit(args.config || process.env.MINT_CONFIG || "mint.config.json");
@@ -32,9 +34,8 @@ const submit = process.env.VERIFY_CONFIRM === NET;
 const outDir = path.join(ROOT, "verification", NET);
 
 function build(name) {
-  const source = SOURCES[name];
-  const art = path.join(ROOT, "artifacts", source, `${name}.json`);
-  if (!fs.existsSync(art)) throw new Error(`no artifact for ${name}: run pnpm compile first`);
+  const art = artifactOf(name);
+  const source = JSON.parse(fs.readFileSync(art, "utf8")).sourceName;
   const dbg = JSON.parse(fs.readFileSync(art.replace(/\.json$/, ".dbg.json"), "utf8"));
   const bi = JSON.parse(fs.readFileSync(path.resolve(path.dirname(art), dbg.buildInfo), "utf8"));
   const out = bi.output.contracts[source][name];
@@ -101,6 +102,6 @@ async function submitToBlockscout(explorer, { address, contract, compiler, args:
 }
 
 const results = [await verifyOne(dep.contract, dep.shop, dep.shopArgs, dep.shopTx)];
-if (dep.beaconTx) results.push(await verifyOne("EvmnetRegistry", dep.beacon, [], dep.beaconTx));
+for (const x of dep.alsoVerify ?? []) results.push(await verifyOne(x.contract, x.address, x.args ?? [], x.tx));
 fs.writeFileSync(path.join(outDir, "result.json"), JSON.stringify(results, null, 2) + "\n");
 console.log(`wrote ${path.relative(process.cwd(), outDir)}${submit ? "" : `  (read-only: set VERIFY_CONFIRM=${NET} to submit to the explorer)`}`);

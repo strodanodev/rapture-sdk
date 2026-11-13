@@ -1,25 +1,24 @@
-// The mint config: one JSON file says which collection to sell, how (fixed price or packs) and to whom the shop
-// belongs. Read by deploy.js, verify.mjs, keeper.mjs, site-config.mjs and check-config.mjs. Pure: no chain access.
+// The mint config: one JSON file says which collection to sell, how, and to whom the shop belongs. Read by deploy.js,
+// verify.mjs, site-config.mjs and check-config.mjs (and the pack module's keeper). Pure: no chain access. Mode "packs"
+// (PackShop v2) is read by packs/lib/config-packs.js, and only where this kit has packs/ (see lib/packs.js).
 //
 // {
 //   "network": "liteforge",                       a network in hardhat.config.js
 //   "collection": { "minter": "0x…", "cards": "0x…", "tokenIdBase": "0" },
 //   "templates": "templates.json",                path relative to this file
-//   "mode": "fixed" | "packs",
+//   "mode": "fixed" (or "packs" where packs/ is present),
 //   "owner": null | "0x…",                         offered ownership after setup (use a Safe)
 //   "fixed": { "price": "0.001", "maxPerWallet": 0, "supply": 100, "lock": true },
-//   "packs": { "price": "0.001", "packSize": 5, "dailyLimit": 3, "deck": "deck.json", "reserveTo": null, "beacon": null }
 // }
 const fs = require("node:fs");
 const path = require("node:path");
+const { loadPacks, PACKS_MISSING } = require("./packs.js");
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 const DECIMAL = /^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/;
 const NAME_CHARS = /^[0-9A-Za-z ',\-.:_]*$/;   // CardDesign's closed charset
 const KINDS = 5;
-const FINISHES = 3;
-const MAX_PACK_SIZE = 6;
 const MAX_TEMPLATES = 4096;
 /** Networks where deploy.js sends transactions without MINT_CONFIRM (and may deploy the reference collection). */
 const LOCAL_NETWORKS = new Set(["hardhat", "local", "localhost"]);
@@ -79,31 +78,6 @@ function templateProblems(t, i, bands = null) {
   return out;
 }
 
-/** Deck file -> { counts: number[5][3], total, packSize? }. */
-function readDeck(file) {
-  const j = JSON.parse(fs.readFileSync(file, "utf8"));
-  return { ...j, counts: j.counts };
-}
-
-function deckProblems(deck, packSize, templates) {
-  const out = [];
-  const c = deck?.counts;
-  if (!Array.isArray(c) || c.length !== KINDS || !c.every((r) => Array.isArray(r) && r.length === FINISHES && r.every((n) => isInt(n, 0, 65535)))) {
-    return [`deck.counts must be ${KINDS} rows (kinds) of ${FINISHES} counts (Normal, Shiny, Gold), each 0..65535`];
-  }
-  const total = c.flat().reduce((a, b) => a + b, 0);
-  if (deck.total != null && deck.total !== total) out.push(`deck.total says ${deck.total} but the counts add up to ${total}`);
-  if (deck.packSize != null && deck.packSize !== packSize) out.push(`deck.packSize ${deck.packSize} differs from packs.packSize ${packSize}`);
-  if (total < packSize) out.push(`the deck (${total} cards) does not fill one pack of ${packSize}`);
-  if (templates) {
-    for (let k = 0; k < KINDS; k++) {
-      const n = c[k].reduce((a, b) => a + b, 0);
-      if (n > 0 && !templates.some((t) => t.kind === k)) out.push(`the deck has ${n} cards of kind ${k} but no template of that kind`);
-    }
-  }
-  return out;
-}
-
 /**
  * Read and check a mint config. Returns { cfg, problems, warnings }: cfg is normalised (absolute paths, wei amounts,
  * templates/deck loaded when their files exist), problems are errors that stop a deploy, warnings do not.
@@ -118,7 +92,9 @@ function loadConfig(file) {
   const cfg = { file: abs, dir, raw, network: raw.network, mode: raw.mode, owner: raw.owner ?? null };
 
   if (typeof raw.network !== "string" || !raw.network) problems.push("network must name a network in hardhat.config.js (liteforge, local)");
-  if (!["fixed", "packs"].includes(raw.mode)) problems.push('mode must be "fixed" or "packs"');
+  const packsModule = raw.mode === "packs" ? loadPacks("config-packs.js") : null;
+  if (raw.mode === "packs" && !packsModule) problems.push(PACKS_MISSING);
+  else if (!["fixed", "packs"].includes(raw.mode)) problems.push('mode must be "fixed"');
   if (cfg.owner != null && !ADDRESS.test(cfg.owner)) problems.push("owner must be an address or null");
   const col = raw.collection ?? {};
   cfg.collection = { minter: col.minter, cards: col.cards ?? null, tokenIdBase: String(col.tokenIdBase ?? "0") };
@@ -155,22 +131,8 @@ function loadConfig(file) {
     if (cfg.templates) cfg.supplies = cfg.templates.map((t) => t.supply ?? cfg.fixed.supply);
     if (cfg.supplies?.some((s) => s == null)) problems.push("every template needs an edition size: set fixed.supply or a per-template supply");
     if (cfg.fixed.price === 0n && cfg.fixed.maxPerWallet === 0) warnings.push("price 0 with no per-wallet limit: anyone can mint every edition for free");
-  } else if (raw.mode === "packs") {
-    const p = raw.packs ?? {};
-    cfg.packs = { price: money(p.price, "packs.price"), priceText: p.price, packSize: p.packSize ?? 5, dailyLimit: p.dailyLimit ?? 0, reserveTo: p.reserveTo ?? null, beacon: p.beacon ?? null };
-    if (!isInt(cfg.packs.packSize, 1, MAX_PACK_SIZE)) problems.push(`packs.packSize must be 1..${MAX_PACK_SIZE}`);
-    if (!isInt(cfg.packs.dailyLimit, 0, 65535)) problems.push("packs.dailyLimit must be 0 (no limit) .. 65535");
-    if (cfg.packs.reserveTo != null && !ADDRESS.test(cfg.packs.reserveTo)) problems.push("packs.reserveTo must be an address or null (the owner, else the deployer)");
-    if (cfg.packs.beacon != null && !ADDRESS.test(cfg.packs.beacon)) problems.push("packs.beacon must be an EvmnetRegistry address or null (deploy one)");
-    if (cfg.packs.price >= 2n ** 96n) problems.push("packs.price does not fit uint96");
-    cfg.deckFile = typeof p.deck === "string" ? path.resolve(dir, p.deck) : null;
-    if (!cfg.deckFile || !fs.existsSync(cfg.deckFile)) problems.push("packs.deck must be the path of a deck JSON file ({ counts: [[normal, shiny, gold] x 5] })");
-    else {
-      try {
-        cfg.deck = readDeck(cfg.deckFile);
-        problems.push(...deckProblems(cfg.deck, cfg.packs.packSize, cfg.templates));
-      } catch (e) { problems.push(`${p.deck}: ${e.message}`); }
-    }
+  } else if (packsModule) {
+    packsModule.loadPacksSection(raw, cfg, { problems, warnings, money, isInt, ADDRESS });
   }
   return { cfg, problems, warnings };
 }
@@ -189,7 +151,7 @@ function writeDeployments(cfg, network, data) {
 }
 
 module.exports = {
-  ADDRESS, KINDS, FINISHES, MAX_PACK_SIZE, LOCAL_NETWORKS,
-  parseUnits, readTemplates, templateProblems, readDeck, deckProblems, loadConfig,
+  ADDRESS, KINDS, LOCAL_NETWORKS, PACKS_MISSING,
+  isInt, parseUnits, readTemplates, templateProblems, loadConfig,
   deploymentsFile, readDeployments, writeDeployments,
 };

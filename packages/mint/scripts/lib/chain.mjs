@@ -6,7 +6,6 @@ const require = createRequire(import.meta.url);
 export const ethers = require("ethers");
 export const NETWORKS = require("./networks.json");
 export const config = require("./config.js");
-export const { DRAND_EVMNET } = require("./deploy.js");
 
 /** --name value pairs and bare --flags -> { name: value | true, _: [positional] }. */
 export function parseArgs(argv = process.argv.slice(2)) {
