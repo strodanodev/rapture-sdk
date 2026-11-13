@@ -1,0 +1,131 @@
+{
+  "name": "Example Collection",
+  "tagline": "Ten placeholder cards to show how a drop looks.",
+  "description": "This is the Rapture SDK mint site template. Edit web/site.config.json: your collection name, colours, logo and art, then point it at your minter with the mint package (pnpm run site-config).",
+  "chain": {
+    "id": 4441,
+    "name": "LitVM Liteforge",
+    "rpc": "https://rpc.testnet.liteforge.zeeve.net/",
+    "explorer": null,
+    "faucet": null,
+    "currency": {
+      "name": "zkLTC",
+      "symbol": "zkLTC",
+      "decimals": 18
+    }
+  },
+  "mint": {
+    "mode": "fixed",
+    "address": null,
+    "collection": null,
+    "tokenIdBase": "0",
+    "designRecords": null,
+    "beacon": null
+  },
+  "branding": {
+    "logo": "art/logo.svg",
+    "favicon": "art/logo.svg",
+    "colors": {
+      "background": "#0f1117",
+      "surface": "#181b24",
+      "text": "#eef0f6",
+      "muted": "#9aa3b5",
+      "accent": "#7c9cff",
+      "accentText": "#0f1117",
+      "shiny": "#8fe3ff",
+      "gold": "#f2c14e"
+    }
+  },
+  "art": {
+    "hero": "art/hero.svg",
+    "cardBack": "art/card-back.svg",
+    "pack": "art/pack.svg",
+    "placeholder": "art/card-placeholder.svg",
+    "cards": "art/cards/{id}.svg"
+  },
+  "kinds": [
+    "Scout",
+    "Regent",
+    "Oracle",
+    "Colossus",
+    "Sovereign"
+  ],
+  "finishes": [
+    "Normal",
+    "Shiny",
+    "Gold"
+  ],
+  "cards": [
+    {
+      "id": 0,
+      "name": "Ash Wanderer",
+      "epithet": "of the Long Road",
+      "kind": 0,
+      "designHash": "0x55538e1ce6d369efd9c6ee0d5cb1adad49da97fba876fa4d91121767424063b8"
+    },
+    {
+      "id": 1,
+      "name": "Copper Scout",
+      "epithet": "the Quick",
+      "kind": 0,
+      "designHash": "0x276a9a04bd0ffa9d1db7ce30c220dd1c27467f70c4f17bff830f1d254143ac8e"
+    },
+    {
+      "id": 2,
+      "name": "Tide Warden",
+      "epithet": "Keeper of the Shore",
+      "kind": 1,
+      "designHash": "0x26c5a4180112443d49bcf8064f3ed86a7765ceb0c0158312e15a59d32d26a5c5"
+    },
+    {
+      "id": 3,
+      "name": "Iron Regent",
+      "epithet": "the Unbent",
+      "kind": 1,
+      "designHash": "0x1cc4b2ff32413d0c087422ef8bab60a8615ecf9cdeda5d9e19603d9da0578720"
+    },
+    {
+      "id": 4,
+      "name": "Ember Oracle",
+      "epithet": "who Reads the Coals",
+      "kind": 2,
+      "designHash": "0x6d2636498fc0641ef23aa4a23fa51d6e30e855a98813823d9408d0b2413c6a76"
+    },
+    {
+      "id": 5,
+      "name": "Glass Seer",
+      "epithet": "of Clear Sight",
+      "kind": 2,
+      "designHash": "0xf76f2950a7aa1bfb120eabef77f0eb1d811af618141eeafae8d6710caddee3c3"
+    },
+    {
+      "id": 6,
+      "name": "Stone Colossus",
+      "epithet": "the Unmoved",
+      "kind": 3,
+      "designHash": "0x0ddbbe7333e4a080ea3c27507172caf9ef45ae707595f0356b29b6dc671f7d4c"
+    },
+    {
+      "id": 7,
+      "name": "Moss Giant",
+      "epithet": "of the Deep Wood",
+      "kind": 3,
+      "designHash": "0x31ee38b382319b4f341753ba7d2de7f58406820acf9b057d4eb1d3d5362a041b"
+    },
+    {
+      "id": 8,
+      "name": "Storm Sovereign",
+      "epithet": "Lord of Thunder",
+      "kind": 4,
+      "designHash": "0xe1d12e2e5164fd17a2f594bfa990dbc447c8f50ead85012be7930c08fe72b9cc"
+    },
+    {
+      "id": 9,
+      "name": "Dawn Keeper",
+      "epithet": "the First Light",
+      "kind": 4,
+      "designHash": "0x6ff19ce93602f4834dff50430a1cb6a7e79b0efcc1bde3d4ff29ccb506cb90ae"
+    }
+  ],
+  "ipfsGateway": null
+}

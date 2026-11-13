@@ -1,0 +1,615 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract ISetRegistry",
+        "name": "sets_",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IRaptureCards",
+        "name": "cards_",
+        "type": "address"
+      },
+      {
+        "internalType": "contract ICardDesignWriter",
+        "name": "design_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "admin_",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16[5]",
+        "name": "statMin",
+        "type": "uint16[5]"
+      },
+      {
+        "internalType": "uint16[5]",
+        "name": "statMax",
+        "type": "uint16[5]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "BadBand",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadKit",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadParts",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadTraits",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EmptyBatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotAdmin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotMinter",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotRegistered",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "AdminTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "who",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "on",
+        "type": "bool"
+      }
+    ],
+    "name": "MinterSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "minter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "designHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "StudioMinted",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "admin",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "kind",
+        "type": "uint8"
+      }
+    ],
+    "name": "bandOf",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "cards",
+    "outputs": [
+      {
+        "internalType": "contract IRaptureCards",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "design",
+    "outputs": [
+      {
+        "internalType": "contract ICardDesignWriter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "faction",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "alignment",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "element",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "frame",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint32",
+                "name": "bodyparts",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint16",
+                "name": "strength",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "agility",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "resilience",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "intelligence",
+                "type": "uint16"
+              }
+            ],
+            "internalType": "struct Traits",
+            "name": "traits",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "chainId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address",
+                "name": "collection",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Origin",
+            "name": "styleSource",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "designHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "art",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "turntable",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "overridesHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatar",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatarPlain",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "soul",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint8",
+                "name": "kit",
+                "type": "uint8"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "epithet",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct Design",
+            "name": "design",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct StudioMinter.StudioCard[]",
+        "name": "cs",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "mintBatch",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "faction",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "alignment",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "element",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "frame",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint32",
+                "name": "bodyparts",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint16",
+                "name": "strength",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "agility",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "resilience",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "intelligence",
+                "type": "uint16"
+              }
+            ],
+            "internalType": "struct Traits",
+            "name": "traits",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "chainId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address",
+                "name": "collection",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Origin",
+            "name": "styleSource",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "designHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "art",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "turntable",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "overridesHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatar",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatarPlain",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "soul",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint8",
+                "name": "kit",
+                "type": "uint8"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "epithet",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct Design",
+            "name": "design",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct StudioMinter.StudioCard",
+        "name": "c",
+        "type": "tuple"
+      }
+    ],
+    "name": "mintStudio",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "minters",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "nextIndex",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "who",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "on",
+        "type": "bool"
+      }
+    ],
+    "name": "setMinter",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "sets",
+    "outputs": [
+      {
+        "internalType": "contract ISetRegistry",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "transferAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

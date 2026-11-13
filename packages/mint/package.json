@@ -1,0 +1,41 @@
+{
+  "name": "@rapture-sdk/mint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Step 2 of the Rapture SDK: sell a collection's cards. A fixed-price minter (default) and PackShop v2, sealed packs dealt from a fixed deck with drand randomness verified on chain. Hardhat contracts, deploy, verify and keeper scripts for LitVM.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strodanodev/rapture-sdk.git",
+    "directory": "packages/mint"
+  },
+  "homepage": "https://github.com/strodanodev/rapture-sdk/tree/main/packages/mint#readme",
+  "bugs": {
+    "url": "https://github.com/strodanodev/rapture-sdk/issues"
+  },
+  "type": "commonjs",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "check-config": "node scripts/check-config.mjs",
+    "check": "hardhat test && node scripts/check-config.mjs examples/fixed/mint.config.json examples/packs/mint.config.json examples/rapture/mint.config.json",
+    "node": "node scripts/local-node.js",
+    "deploy:local": "hardhat run scripts/deploy.js --network local",
+    "deploy:liteforge": "hardhat run scripts/deploy.js --network liteforge",
+    "verify": "node scripts/verify.mjs",
+    "keeper": "node scripts/keeper.mjs",
+    "site-config": "node scripts/site-config.mjs",
+    "export-templates": "node scripts/export-templates.mjs"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "3.1.3",
+    "@openzeppelin/contracts": "5.0.2",
+    "ethers": "6.17.0",
+    "hardhat": "2.29.1",
+    "solc": "0.8.28"
+  }
+}

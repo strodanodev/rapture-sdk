@@ -1,0 +1,9 @@
+node_modules/
+artifacts/
+cache/
+# local runs: the dev chain's addresses and anything a verify run writes
+**/deployments/local.json
+**/deployments/hardhat.json
+verification/
+.env
+*.log

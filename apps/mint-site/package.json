@@ -1,0 +1,28 @@
+{
+  "name": "@rapture-sdk/mint-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Step 2 of the Rapture SDK: a static mint site template for Vercel. Wallet connect, a fixed-price mint page or a pack page with drand reveals, and the holder's library, all driven by one config file.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strodanodev/rapture-sdk.git",
+    "directory": "apps/mint-site"
+  },
+  "homepage": "https://github.com/strodanodev/rapture-sdk/tree/main/apps/mint-site#readme",
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "csp": "node scripts/csp.mjs",
+    "placeholder-art": "node scripts/placeholder-art.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "check": "node scripts/check.mjs && node --test \"test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "ethers": "6.17.0"
+  }
+}

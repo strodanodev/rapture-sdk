@@ -1,0 +1,5 @@
+node_modules/
+.vercel/
+# a local copy of the config pointed at a dev chain (scripts/dev-server.mjs serves it instead of site.config.json)
+web/site.config.local.json
+*.log

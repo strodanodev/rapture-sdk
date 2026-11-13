@@ -1,0 +1,13 @@
+{
+  "note": "A small example print run: 79 cards = 15 packs of 5 plus a 4-card reserve pack. counts[kind] = [Normal, Shiny, Gold].",
+  "finishes": ["Normal", "Shiny", "Gold"],
+  "counts": [
+    [20, 4, 1],
+    [16, 3, 1],
+    [12, 2, 1],
+    [8, 2, 1],
+    [6, 1, 1]
+  ],
+  "total": 79,
+  "packSize": 5
+}
