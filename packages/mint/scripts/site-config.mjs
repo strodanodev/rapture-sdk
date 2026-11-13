@@ -3,11 +3,12 @@
 //   node scripts/site-config.mjs --config my-drop/mint.config.json --site ../../apps/mint-site/web/site.config.json [--network local]
 //
 // Reads the shop from deployments/<network>.json next to the config and CHECKS it on chain before writing: it must
-// have code and the MINTER role, a fixed-price catalogue must hold templates, and a packs shop must be locked with the
-// config's deck and use the recorded beacon, and the shop's templates must be the config's, in order. Then it rewrites
+// have code and the MINTER role, a fixed-price catalogue must hold templates (a pack shop runs its own checks, from
+// packs/), and the shop's templates must be the config's, in order. Then it rewrites
 // the site config's "chain", "mint" and "cards" sections (a card keeps the "art" it had) and leaves branding, art and
 // text alone. Public data only. A paused shop is fine: the site says sales are closed.
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { ethers, parseArgs, networkInfo, provider, loadConfigOrExit, deploymentOrExit, TEMPLATE_TUPLE } from "./lib/chain.mjs";
 
@@ -33,22 +34,13 @@ if (dep.contract === "FixedPriceMinter") {
   if (c.templateCount === 0n) throw new Error("the minter has no templates");
   console.log(`FixedPriceMinter ${dep.shop}: ${ethers.formatEther(c.price)} per card, ${c.templateCount} templates, ${c.totalMinted}/${c.maxSupply} minted, paused ${c.paused}, locked ${c.locked}`);
   mint = { mode: "fixed", address: dep.shop, collection: cards, tokenIdBase };
-} else if (dep.contract === "PackShopV2") {
-  const shop = new ethers.Contract(dep.shop, [
-    "function config() view returns (uint256 price, uint8 packSize, uint16 dailyLimit, bool paused, bool ready, uint32 maxSupply, uint32 packsTotal, uint32 packsSold, uint256 cardsLeft, uint256 templateCount)",
-    "function deckInitial() view returns (uint16[3][5])",
-    "function locked() view returns (bool)",
-    "function beacon() view returns (address)",
-  ], p);
-  const c = await shop.config();
-  if (!(await shop.locked())) throw new Error("the shop's deck is not locked");
-  const onChain = Array.from(await shop.deckInitial(), (row) => Array.from(row, Number)).flat().join("/");
-  if (onChain !== cfg.deck.counts.flat().join("/")) throw new Error(`the locked deck (${onChain}) is not the config's deck`);
-  if ((await shop.beacon()).toLowerCase() !== dep.beacon.toLowerCase()) throw new Error("the shop's beacon is not the recorded EvmnetRegistry");
-  if (!c.ready) throw new Error("the shop is not ready (MINTER role? sold out? shut down?)");
-  console.log(`PackShopV2 ${dep.shop}: ${ethers.formatEther(c.price)} a pack of ${c.packSize}, ${c.cardsLeft}/${c.maxSupply} cards left, paused ${c.paused}`);
-  mint = { mode: "packs", address: dep.shop, collection: cards, tokenIdBase, beacon: { registry: dep.beacon } };
-} else throw new Error(`unknown contract ${dep.contract} in the deployment record`);
+} else {
+  // a pack shop (PackShop v2): its checks live with it in packs/, where this kit has it
+  const { requirePacks } = createRequire(import.meta.url)("./lib/packs.js");
+  const packs = requirePacks("site-packs.js");
+  mint = await packs.mintSection({ ethers, p, dep, cfg, cards, tokenIdBase });
+}
+
 
 // the shop's templates are the config's, in order: the site names cards by template id
 const reader = new ethers.Contract(dep.shop, ["function templateCount() view returns (uint256)", `function templateOf(uint256) view returns (${TEMPLATE_TUPLE})`], p);

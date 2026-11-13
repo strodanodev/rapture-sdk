@@ -7,7 +7,6 @@ modules, no build step, no framework) for Vercel or any static host:
 |---|---|
 | `index.html` | the collection: hero art, name, price, how many are left, the way in |
 | `mint.html` | fixed price: every card with its edition count, a quantity and a Mint button |
-| `packs.html` | packs: buy a sealed pack, a countdown to its drand round, open it, the cards turn over (best last); the print run left by kind and finish; your sealed packs to resume |
 | `library.html` | the cards the connected wallet holds, named and with their finish |
 
 The header's wallet button connects MetaMask or any EIP-1193 wallet, switches it to the chain (adding the chain if
@@ -16,8 +15,12 @@ wallet, so they show prices and supply before anyone connects. The contracts are
 ([`packages/mint`](../../packages/mint)); the full walk from a deployed collection to a live site is
 [`docs/guide/02-mint-site.md`](../../docs/guide/02-mint-site.md).
 
-It is forge.litvm.games' v2 shop (the wallet, RPC, drand and pack clients) with Rapture's 3D hall, branding and art
-taken out, plus a fixed-price page and a library that works for any collection.
+It is built from forge.litvm.games' shop (the wallet and RPC clients and the transaction path) with Rapture's 3D hall,
+branding and art taken out, plus a fixed-price page and a library that works for any collection.
+
+A pack page exists too (sealed packs with drand reveals, for PackShop v2), but it isn't published in this kit yet: it
+stays in Rapture's private build until Rapture launches the pack shop. A config with `mint.mode: "packs"` is refused
+with that reason.
 
 ## One config file
 
@@ -27,14 +30,13 @@ Everything about your drop is in [`web/site.config.json`](web/site.config.json):
 |---|---|
 | `name`, `tagline`, `description` | the words on the home page and in the title |
 | `chain` | `id`, `name`, `rpc`, `explorer` (a Blockscout URL or null), `faucet` (or null), `currency` |
-| `mint.mode` | `"fixed"` (FixedPriceMinter) or `"packs"` (PackShopV2) |
+| `mint.mode` | `"fixed"` (FixedPriceMinter) |
 | `mint.address` | the minter; null until it is deployed (the pages then say "Not open yet") |
 | `mint.collection`, `mint.tokenIdBase` | the ERC-721 and its first token id, for the library |
 | `mint.designRecords` | the collection's design records (the reference CardDesign), to name any token; optional |
-| `mint.beacon` | packs only: `registry` and drand `urls` (default: the three api.drand.sh mirrors) |
 | `branding.logo`, `branding.favicon` | paths inside `web/` |
 | `branding.colors` | `background`, `surface`, `text`, `muted`, `accent`, `accentText`, `shiny`, `gold` (#hex) |
-| `art` | `hero`, `cardBack`, `pack`, `placeholder`, and `cards`: a pattern with `{id}`, e.g. `art/cards/{id}.svg` |
+| `art` | `hero`, `cardBack`, `placeholder`, and `cards`: a pattern with `{id}`, e.g. `art/cards/{id}.svg` (`pack` is for a pack page) |
 | `kinds`, `finishes` | the names of the 5 kinds (in contract order) and the 3 finishes |
 | `cards` | `{ id, name, epithet, kind, designHash, art? }` per template, in the minter's order |
 | `ipfsGateway` | `https://<gateway>/ipfs/` if your token metadata points at IPFS, else null |
@@ -53,11 +55,10 @@ art at the same paths, or point the config at other files. Keep card art 5:7 (25
 ## Security headers
 
 `vercel.json` sends a strict Content-Security-Policy: everything same-origin, no inline script or style, no other
-origin's script, and `connect-src` lists exactly the RPC, the drand mirrors (packs only) and the IPFS gateway (when
-set). It is generated from the config:
+origin's script, and `connect-src` lists exactly the RPC and the IPFS gateway (when set). It is generated from the config:
 
 ```bash
-pnpm csp     # after changing chain.rpc, mint.mode, mint.beacon.urls or ipfsGateway
+pnpm csp     # after changing chain.rpc or ipfsGateway
 ```
 
 `pnpm run check` fails when `vercel.json` and the config disagree, when an art path is missing, or when a page would
@@ -86,16 +87,17 @@ Add the local chain to MetaMask (RPC `http://127.0.0.1:8547`, chain id 31338) an
 
 ## Tests
 
-`pnpm run check` runs offline: `scripts/check.mjs`, then `node --test`:
+`pnpm run check` runs offline: `scripts/check.mjs`, then `node --test`, then a public-only pass
+(`scripts/public-check.mjs`: the template without Rapture's private pack page, checked and tested in a temp folder;
+it does nothing where that page is absent):
 
 | Suite | |
 |---|---|
 | `abi.test.mjs` | every hard-coded selector, topic and error id equals ethers' for the compiled ABIs in `test/abi/` (the mint package keeps those equal to its build); encoders and decoders match ethers byte for byte |
-| `chain.test.mjs`, `wallet.test.mjs`, `drand.test.mjs` | the RPC client (retries, timeouts, receipts), the EIP-1193/EIP-6963 wallet layer, the drand client (real evmnet rounds, mirrors, the countdown) |
-| `packshop.test.mjs` | the pack client end to end against a fake PackShopV2 chain |
+| `chain.test.mjs`, `wallet.test.mjs` | the RPC client (retries, timeouts, receipts) and the EIP-1193/EIP-6963 wallet layer |
 | `fixed.test.mjs` | the fixed-price client end to end against a fake FixedPriceMinter |
 | `holdings.test.mjs` | the library: the ownerOf scan, remembered tokens, ERC721Enumerable, design records |
-| `config.test.mjs` | config validation, the CSP, and that the committed `vercel.json` matches the template config |
+| `config.test.mjs` | config validation (a `"packs"` config is refused where the pack page is absent), the CSP, and that the committed `vercel.json` matches the template config |
 
 ## Deploy
 

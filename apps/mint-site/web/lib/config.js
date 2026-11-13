@@ -14,6 +14,8 @@
 // The mint package's scripts/site-config.mjs writes "chain" and "mint" (and "cards") after a deploy.
 
 export const DRAND_HOSTS = Object.freeze(["https://api.drand.sh", "https://api2.drand.sh", "https://api3.drand.sh"]);
+/** Mode "packs" needs the pack module (web/packs/), which Rapture's private build has and the public kit does not yet. */
+export const PACKS_MISSING = 'PackShop v2 isn\'t published in this kit yet: mint.mode "packs" needs the pack module (web/packs/), which stays in Rapture\'s private build until the pack shop launches. Use mode "fixed".';
 export const COLOR_KEYS = Object.freeze(["background", "surface", "text", "muted", "accent", "accentText", "shiny", "gold"]);
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
@@ -26,8 +28,8 @@ const isHttps = (u) => typeof u === "string" && /^https:\/\/[^\s/?#]+(?:\/[^\s]*
 const isRpc = (u) => isHttps(u) || (typeof u === "string" && LOCAL_HOST.test(u));
 export const originOf = (u) => { const m = /^(https?:\/\/[^/?#]+)/.exec(u); return m ? m[1] : null; };
 
-/** Problems ([] = fine) and warnings in a site config. */
-export function validateSiteConfig(c) {
+/** Problems ([] = fine) and warnings in a site config. packs: whether this site has the pack module (web/packs/). */
+export function validateSiteConfig(c, { packs = true } = {}) {
   const problems = [], warnings = [];
   if (!c || typeof c !== "object") return { problems: ["the site config is not a JSON object"], warnings };
   if (typeof c.name !== "string" || !c.name.trim() || c.name.length > 60) problems.push("name must be 1-60 characters");
@@ -42,7 +44,8 @@ export function validateSiteConfig(c) {
   if (typeof cur.symbol !== "string" || !cur.symbol || cur.decimals !== 18) problems.push("chain.currency needs a symbol and decimals 18");
 
   const m = c.mint ?? {};
-  if (!["fixed", "packs"].includes(m.mode)) problems.push('mint.mode must be "fixed" or "packs"');
+  if (m.mode === "packs" && !packs) problems.push(PACKS_MISSING);
+  else if (!["fixed", "packs"].includes(m.mode)) problems.push('mint.mode must be "fixed"');
   if (m.address == null) warnings.push("mint.address is not set: the site shows \"not open yet\" until the mint package's site-config writes it");
   else if (!ADDRESS.test(m.address)) problems.push("mint.address must be the minter's address or null");
   if (m.collection != null && !ADDRESS.test(m.collection)) problems.push("mint.collection must be the ERC-721's address or null");
@@ -126,7 +129,8 @@ export async function loadSiteConfig(url = "./site.config.json", { fetch: f = gl
   const res = await f(url, { cache: "no-cache" });
   if (!res.ok) throw new Error(`site.config.json could not be loaded (HTTP ${res.status})`);
   const c = await res.json();
-  const { problems, warnings } = validateSiteConfig(c);
+  const packs = c?.mint?.mode !== "packs" || (await import("../packs/lib/packshop.js").then(() => true, () => false));
+  const { problems, warnings } = validateSiteConfig(c, { packs });
   for (const w of warnings) console.warn(`[site.config.json] ${w}`);
   if (problems.length) throw new Error(`site.config.json has problems:\n- ${problems.join("\n- ")}`);
   return c;

@@ -9,7 +9,6 @@ const { artifacts } = require("hardhat");
 const SITE = path.join(__dirname, "..", "..", "..", "apps", "mint-site", "test", "abi");
 const COPIES = {
   "FixedPriceMinter.json": "FixedPriceMinter",
-  "PackShopV2.json": "PackShopV2",
   "reference/StudioMinter.json": "StudioMinter",
   "reference/CardDesign.json": "CardDesign",
   "reference/RaptureCards.json": "RaptureCards",

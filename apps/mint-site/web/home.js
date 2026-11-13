@@ -1,7 +1,7 @@
 // Home: the collection, what it costs, how much is left, and the way in (mint or packs).
 import { boot, el } from "./app.js";
 import { fixedConfig, readMinter } from "./lib/fixed.js";
-import { packConfig, readShop, formatAmount } from "./lib/packshop.js";
+import { formatAmount } from "./lib/shop.js";
 
 const ctx = await boot("index");
 if (ctx) {
@@ -17,7 +17,7 @@ if (ctx) {
       site.description ? el("p", { text: site.description }) : null,
       stats,
       el("p", { class: "actions" },
-        el("a", { class: "button primary", href: packs ? "packs.html" : "mint.html", text: packs ? "Open packs" : "Mint cards" }),
+        el("a", { class: "button primary", href: packs ? "packs/index.html" : "mint.html", text: packs ? "Open packs" : "Mint cards" }),
         el("a", { class: "button", href: "library.html", text: "My cards" })))));
 
   const sym = site.chain.currency.symbol;
@@ -25,6 +25,7 @@ if (ctx) {
   else {
     try {
       if (packs) {
+        const { packConfig, readShop } = await import("./packs/lib/packshop.js");   // a packs site has the pack module
         const s = await readShop(packConfig(site));
         stat("Pack", `${formatAmount(s.price, 4, "ceil")} ${sym} · ${s.packSize} cards`);
         stat("Cards left", `${s.cardsLeft} of ${s.maxSupply}`);

@@ -6,14 +6,18 @@
 //   remembered  token ids this browser saw minted (mints, pack opens): instant, verified with ownerOf before trusted
 //   scan        ownerOf over the collection's ids, tokenIdBase + totalSupply - 1 down to tokenIdBase (newest first),
 //               stopping the moment the count is met (at most SCAN_LIMIT calls)
-// WHICH CARD. A FixedPriceMinter answers templatesOf(ids) for the tokens it minted. A PackShopV2 answers finishesOf(ids),
+// WHICH CARD. A FixedPriceMinter answers templatesOf(ids) for the tokens it minted. A pack shop (the pack module, where
+// the site has it) answers finishesOf(ids),
 // and the buyer's own packs (recentPacks, packOf, tokensOf) give their template ids. A collection with design records
 // (mint.designRecords, the reference CardDesign) maps any token to its design hash, which names a card in the config.
 // Anything left is shown as the token alone.
 import { createChain, isAbort, AbortError } from "./chain.js";
 import { NFT_SELECTORS, ERC721_ENUMERABLE, encodeCall, isAddress, words, uintAt, addressAt, boolAt } from "./abi.js";
 import { templatesOf, fixedConfig } from "./fixed.js";
-import { packConfig, finishesOf, findMyPacks, readPack, readTokens, PHASE } from "./packshop.js";
+
+/** The pack module (web/packs/), loaded only by a packs site, and only where the site has it. */
+let packModule = null;
+const loadPacks = () => (packModule ??= import("../packs/lib/packshop.js").catch(() => null));
 
 const SCAN_LIMIT = 1500;          // ownerOf calls one read may spend looking for tokens
 const ENUM_LIMIT = 1000;          // tokens listed from an enumerable collection
@@ -55,8 +59,15 @@ export function createHoldings({ site, chain, storage } = {}) {
   const client = chain ?? createChain(site.chain.rpc);
   const store = storage === undefined ? defaultStorage() : storage;
   const mode = site.mint.mode;
-  const shopCfg = isAddress(site.mint.address) ? (mode === "fixed" ? fixedConfig(site) : packConfig(site)) : null;
-  if (shopCfg && chain) shopCfg.client = client;
+  const fixedCfg = isAddress(site.mint.address) && mode === "fixed" ? fixedConfig(site) : null;
+  if (fixedCfg && chain) fixedCfg.client = client;
+  let packsCfg;                      // undefined: not looked up yet; null: no pack shop here
+  async function packs() {
+    if (packsCfg !== undefined) return packsCfg;
+    const P = mode === "packs" && isAddress(site.mint.address) ? await loadPacks() : null;
+    packsCfg = P ? { P, cfg: { ...P.packConfig(site), ...(chain ? { client } : {}) } } : null;
+    return packsCfg;
+  }
   const base = BigInt(site.mint.tokenIdBase ?? "0");
   const byDesign = new Map((site.cards ?? []).filter((c) => c.designHash).map((c) => [norm(c.designHash), c.id]));
   const keyOf = (w) => `mintsite.library.v1:${site.chain.id}:${norm(nft)}:${norm(w)}`;
@@ -85,23 +96,25 @@ export function createHoldings({ site, chain, storage } = {}) {
     const set = (id, k, v) => { if (v == null) return; (info[id] ??= {})[k] = v; };
     const remembered = load(w).info ?? {};
     for (const id of ids) if (remembered[id]) for (const [k, v] of Object.entries(remembered[id])) set(id, k, v);
-    if (shopCfg && mode === "fixed") {
+    if (fixedCfg) {
       for (let i = 0; i < ids.length; i += BATCH) {
         const part = ids.slice(i, i + BATCH);
-        try { (await templatesOf(shopCfg, part, { signal })).forEach((t, j) => set(part[j], "templateId", t)); }
+        try { (await templatesOf(fixedCfg, part, { signal })).forEach((t, j) => set(part[j], "templateId", t)); }
         catch (e) { if (isAbort(e)) throw e; }
       }
     }
-    if (shopCfg && mode === "packs") {
+    const pk = await packs();
+    if (pk) {
+      const { P, cfg: shopCfg } = pk;
       for (let i = 0; i < ids.length; i += BATCH) {
         const part = ids.slice(i, i + BATCH);
-        try { (await finishesOf(shopCfg, part, { signal })).forEach((f, j) => set(part[j], "finish", f || null)); }
+        try { (await P.finishesOf(shopCfg, part, { signal })).forEach((f, j) => set(part[j], "finish", f || null)); }
         catch (e) { if (isAbort(e)) throw e; }
       }
       try {
-        const opened = (await findMyPacks(shopCfg, w, { signal })).filter((p) => p.phase === PHASE.Opened);
+        const opened = (await P.findMyPacks(shopCfg, w, { signal })).filter((p) => p.phase === P.PHASE.Opened);
         await pool(opened, 4, async (p) => {
-          const [pack, tokens] = await Promise.all([readPack(shopCfg, p.packId, { signal }), readTokens(shopCfg, p.packId, { signal })]);
+          const [pack, tokens] = await Promise.all([P.readPack(shopCfg, p.packId, { signal }), P.readTokens(shopCfg, p.packId, { signal })]);
           tokens.forEach((t, j) => { set(t, "templateId", pack.templateIds[j]); set(t, "finish", pack.finishes[j]); });
         }, signal);
       } catch (e) { if (isAbort(e)) throw e; }

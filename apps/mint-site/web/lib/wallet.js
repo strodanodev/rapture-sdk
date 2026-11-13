@@ -25,7 +25,7 @@ export const LITEFORGE = Object.freeze({
 });
 
 /** Every `code` a WalletError can carry. The first six are the contract with the UI; not_connected and
- *  low_balance are the two extras this layer needs (packshop.js and fixed.js add their own on ShopError). */
+ *  low_balance are the two extras this layer needs (the shop clients add their own on ShopError). */
 export const WALLET_ERROR_CODES = Object.freeze([
   "user_rejected",    // the player pressed Reject (EIP-1193 4001)
   "request_pending",  // the wallet already has an unanswered request (-32002)
@@ -416,7 +416,7 @@ export function createWallet({ chain: chainArg = LITEFORGE, provider = null, inf
     const tx = { from, to, data };
     if (value != null && toBigInt(value) !== 0n) tx.value = toQuantity(value);
     if (gas != null) tx.gas = toQuantity(gas);
-    // EIP-1559 caps are optional: given, the wallet must not bid below them (see packshop.js feeCaps); omitted, it decides
+    // EIP-1559 caps are optional: given, the wallet must not bid below them (see shop.js feeCaps); omitted, it decides
     if (maxFeePerGas != null) tx.maxFeePerGas = toQuantity(maxFeePerGas);
     if (maxPriorityFeePerGas != null) tx.maxPriorityFeePerGas = toQuantity(maxPriorityFeePerGas);
     const hash = await call("eth_sendTransaction", [tx]);
