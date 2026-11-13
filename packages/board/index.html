@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0c12" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Board game</title>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <header id="bar">
+      <strong id="title"></strong>
+      <span class="grow"></span>
+      <button id="wallet" hidden>Connect wallet</button>
+      <label class="quality">quality <select id="quality"></select></label>
+      <span id="fps"></span>
+    </header>
+    <section id="menu" class="card">
+      <h1>Play</h1>
+      <button id="play-0">Against the bot, first to move</button>
+      <button id="play-1">Against the bot, second to move</button>
+      <button id="hotseat">Two players, one screen</button>
+      <p class="note">
+        Online: open the game from the LitNode arcade, or run a dev relay (<code>RELAY_DEV=1 pnpm relay</code>) and open this
+        page twice with <code>?relay=ws://127.0.0.1:7832&amp;room=x&amp;name=alice</code> and <code>…&amp;name=bob</code>.
+      </p>
+    </section>
+    <aside id="panel" class="card" hidden>
+      <div id="status"></div>
+      <div id="clocks"></div>
+      <ol id="moves"></ol>
+      <div class="row">
+        <button id="concede">Concede</button>
+        <button id="offer" hidden>Offer a draw</button>
+        <button id="accept" hidden>Accept the draw</button>
+        <button id="decline" hidden>Decline</button>
+        <button id="leave">Menu</button>
+      </div>
+    </aside>
+    <footer id="showcase"></footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
