@@ -263,7 +263,7 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 
 /* ------------------------------------------------------------------ the hand */
 /* The hand sits whole along the bottom edge, fanned; a card lifts and grows when you point at it. */
-.hand { --w: clamp(96px, 17vh, 176px); display: flex; justify-content: center; align-items: flex-start; height: calc(var(--w) * 1.4 + 34px); max-width: 100%; padding: 0 16px; margin-bottom: calc(var(--safe-b) * -1); perspective: 1000px; }
+.hand { --w: clamp(96px, 19.5vh, 200px); display: flex; justify-content: center; align-items: flex-start; height: calc(var(--w) * 1.4 + 34px); max-width: 100%; padding: 0 16px; margin-bottom: calc(var(--safe-b) * -1); perspective: 1000px; }
 /* side by side while the hand fits beside the end-turn medallion, so every card's stats and rules show; past that,
    only as much overlap as it must (stats stay clear). It fans in an arc: each card turned and dropped a little more
    toward the ends (hover, focus and a pick lift it) */
@@ -286,6 +286,14 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 .hand .tcard .tc-name:not(.long) { font-size: max(1.08em, 10px); }
 .hand .tcard .tc-type { font-size: max(0.78em, 8.5px); }
 @media (min-width: 761px) { .hand .tcard .tc-name.long { font-size: max(0.9em, 10px); letter-spacing: 0; padding-inline: 0.6em; } }
+/* wider screens: the hand rests on a forged tray, an arched rail under the cards, so the foot of the table reads as
+   furniture when the hand is small (it was an empty dark third) */
+@media (min-width: 761px) {
+  .hand { position: relative; }
+  .hand::before { content: ''; position: absolute; left: 50%; bottom: -12px; z-index: -1; width: min(1180px, 92vw); height: 58%; transform: translateX(-50%); pointer-events: none;
+    border-radius: 50% 50% 0 0 / 36% 36% 0 0; border-top: 1px solid rgba(255, 201, 94, 0.36); background: linear-gradient(180deg, rgba(32, 24, 36, 0.84), rgba(10, 8, 14, 0.95));
+    box-shadow: 0 -4px 0 0 rgba(8, 7, 11, 0.6), 0 -5px 0 0 rgba(255, 201, 94, 0.14), 0 -16px 40px rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 240, 210, 0.06); }
+}
 .hand-more { display: none; }   /* the "more cards" chip is for phones, whose hand scrolls (see the phone layout) */
 
 /* ------------------------------------------------------------------ the dock: the end-turn medallion and the menu */
@@ -501,7 +509,7 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 }
 @media (max-height: 820px) and (min-width: 761px) {
   .battlefield { --u-max: clamp(60px, 15vh, 130px); }
-  .hand { --w: clamp(96px, 17vh, 146px); }
+  .hand { --w: clamp(96px, 18vh, 150px); }
   .hud-center { min-height: 46px; }
   .plate { min-height: 56px; }
   .pl-hero, .pl-face { width: 72px; height: 72px; }
