@@ -4,11 +4,12 @@
 //
 // Reads the shop from deployments/<network>.json next to the config and CHECKS it on chain before writing: it must
 // have code and the MINTER role, a fixed-price catalogue must hold templates, and a packs shop must be locked with the
-// config's deck and use the recorded beacon. Then it rewrites the site config's "chain" and "mint" sections and
-// leaves branding, art and text alone. Public data only. A paused shop is fine: the site says sales are closed.
+// config's deck and use the recorded beacon, and the shop's templates must be the config's, in order. Then it rewrites
+// the site config's "chain", "mint" and "cards" sections (a card keeps the "art" it had) and leaves branding, art and
+// text alone. Public data only. A paused shop is fine: the site says sales are closed.
 import fs from "node:fs";
 import path from "node:path";
-import { ethers, parseArgs, networkInfo, provider, loadConfigOrExit, deploymentOrExit } from "./lib/chain.mjs";
+import { ethers, parseArgs, networkInfo, provider, loadConfigOrExit, deploymentOrExit, TEMPLATE_TUPLE } from "./lib/chain.mjs";
 
 const args = parseArgs();
 const cfg = loadConfigOrExit(args.config || process.env.MINT_CONFIG || "mint.config.json");
@@ -49,8 +50,21 @@ if (dep.contract === "FixedPriceMinter") {
   mint = { mode: "packs", address: dep.shop, collection: cards, tokenIdBase, beacon: { registry: dep.beacon } };
 } else throw new Error(`unknown contract ${dep.contract} in the deployment record`);
 
+// the shop's templates are the config's, in order: the site names cards by template id
+const reader = new ethers.Contract(dep.shop, ["function templateCount() view returns (uint256)", `function templateOf(uint256) view returns (${TEMPLATE_TUPLE})`], p);
+const count = Number(await reader.templateCount());
+if (count !== cfg.templates.length) throw new Error(`the shop holds ${count} templates, the config ${cfg.templates.length}`);
+for (let i = 0; i < count; i++) {
+  if ((await reader.templateOf(i)).design.designHash.toLowerCase() !== cfg.templates[i].design.designHash.toLowerCase()) throw new Error(`template ${i} on chain is not the config's`);
+}
+// the collection's design records (the reference StudioMinter names them with design()): any token -> its design
+const collectionMinter = dep.referenceCollection?.minter ?? cfg.collection.minter;
+mint.designRecords = await new ethers.Contract(collectionMinter, ["function design() view returns (address)"], p).design().catch(() => null);
+
 const site = JSON.parse(fs.readFileSync(sitePath, "utf8"));
-site.chain = { id: net.chainId, name: net.name, rpc: net.rpc, explorer: net.explorer ?? null, currency: net.currency };
+const artOf = new Map((site.cards ?? []).filter((c) => c.art).map((c) => [c.id, c.art]));
+site.chain = { id: net.chainId, name: net.name, rpc: net.rpc, explorer: net.explorer ?? null, faucet: site.chain?.faucet ?? null, currency: net.currency };
 site.mint = mint;
+site.cards = cfg.templates.map((t, id) => ({ id, name: t.design.name, epithet: t.design.epithet, kind: t.kind, designHash: t.design.designHash, ...(artOf.has(id) ? { art: artOf.get(id) } : {}) }));
 fs.writeFileSync(sitePath, JSON.stringify(site, null, 2) + "\n");
-console.log(`wrote the chain and mint sections of ${path.relative(process.cwd(), sitePath)}. In the site folder, run pnpm csp to refresh vercel.json's Content-Security-Policy.`);
+console.log(`wrote the chain, mint and cards sections of ${path.relative(process.cwd(), sitePath)} (${site.cards.length} cards). In the site folder, run pnpm csp to refresh vercel.json's Content-Security-Policy.`);

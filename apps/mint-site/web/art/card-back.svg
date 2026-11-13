@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 350" width="250" height="350">
+  <defs><pattern id="p" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="24" fill="#181b24"/><path d="M0 12 H24" stroke="#7c9cff" stroke-opacity="0.35" stroke-width="2"/></pattern></defs>
+  <rect width="250" height="350" rx="16" fill="#0f1117"/>
+  <rect x="10" y="10" width="230" height="330" rx="12" fill="url(#p)" stroke="#7c9cff" stroke-width="3"/>
+  <circle cx="125" cy="175" r="44" fill="#0f1117" stroke="#7c9cff" stroke-width="3"/>
+  <text x="125" y="186" text-anchor="middle" font-family="system-ui, sans-serif" font-size="30" font-weight="800" fill="#7c9cff">EC</text></svg>

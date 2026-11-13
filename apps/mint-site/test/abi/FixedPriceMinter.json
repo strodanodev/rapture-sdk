@@ -1,0 +1,1177 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract IStudioMinter",
+        "name": "minter_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "price_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "maxPerWallet_",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "BadMinter",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadQuantity",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadTemplate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DuplicateDesign",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EnforcedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ExpectedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "Insufficient",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "IsLocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotMinter",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RenounceDisabled",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "SoldOut",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TooManyTemplates",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownTemplate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "WalletLimitReached",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "WrongPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "templates",
+        "type": "uint256"
+      }
+    ],
+    "name": "Locked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "limit",
+        "type": "uint32"
+      }
+    ],
+    "name": "MaxPerWalletSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "payer",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "paid",
+        "type": "uint256"
+      }
+    ],
+    "name": "Minted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      }
+    ],
+    "name": "PriceSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "kind",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "designHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "maxSupply",
+        "type": "uint32"
+      }
+    ],
+    "name": "TemplateAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      }
+    ],
+    "name": "TemplateRetired",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdrawn",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_PER_TX",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_TEMPLATES",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PAGE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "acceptOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "faction",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "alignment",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "element",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "frame",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint32",
+                "name": "bodyparts",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint16",
+                "name": "strength",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "agility",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "resilience",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "intelligence",
+                "type": "uint16"
+              }
+            ],
+            "internalType": "struct Traits",
+            "name": "traits",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "chainId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address",
+                "name": "collection",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Origin",
+            "name": "styleSource",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "designHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "art",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "turntable",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "overridesHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatar",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatarPlain",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "soul",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint8",
+                "name": "kit",
+                "type": "uint8"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "epithet",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct Design",
+            "name": "design",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct FixedPriceMinter.Template[]",
+        "name": "ts",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "uint32[]",
+        "name": "maxSupplies",
+        "type": "uint32[]"
+      }
+    ],
+    "name": "addTemplates",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "config",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "price_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "maxPerWallet_",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "paused_",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "ready_",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "locked_",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "templateCount_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalMinted_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxSupply_",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      }
+    ],
+    "name": "editionOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint32",
+            "name": "maxSupply",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "minted",
+            "type": "uint32"
+          },
+          {
+            "internalType": "bool",
+            "name": "retired",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct FixedPriceMinter.Edition",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "from",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "n",
+        "type": "uint256"
+      }
+    ],
+    "name": "editionsOf",
+    "outputs": [
+      {
+        "internalType": "uint32[]",
+        "name": "maxSupply",
+        "type": "uint32[]"
+      },
+      {
+        "internalType": "uint32[]",
+        "name": "minted",
+        "type": "uint32[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "retired",
+        "type": "bool[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "hasDesign",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lock",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "locked",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxPerWallet",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "mint",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "who",
+        "type": "address"
+      }
+    ],
+    "name": "mintableBy",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "mintedBy",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "minter",
+    "outputs": [
+      {
+        "internalType": "contract IStudioMinter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "ownerMint",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "price",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ready",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      }
+    ],
+    "name": "retireTemplate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "limit",
+        "type": "uint32"
+      }
+    ],
+    "name": "setMaxPerWallet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "price_",
+        "type": "uint256"
+      }
+    ],
+    "name": "setPrice",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "templateCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "templateId",
+        "type": "uint256"
+      }
+    ],
+    "name": "templateOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "faction",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "alignment",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "element",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint8",
+                "name": "frame",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint32",
+                "name": "bodyparts",
+                "type": "uint32"
+              },
+              {
+                "internalType": "uint16",
+                "name": "strength",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "agility",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "resilience",
+                "type": "uint16"
+              },
+              {
+                "internalType": "uint16",
+                "name": "intelligence",
+                "type": "uint16"
+              }
+            ],
+            "internalType": "struct Traits",
+            "name": "traits",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "chainId",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address",
+                "name": "collection",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Origin",
+            "name": "styleSource",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "designHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "art",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "turntable",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "overridesHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatar",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "avatarPlain",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "soul",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint8",
+                "name": "kit",
+                "type": "uint8"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "epithet",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct Design",
+            "name": "design",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct FixedPriceMinter.Template",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "templatesOf",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "plusOne",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalMinted",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

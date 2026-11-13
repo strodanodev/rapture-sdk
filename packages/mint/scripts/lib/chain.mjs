@@ -64,4 +64,6 @@ export async function pool(items, n, fn) {
 export const ORIGIN_TUPLE = "tuple(uint64 chainId, address collection, uint256 tokenId)";
 export const DESIGN_TUPLE = "tuple(bytes32 designHash, bytes32 art, bytes32 turntable, bytes32 overridesHash, bytes32 avatar, bytes32 avatarPlain, bytes32 soul, uint8 kit, string name, string epithet)";
 export const CARD_TUPLE = "tuple(address drop, uint64 profileId, uint32 index, uint16 setId, uint8 kind, uint8 faction, uint8 alignment, uint8 element, uint8 frame, uint32 bodyparts, bool revealed, bool custodial, bytes32 entropyCommit, bytes32 sealedCommit)";
+export const TRAITS_TUPLE = "tuple(uint8 faction, uint8 alignment, uint8 element, uint8 frame, uint32 bodyparts, uint16 strength, uint16 agility, uint16 resilience, uint16 intelligence)";
+export const TEMPLATE_TUPLE = `tuple(uint8 kind, ${TRAITS_TUPLE} traits, ${ORIGIN_TUPLE} styleSource, ${DESIGN_TUPLE} design)`;
 export const STATS_TUPLE = "tuple(uint16 strength, uint16 agility, uint16 resilience, uint16 intelligence, uint32 level, uint64 experience)";
