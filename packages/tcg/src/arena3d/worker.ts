@@ -4,9 +4,11 @@
  * the battle. Bundled by scripts/build-arena3d.mjs into web/arena3d.js; web/ui/arena.js starts it.
  *
  * Page → worker: init { canvas, width, height, dpr, coarse, still, base, realm, mood }, size, realm, mood, quake, visible,
- *   board { rect } (the battle board's box on screen, CSS px, or null).
- * Worker → page: ready { gpu, ms }, failed { reason }, tooSlow, stats { fps, frameMs, drawCalls, triangles, pixelRatio }.
+ *   board { layout } (where the battle board is on screen and how it is laid out, see board.ts, or null).
+ * Worker → page: ready { gpu, ms }, failed { reason }, tooSlow, stats { fps, frameMs, drawCalls, triangles, pixelRatio },
+ *   board3d { up } (the modelled board is up under the HTML one, or no longer).
  */
+import type { BoardLayout } from './board';
 import { Realm, type RealmId } from './realm';
 import { type Mood, Stage } from './stage';
 
@@ -18,7 +20,7 @@ type In =
   | { type: 'quake' }
   | { type: 'burst'; x: number; y: number; color: number; kind: 'hit' | 'death' | 'play' | 'heal' | 'spell' }
   | { type: 'fx'; canvas: OffscreenCanvas }
-  | { type: 'board'; rect: { x: number; y: number; w: number; h: number } | null }
+  | { type: 'board'; layout: BoardLayout | null }
   | { type: 'visible'; visible: boolean };
 
 const post = (m: unknown): void => (self as unknown as Worker).postMessage(m);
@@ -38,6 +40,7 @@ async function init(m: Extract<In, { type: 'init' }>): Promise<void> {
   if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) { stage.dispose(); stage = null; post({ type: 'failed', reason: `software rendering (${gpu})` }); return; }
   const t1 = performance.now();
   stage.onTooSlow = () => post({ type: 'tooSlow' });
+  stage.onBoard = (up) => post({ type: 'board3d', up });
   realm = new Realm(stage, m.base);
   stage.setMood(m.mood);
   stage.start();
@@ -60,6 +63,6 @@ self.onmessage = (e: MessageEvent<In>): void => {
   else if (m.type === 'quake') stage.quake();
   else if (m.type === 'burst') stage.burst(m.x, m.y, m.color, m.kind);
   else if (m.type === 'fx') stage.attachFx(m.canvas);
-  else if (m.type === 'board') stage.board = m.rect;
+  else if (m.type === 'board') { stage.board = m.layout; stage.boardVersion++; }
   else if (m.type === 'visible') stage.hidden = !m.visible;
 };

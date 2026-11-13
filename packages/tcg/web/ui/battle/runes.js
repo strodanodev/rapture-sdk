@@ -65,14 +65,15 @@ function stadium(w, h, inset, gap) {
  * Fill `host` (the table mat) with the rune circle, and keep it fitted to the host's size. `avoid()` returns rects in
  * the host's coordinates (the lanes) that glyphs must not cover: on a narrow table the ring would cross them, so those
  * glyphs and the dark band are left out there and only the thin rim runs past. Returns { refresh() } for when the
- * rects change.
+ * rects change, and band(): the dark band's inset and width, or null where it is left out (the 3D board cuts a
+ * channel under it).
  */
 export function runeRing(host, avoid = () => []) {
   const svg = document.createElementNS(NS, "svg");
   svg.setAttribute("class", "tm-runes");
   svg.setAttribute("aria-hidden", "true");
   host.append(svg);
-  let last = "";
+  let last = "", band = null;
   const draw = () => {
     const w = Math.round(host.clientWidth), h = Math.round(host.clientHeight);
     const keep = avoid().filter(Boolean);
@@ -85,6 +86,7 @@ export function runeRing(host, avoid = () => []) {
     const over = near(size * 0.5);
     // the band is dropped only where the ring truly runs through a lane, not where it just passes close
     const crossed = pts.some(near(0));
+    band = crossed || w < h ? null : { inset, width: size * 2.1 };
     const rand = rng(7);
     let glyphs = "";
     for (const p of pts) { const d = glyph(rand, size); if (!over(p)) glyphs += `<path transform="translate(${f(p.x)} ${f(p.y)}) rotate(${f(p.deg)})" d="${d}"/>`; }
@@ -95,5 +97,5 @@ export function runeRing(host, avoid = () => []) {
       + `<g class="tm-glyphs" stroke-width="${f(Math.max(1.2, size * 0.12))}">${glyphs}</g>`;
   };
   new ResizeObserver(draw).observe(host);
-  return { refresh: draw };
+  return { refresh: draw, band: () => band };
 }

@@ -59,7 +59,10 @@ export function matchScreen(app) {
   const overlays = createOverlays(app);
   const result = createResult(app);
   const viewbar = createViewbar(app, { session: () => session, flip: () => flip() });
-  const mat = h("div", { class: "table-mat", aria: { hidden: "true" } }, h("i", { class: "tm-ring" }), h("i", { class: "tm-seat foe" }), h("i", { class: "tm-seat you" }));
+  // four sizeless probes at the mat's corners: where each lands on screen (through the board's 3D tilt) is what the
+  // 3D arena builds its board to
+  const probes = [["0", "0"], ["100%", "0"], ["100%", "100%"], ["0", "100%"]].map(([left, top]) => { const p = h("i", { class: "tm-probe" }); p.style.left = left; p.style.top = top; return p; });
+  const mat = h("div", { class: "table-mat", aria: { hidden: "true" } }, h("i", { class: "tm-ring" }), h("i", { class: "tm-seat foe" }), h("i", { class: "tm-seat you" }), ...probes);
   // the lanes' extent in the mat's coordinates: layout offsets (untouched by the board's 3D tilt), summed up to the
   // board, since a lane with preserve-3d is its own children's offset parent
   const offsetIn = (node, root) => {
@@ -73,19 +76,35 @@ export function matchScreen(app) {
     const a = offsetIn(kids[0], board), b = offsetIn(kids[kids.length - 1], board);
     return { x: a.x - mat.offsetLeft, y: a.y - mat.offsetTop, w: b.x + kids[kids.length - 1].offsetWidth - a.x, h: kids[0].offsetHeight };
   };
-  const board = h("div", { class: "battlefield" }, mat, foeLane, h("div", { class: "lane-line" }), myLane);
+  const laneLine = h("div", { class: "lane-line" });
+  const board = h("div", { class: "battlefield" }, mat, foeLane, laneLine, myLane);
   const ring = runeRing(mat, () => [laneRect(foeLane), laneRect(myLane)]);
-  // tell the 3D arena where the board's mat is on screen, so its stone table lies exactly under it (only on change)
+  // tell the 3D arena where the board is on screen and how it is laid out, so the board it models lies exactly under
+  // this one, a recess under every slot (only on change): the mat's corners on screen, and in the mat's coordinates
+  // its size and corner radius, each slot (an empty slot's box, centred in its place in the lane), the rune band and
+  // the centre line
   let lastBoard = "";
+  const r1 = (n) => Math.round(n * 10) / 10;
   const fitBoard = () => {
-    const r = mat.getBoundingClientRect(), key = `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`;
-    if (key === lastBoard || !r.width) return;
+    const w = mat.offsetWidth, hh = mat.offsetHeight;
+    if (!w || !hh || el.hidden) return;
+    const quad = probes.map((p) => { const r = p.getBoundingClientRect(); return [r1(r.x), r1(r.y)]; });
+    const slots = [foeLane, myLane].flatMap((lane) => [...lane.children].map((k) => {
+      const o = offsetIn(k, board), sw = k.offsetWidth, sh = sw * 1.22 * 0.92;
+      return { x: r1(o.x - mat.offsetLeft), y: r1(o.y - mat.offsetTop + (k.offsetHeight - sh) / 2), w: r1(sw), h: r1(sh) };
+    }));
+    const lo = offsetIn(laneLine, board);
+    const layout = { quad, w, h: hh, radius: Math.min(parseFloat(getComputedStyle(mat).borderTopLeftRadius) || 0, w / 2, hh / 2), slots, band: ring.band(),
+      line: { y: r1(lo.y - mat.offsetTop + laneLine.offsetHeight / 2), x0: r1(lo.x - mat.offsetLeft), x1: r1(lo.x - mat.offsetLeft + laneLine.offsetWidth) } };
+    const key = JSON.stringify(layout);
+    if (key === lastBoard) return;
     lastBoard = key;
-    app.arena.setBoard(r);
+    app.arena.setBoard(layout);
   };
   addEventListener("resize", () => requestAnimationFrame(() => { fitBoard(); markHandMore(); }));
   el = h("section", { class: "match", aria: { label: "Battle" } },
     overlays.fx, foeP.el, h("div", { class: "hud-center" }, medallion, status), board, meP.el, pickInfo, hand, handMore, dock, overlays.feed, overlays.cine, viewbar.el, result.el);
+  el.addEventListener("animationend", (e) => { if (e.target === el) fitBoard(); });   // the screen's entrance scales it: measure again at rest
   const aim = createAim(el);   // the targeting arrow from whatever is picked (see ui/battle/aim.js)
   const bfx = createBattleFx(el, app.arena, game);   // what each move looks like (see ui/battle/fx.js)
   const menu = createBattleMenu(app, el, { session: () => session, ctx: () => ctx, viewing, blocked: () => result.open });

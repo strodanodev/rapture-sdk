@@ -103,7 +103,7 @@ export function createArena(root) {
       void three?.setRealm(id);
     },
     /** "menu" shows the level in full; "battle" dims it behind the board. */
-    setMood(mood) { api.mood = mood; root.dataset.mood = mood; three?.setMood(mood); },
+    setMood(mood) { api.mood = mood; root.dataset.mood = mood; if (mood !== "battle") root.classList.remove("board3d"); three?.setMood(mood); },
     quake() { root.classList.remove("quake"); void root.offsetWidth; root.classList.add("quake"); three?.quake(); },
     /** A particle burst on the 3D table under a screen point (CSS px); false when the 3D arena isn't running. */
     burst(x, y, color, kind) { if (!three) return false; three.burst(x, y, color, kind); return true; },
@@ -112,8 +112,12 @@ export function createArena(root) {
      * arena's table lies under the HTML board, which would bury them in the scene.
      */
     mountFx(parent) { fxParent = parent; mountFx(); },
-    /** The battle board's box on screen (a DOMRect, or null): the 3D table is fitted under it. */
-    setBoard(rect) { three?.setBoard(rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : null); },
+    /**
+     * Where the battle board is on screen and how it is laid out (see src/arena3d/board.ts, or null): the 3D arena
+     * models its board to it. Kept, so an arena that starts after the match has begun still gets it. When that board
+     * is up, #arena carries .board3d and the page drops its drawn table (styles/battle.css).
+     */
+    setBoard(layout) { board = layout; three?.setBoard(layout); },
     /** Frame rate, resolution and draw calls of the 3D arena, or null while the CSS arena is showing. */
     stats: () => three?.stats() ?? null,
     upgrade: () => upgrade(),
@@ -127,7 +131,7 @@ export function createArena(root) {
    * into assets/arena/ to add your own). Anything that fails, or a device that can't hold the frame rate, keeps the
    * CSS arena, and #arena[data-fallback] says why.
    */
-  let fxParent = null, fxCanvas = null;
+  let fxParent = null, fxCanvas = null, board = null;
   function mountFx() {
     if (!three?.attachFx || !fxParent || fxCanvas) return;
     fxCanvas = h("canvas", { class: "ar-fx", aria: { hidden: "true" } });
@@ -155,7 +159,7 @@ export function createArena(root) {
       let lastStats = null;
       const size = () => worker.postMessage({ type: "size", width: innerWidth, height: innerHeight, dpr: devicePixelRatio || 1 });
       const visible = () => worker.postMessage({ type: "visible", visible: !document.hidden });
-      const stop = () => { worker?.terminate(); canvas?.remove(); fxCanvas?.remove(); fxCanvas = null; removeEventListener("resize", size); document.removeEventListener("visibilitychange", visible); };
+      const stop = () => { worker?.terminate(); canvas?.remove(); fxCanvas?.remove(); fxCanvas = null; root.classList.remove("board3d"); removeEventListener("resize", size); document.removeEventListener("visibilitychange", visible); };
       const ready = new Promise((resolve, reject) => {
         worker.onerror = (e) => reject(new Error(`worker error: ${e.message || "failed to start"}`));
         worker.onmessage = (e) => {
@@ -163,6 +167,7 @@ export function createArena(root) {
           if (m.type === "ready") resolve(m);
           else if (m.type === "failed") reject(new Error(m.reason));
           else if (m.type === "stats") lastStats = m.stats;
+          else if (m.type === "board3d") root.classList.toggle("board3d", m.up && api.mood === "battle");
           else if (m.type === "tooSlow") {
             console.info("[arena] the 3D arena can't keep up here: using the CSS arena");
             stop(); three = null; root.classList.remove("three"); root.classList.add("three-failed"); root.dataset.fallback = "too slow on this device";
@@ -178,7 +183,7 @@ export function createArena(root) {
         setRealm: (id) => worker.postMessage({ type: "realm", id }),
         setMood: (mood) => worker.postMessage({ type: "mood", mood }),
         quake: () => worker.postMessage({ type: "quake" }),
-        setBoard: (rect) => worker.postMessage({ type: "board", rect }),
+        setBoard: (layout) => worker.postMessage({ type: "board", layout }),
         burst: (x, y, color, kind) => worker.postMessage({ type: "burst", x, y, color, kind }),
         attachFx: (offscreen) => worker.postMessage({ type: "fx", canvas: offscreen }, [offscreen]),
         stats: () => (lastStats ? { ...lastStats, gpu: info.gpu, setupMs: info.ms } : { gpu: info.gpu, setupMs: info.ms }),
@@ -186,6 +191,7 @@ export function createArena(root) {
       };
       // the realm or mood may have changed while it loaded
       three.setRealm(api.realm); three.setMood(api.mood);
+      if (board) three.setBoard(board);
       root.classList.add("three");
       mountFx();
       return true;

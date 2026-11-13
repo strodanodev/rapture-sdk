@@ -10,11 +10,15 @@
  * realm ({ files: [...], realms: { valhalla: { radius, height, offset?, ground? } } }: ground is the floor's height there). They stand on plinths facing the table,
  * in the realm's weathered stone, and skip phones. Valhalla's dais also gets a raised, stepped octagonal rim.
  *
+ * Each realm also has the battle board (board.ts): cut from the hall's own photographed stone, rimmed in forged iron,
+ * built to lie exactly under the page's HTML board in battle and lit by the stage's board light.
+ *
  * The GLBs are the Rapture Chess arenas with their Draco compression decoded at build time and the meshes quantized
  * (KHR_mesh_quantization), so three.js reads them with no decoder, WebAssembly or worker.
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { type BoardStyle, buildBoard, defaultLayout, disposeBoard, solveHomography } from './board';
 import type { SkyColors, Stage } from './stage';
 
 export type RealmId = 'valhalla' | 'underworld';
@@ -38,6 +42,8 @@ interface Preset {
   ridges: [number, number];
   /** The practical lights' colour and strength (braziers in Valhalla, the lava moat in the Underworld). */
   practical: { color: number; intensity: number };
+  /** The battle board: which of the model's stones it is cut from and its tints, its metals, its glow, its key light. */
+  board: { stone: RegExp[]; top: number; under: number; ember: number; iron: number; trim: number; glow: number; base: number; key: { color: number; power: number }; spikes: boolean };
 }
 
 const PRESETS: Record<RealmId, Preset> = {
@@ -54,6 +60,8 @@ const PRESETS: Record<RealmId, Preset> = {
     grade: 0xd2f0ff,
     ridges: [0x0a141e, 0x132636],
     practical: { color: 0xff8a3d, intensity: 42 },
+    // pale blue-grey flagstone, blued iron and gold under a cold white light
+    board: { stone: [/floor/, /stone/], top: 0x86b4c0, under: 0x1b272c, ember: 0, iron: 0x343a44, trim: 0xffbf5e, glow: 0x7fe6ff, base: 0x2c2c32, key: { color: 0xe4eeff, power: 190 }, spikes: false },
   },
   underworld: {
     // the fog is the horizon's own red and thick enough that the crater floor melts into it, with no hard edge
@@ -67,6 +75,8 @@ const PRESETS: Record<RealmId, Preset> = {
     grade: 0xffd2c0,
     ridges: [0x0e0302, 0x1c0504],
     practical: { color: 0xff5a1a, intensity: 34 },
+    // scorched basalt over a bed of embers, black iron and copper, spiked, under a furnace-warm light
+    board: { stone: [/basalt/, /rock/], top: 0x5c5a5e, under: 0x120b0a, ember: 0x2c0a02, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xfff0e2, power: 210 }, spikes: true },
   },
 };
 
@@ -84,9 +94,14 @@ export class Realm {
   private fires: THREE.MeshStandardMaterial[] = [];
   /** Statues and the dais rim, rebuilt for each realm. */
   private readonly dressing = new THREE.Group();
-  /** The battle table: fitted under the HTML board in battle (see fitTable), a smaller centrepiece on the title. */
+  /** The battle board: built under the HTML board in battle (see fitBoard), a smaller centrepiece on the title. */
   private table: THREE.Group | null = null;
   private tableSettled = false;   // its shadow is redrawn once each time it comes to rest
+  private boardStyle: BoardStyle | null = null;
+  /** The model's occlusion-roughness-metal maps by material name (the hall's stone is dressed without them). */
+  private readonly arm = new Map<string, THREE.Texture>();
+  private boardBuilt = -1;        // the stage's boardVersion the board was built for
+  private boardFitted = false;    // built to the page's layout (not the default one)
   private readonly ray = new THREE.Raycaster();
   private readonly tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TABLE_TOP);
   private statues: Promise<{ manifest: StatueManifest; models: THREE.Object3D[] } | null> | null = null;
@@ -166,11 +181,25 @@ export class Realm {
     const p = PRESETS[id];
     const stone = (color: number): THREE.MeshStandardMaterial => weather(new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0.04, envMapIntensity: 0.3 }), 1.7, 0.5, 0.35, 0.45);
     if (p.floorRadius > 0) this.dressing.add(daisRim(p.floorRadius, stone(id === 'valhalla' ? 0x56565a : 0x3a3034)));
-    // the battle table: a carved stone slab on a pedestal at the centre of the dais, gilt-edged; the HTML board lies
-    // over it in battle, and on the title it is the arena's centrepiece
-    this.table = battleTable(stone(id === 'valhalla' ? 0x3c5a60 : 0x4a2e2a), stone(id === 'valhalla' ? 0x2c2c32 : 0x231a1c), id === 'valhalla' ? 0x7fe6ff : 0xff6a2a);
-    this.table.position.y = this.stage.inBattle ? 0 : id === 'underworld' ? TABLE_ALTAR : TABLE_SINK;
-    this.dressing.add(this.table);
+    // the battle board: the HTML units stand on it in battle, and on the title it is the arena's centrepiece
+    const b = p.board, tex = b.stone.map((name) => this.textured(name)).find((m) => m) ?? null;
+    const cut = (color: number, roughness: number, emissive = 0, shaded = false): THREE.MeshStandardMaterial => {
+      if (!tex) return Object.assign(stone(color), { emissive: new THREE.Color(emissive), vertexColors: shaded });
+      // the hall's photographed stone with its roughness map back on (the hall wears it matte): the board is dressed
+      // and polished, so its key light picks out the grain
+      const m = new THREE.MeshStandardMaterial({ map: tex.map, normalMap: tex.normalMap, normalScale: new THREE.Vector2(1.5, 1.5), roughnessMap: this.arm.get(tex.name) ?? null, color, roughness, metalness: 0, envMapIntensity: 0.5, emissive, vertexColors: shaded });   // shaded: the recess floors carry a baked shadow in their vertex colours
+      return weather(m, 0.55, 0.3, 0, 0);   // broad mottling, so the photo's repeat doesn't read as tiles
+    };
+    const metal = (color: number, roughness: number, bump: number): THREE.MeshStandardMaterial => weather(new THREE.MeshStandardMaterial({ color, roughness, metalness: 1, envMapIntensity: 1.1 }), 1.5, 0.3, 0, bump);
+    this.boardStyle = {
+      stone: cut(b.top, 0.82), under: cut(b.under, 1, b.ember, true), iron: metal(b.iron, 0.55, 0.3), trim: metal(b.trim, 0.3, 0.2),
+      glow: new THREE.MeshStandardMaterial({ color: 0x050608, emissive: b.glow, emissiveIntensity: 1.25 }), base: stone(b.base), spikes: b.spikes,
+    };
+    this.stage.boardKey.color.set(b.key.color);
+    this.stage.boardKeyPower = b.key.power;
+    if (this.table) disposeBoard(this.table);
+    this.table = null;
+    this.buildBoard(this.stage.inBattle ? 0 : id === 'underworld' ? TABLE_ALTAR : TABLE_SINK);
     const found = this.stage.coarse ? null : await this.loadStatues();
     const ring = found?.manifest.realms?.[id];
     if (found && ring && this.id === id) {
@@ -270,6 +299,7 @@ export class Realm {
       // Poly Haven stone, ground and rock: keep the colour and normal maps, darken them to the realm's mood, matte
       const m = src.clone();
       m.color.set(TINT[n] ?? 0x8a8478);
+      if (src.roughnessMap) this.arm.set(n, src.roughnessMap);   // kept for the battle board, which is polished (see dressRealm)
       m.metalnessMap = null; m.roughnessMap = null;
       m.metalness = 0; m.roughness = 0.9; m.envMapIntensity = 0.25;
       return m;
@@ -304,35 +334,60 @@ export class Realm {
   }
 
   /**
-   * Fit the table under the HTML board: cast rays through the middle of each edge of the board's box on screen onto
-   * the table-top plane, and scale and move the table to that footprint, so the stone lies exactly under the board at
-   * any viewport. Without a board (the title), it is a smaller centrepiece. Eased, so layout changes glide.
+   * Build the board for the page's layout: cast a ray through each corner of the HTML board's mat on screen, from the
+   * battle camera where it rests, onto the table-top plane; the homography from the mat's own coordinates to those
+   * four points places every part of the board (board.ts), so each recess lies exactly under its HTML slot at any
+   * viewport. With no layout yet (the title), it is built to a default one, centred on the dais.
    */
-  private fitTable(dt: number): void {
-    if (!this.table) return;
-    const s = this.stage, b = s.inBattle ? s.board : null;
-    // outside battle the table waits below the dais, so the title shows the level, not a bare slab; it rises for a match
-    // (the Underworld's dais is a pit: there the table settles into it as an altar rather than vanishing)
-    let sx = 0.7, sz = 0.7, px = 0, pz = 0, py = this.id === 'underworld' ? TABLE_ALTAR : TABLE_SINK;
-    if (b && b.w > 0 && b.h > 0) {
-      const hit = (x: number, y: number): THREE.Vector3 | null => {
-        this.ray.setFromCamera(s.toNdc(x, y), s.camera);
-        return this.ray.ray.intersectPlane(this.tablePlane, new THREE.Vector3());
-      };
-      const l = hit(b.x, b.y + b.h / 2), r = hit(b.x + b.w, b.y + b.h / 2), top = hit(b.x + b.w / 2, b.y), bot = hit(b.x + b.w / 2, b.y + b.h);
-      if (!l || !r || !top || !bot) return;
-      sx = (Math.abs(r.x - l.x) / TABLE_L) * 1.03;   // a hair larger: the gilt band frames the board's edge
-      sz = (Math.abs(bot.z - top.z) / TABLE_D) * 1.03;
-      px = (l.x + r.x) / 2; pz = (top.z + bot.z) / 2; py = 0;
+  private buildBoard(y: number): void {
+    const s = this.stage, style = this.boardStyle;
+    if (!style) return;
+    let layout = s.board, H: number[] | null = null;
+    if (layout?.quad.length === 4 && layout.w > 0 && layout.h > 0) {
+      const cam = s.battleCamera();
+      const hits = layout.quad.map(([x, y2]) => { this.ray.setFromCamera(s.toNdc(x, y2), cam); return this.ray.ray.intersectPlane(this.tablePlane, new THREE.Vector3()); });
+      if (hits.every((h) => h)) H = solveHomography([[0, 0], [layout.w, 0], [layout.w, layout.h], [0, layout.h]], hits.map((h) => [h!.x, h!.z]));
+      if (H) {
+        // the hall is dimmed round the board's place on screen
+        const xs = layout.quad.map((q) => q[0]), ys = layout.quad.map((q) => q[1]);
+        const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+        s.setFocus((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) * 0.62, (y1 - y0) * 0.72);
+      }
     }
-    const k = Math.min(1, dt * 6), T = this.table;
-    T.scale.x += (sx - T.scale.x) * k; T.scale.z += (sz - T.scale.z) * k;
-    T.position.x += (px - T.position.x) * k; T.position.z += (pz - T.position.z) * k;
-    T.position.y += (py - T.position.y) * Math.min(1, dt * 2.5);
+    this.boardFitted = !!H;
+    if (!H || !layout) { layout = defaultLayout(); const k = 15 / layout.w; H = [k, 0, (-layout.w * k) / 2, 0, k, (-layout.h * k) / 2, 0, 0, 1]; }
+    const old = this.table;
+    this.table = buildBoard(layout, H, TABLE_TOP, style);
+    this.table.position.y = old?.position.y ?? y;
+    this.table.scale.copy(old?.scale ?? new THREE.Vector3(1, 1, 1));
+    if (old) { this.dressing.remove(old); disposeBoard(old); }
+    this.dressing.add(this.table);
+    this.boardBuilt = s.boardVersion;
+    this.tableSettled = false;
+  }
+
+  /**
+   * Keep the board in step: rebuilt when the page's layout or the viewport changes (in battle), risen under the HTML
+   * board for a match and, outside one, waiting below the dais so the title shows the level, not a bare slab (the
+   * Underworld's dais is a pit: there it settles into it as an altar rather than vanishing).
+   */
+  private fitBoard(dt: number): void {
+    const s = this.stage, battle = s.inBattle;
+    if (!this.boardStyle) return;
+    if (!this.table || (battle && this.boardBuilt !== s.boardVersion)) this.buildBoard(this.id === 'underworld' ? TABLE_ALTAR : TABLE_SINK);
+    const T = this.table!;
+    const py = battle ? 0 : this.id === 'underworld' ? TABLE_ALTAR : TABLE_SINK, size = battle ? 1 : 0.7;
+    const k = Math.min(1, dt * 5);
+    T.position.y = Math.abs(py - T.position.y) < 0.003 ? py : T.position.y + (py - T.position.y) * k;
+    const sc = Math.abs(size - T.scale.x) < 0.003 ? size : T.scale.x + (size - T.scale.x) * k;
+    T.scale.set(sc, 1, sc);
     T.visible = T.position.y > TABLE_SINK + 0.02;
-    const settled = Math.abs(py - T.position.y) < 0.004 && Math.abs(sx - T.scale.x) < 0.004 && Math.abs(px - T.position.x) < 0.01;
-    if (settled && !this.tableSettled) this.stage.refreshShadows();
+    const settled = T.position.y === py && sc === size;
+    if (settled && !this.tableSettled) s.refreshShadows();
     this.tableSettled = settled;
+    // up: the page may drop its drawn mat, and the hall dims round the board
+    const up = battle && this.boardFitted && settled && s.arrived;
+    if (up !== s.boardUp) { s.boardUp = up; s.onBoard?.(up); }
   }
 
   private glows: THREE.Sprite[] = [];
@@ -391,7 +446,7 @@ export class Realm {
   }
 
   private update(dt: number, t: number): void {
-    this.fitTable(dt);
+    this.fitBoard(dt);
     const fog = this.stage.scene.fog as THREE.FogExp2;
     for (const m of this.animated) { m.uniforms.time.value = t; (m.uniforms.fogColor.value as THREE.Color).copy(fog.color); m.uniforms.fogDensity.value = fog.density; }
     for (let i = 0; i < this.fires.length; i++) { const heat = this.fires[i].userData.heat ?? 3.0; this.fires[i].emissiveIntensity = heat * (1 + 0.27 * Math.sin(t * 7 + i * 1.7) * Math.sin(t * 3.1 + i)); }
@@ -403,54 +458,12 @@ export class Realm {
   }
 }
 
-/** The battle table's size (m) before it is fitted, and the height of its top. */
-const TABLE_L = 15, TABLE_D = 7.6, TABLE_TOP = 0.74;
-/** Where the table waits, below the dais floor, when there is no battle. */
+/** The height of the battle board's top (m). */
+const TABLE_TOP = 0.74;
+/** Where the board waits, below the dais floor, when there is no battle. */
 const TABLE_SINK = -1.05;
 /** Where it rests in the Underworld's pit outside battle, its top just above the rim. */
 const TABLE_ALTAR = -0.45;
-
-/** A stadium outline (a rectangle whose short ends are half circles), length along x, as a three.js Shape. */
-function stadiumShape(length: number, depth: number): THREE.Shape {
-  const r = depth / 2, half = length / 2 - r, s = new THREE.Shape();
-  s.moveTo(-half, -r);
-  s.lineTo(half, -r);
-  s.absarc(half, 0, r, -Math.PI / 2, Math.PI / 2, false);
-  s.lineTo(-half, r);
-  s.absarc(-half, 0, r, Math.PI / 2, Math.PI * 1.5, false);
-  return s;
-}
-
-/** Extrude a shape upward (it lies in the x-z plane) from `bottom` by `height`, with a bevelled edge. */
-function slab(shape: THREE.Shape, height: number, bottom: number, mat: THREE.Material, bevel = 0.06): THREE.Mesh {
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 24 });
-  geo.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(geo, mat);
-  m.position.y = bottom;
-  m.castShadow = true; m.receiveShadow = true;
-  return m;
-}
-
-/**
- * The battle table: a stadium-shaped stone slab (15 x 7.6 m) on a narrower pedestal, a gilt band round its top edge
- * and a faint glowing groove inset from it. Long axis along x, as the board lies on screen.
- */
-function battleTable(top: THREE.Material, base: THREE.Material, glow: number): THREE.Group {
-  const g = new THREE.Group();
-  // a little larger than the HTML board laid over it, so its stone and gilt edge frame the board as its base
-  const L = TABLE_L, D = TABLE_D;
-  g.add(slab(stadiumShape(L * 0.72, D * 0.55), 0.6, -0.2, base, 0.08));
-  g.add(slab(stadiumShape(L, D), 0.34, 0.4, top, 0.07));
-  const band = stadiumShape(L + 0.24, D + 0.24);
-  band.holes.push(stadiumShape(L - 0.1, D - 0.1));
-  g.add(slab(band, 0.1, 0.62, new THREE.MeshStandardMaterial({ color: 0xffbf5e, roughness: 0.3, metalness: 1, envMapIntensity: 1.2 }), 0.02));
-  const groove = stadiumShape(L - 1.0, D - 1.0);
-  groove.holes.push(stadiumShape(L - 1.12, D - 1.12));
-  const line = slab(groove, 0.02, 0.8, new THREE.MeshStandardMaterial({ color: 0x050608, emissive: glow, emissiveIntensity: 1.4 }), 0);
-  line.castShadow = false;
-  g.add(line);
-  return g;
-}
 
 /** A raised, stepped octagonal stone rim round a dais of radius r: two flat rings, the inner one higher. */
 function daisRim(r: number, mat: THREE.Material): THREE.Group {
