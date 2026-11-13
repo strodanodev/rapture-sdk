@@ -1,0 +1,50 @@
+{
+  "name": "@rapture-sdk/board",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Rapture SDK's board-game template: a 3D two-player board game with wallet seating, a gauntlet match server and a LitNode ruleset. Chess is the sample; replace the ruleset module, the pieces and the board config to make your own.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strodanodev/rapture-sdk.git",
+    "directory": "packages/board"
+  },
+  "homepage": "https://github.com/strodanodev/rapture-sdk/tree/main/packages/board#readme",
+  "bugs": {
+    "url": "https://github.com/strodanodev/rapture-sdk/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/draco.mjs && vite --host 127.0.0.1 --port 4175",
+    "build": "node scripts/draco.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4175",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "title": "node scripts/build-title.mjs",
+    "relay": "tsx relay/server.mts",
+    "relay-key": "node scripts/relay-key.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "check": "node scripts/vendor.mjs --check --source && tsc --noEmit && tsx --test \"test/*.test.ts\" && vite build --outDir .check/dist --logLevel warn"
+  },
+  "dependencies": {
+    "chess.js": "1.4.0",
+    "n8ao": "2.0.1",
+    "postprocessing": "6.39.5",
+    "three": "0.186.1",
+    "three-good-godrays": "0.12.1",
+    "ws": "8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.3",
+    "@types/three": "0.186.0",
+    "@types/ws": "8.18.1",
+    "esbuild": "0.28.1",
+    "tsx": "4.23.7",
+    "typescript": "6.0.3",
+    "vite": "8.3.5"
+  }
+}

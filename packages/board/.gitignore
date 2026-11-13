@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.check/
+# the first pass of `pnpm title` (rulesets/ is the artifact: commit it once you register it)
+titles/
+public/draco/
+.vercel/
+.env
+*.log
+# the relay key (scripts/relay-key.mjs): private
+.relay-key.json
+relay/logs/

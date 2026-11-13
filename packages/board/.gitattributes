@@ -1,0 +1,3 @@
+# A ruleset's buildHash is over its exact bytes: never let a checkout rewrite its line endings.
+rulesets/*.js -text
+rulesets/*.json -text
