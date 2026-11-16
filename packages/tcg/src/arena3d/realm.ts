@@ -394,6 +394,8 @@ export class Realm {
     this.tableSettled = settled;
     // up: the page may drop its drawn mat, and the hall dims round the board
     const up = battle && this.boardFitted && settled && s.arrived;
+    // what the board is waiting on, for the page's arena stats: f(itted to the page's layout), s(ettled in place), a(rrived camera)
+    s.boardWaits = battle ? `${this.boardFitted ? '' : 'f'}${settled ? '' : 's'}${s.arrived ? '' : 'a'}` : '';
     if (up !== s.boardUp) { s.boardUp = up; s.onBoard?.(up); }
   }
 

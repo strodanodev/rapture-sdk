@@ -10,6 +10,7 @@ const MODE_COPY = {
   practice: ["Choose your champion", "Practice · against the house bot", "Enter the arena"],
   gauntlet: ["Choose your champion", "Gauntlet · a new run", "Begin the run"],
   relay: ["Choose your champion", "Two-player match", "Take your seat"],
+  ranked: ["Choose your champion", "Ranked · on the LitNode ladder", "Find a match"],
 };
 
 export function selectScreen(app) {
@@ -57,7 +58,7 @@ export function selectScreen(app) {
         power ? h("div", { class: "cd-power" }, h("span", { class: "eyebrow" }, "Hero power"), h("p", null, h("b", { text: `${power.name} · ${power.cost}` }), h("span", { text: power.text }))) : null,
         h("div", { class: "field" }, h("span", { text: `Battlefield · ${REALMS[shownRealm].name}${realmChoice === "auto" ? " (auto)" : ""}` }),
           seg([["auto", "Auto"], ["valhalla", REALMS.valhalla.name], ["underworld", REALMS.underworld.name]], realmChoice, (v) => { app.setPref("realm", v); renderDetail(); })),
-        mode !== "relay" ? h("div", { class: "field" }, h("span", { text: mode === "gauntlet" ? "Foes get stronger each stage" : "House bot" }),
+        mode !== "relay" && mode !== "ranked" ? h("div", { class: "field" }, h("span", { text: mode === "gauntlet" ? "Foes get stronger each stage" : "House bot" }),
           mode === "practice" ? seg(LEVELS, app.prefs.level, (v) => { app.setPref("level", v); renderDetail(); }) : null) : null)),
       h("div", { class: "cta-dock" }, confirm));
     confirm.replaceChildren(icon("swords"), MODE_COPY[mode][2]);
@@ -91,7 +92,7 @@ export function selectScreen(app) {
 
   return {
     id: "select", el,
-    /** Open for a mode: "practice", "gauntlet" or "relay". */
+    /** Open for a mode: "practice", "gauntlet", "ranked" or "relay". */
     setMode(m) { mode = m; },
     enter() {
       app.arena.setMood("menu");
