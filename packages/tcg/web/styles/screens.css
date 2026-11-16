@@ -192,7 +192,8 @@ a.menu-item:hover { text-decoration: none; }
 @media (max-height: 700px) and (min-width: 901px) { .cd-card { display: none; } }
 /* phones: the detail panel is compact enough that the battlefield and House Bot choices show above the Enter dock */
 @media (max-width: 560px) {
-  .champ-grid { min-height: calc(88px * 7 / 5 + 18px) !important; grid-auto-columns: 88px !important; grid-auto-rows: calc(88px * 7 / 5) !important; }
+  .champ-grid { min-height: calc(88px * 7 / 5 + 18px) !important; grid-auto-columns: 88px !important; grid-auto-rows: calc(88px * 7 / 5) !important;
+    -webkit-mask-image: linear-gradient(90deg, #000 84%, transparent); mask-image: linear-gradient(90deg, #000 84%, transparent); }   /* the strip fades at its right edge: more champions follow */
   .cd-body { gap: 5px; padding-top: 4px; }
   .cd-body > .epithet, .cd-body > .hint { display: none; }
   .cd-name { font-size: 19px; }
@@ -443,12 +444,12 @@ a.menu-item:hover { text-decoration: none; }
 .page-scrim { background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, rgba(5, 4, 9, 0.6)), linear-gradient(180deg, rgba(5, 4, 9, 0.8), rgba(5, 4, 9, 0.3) 24%, rgba(5, 4, 9, 0.36) 72%, rgba(5, 4, 9, 0.85)); }
 body:has(#ui > .page:not([hidden])) #arena { filter: blur(1.5px) brightness(0.9) saturate(0.95); }
 /* profile: who you are, and what to do next while the record is short */
-.ph-who { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--muted); }
+.ph-who { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--muted); font-variant-caps: all-small-caps; letter-spacing: 0.1em; }
 .ph-who svg { width: 16px; height: 16px; color: var(--gold-2); }
 .ph-who b { color: var(--ivory); font-weight: 600; letter-spacing: 0.04em; }
 .ph-next { display: flex; flex-wrap: wrap; gap: 10px; }
 /* the daily puzzle's next-day countdown */
-.pz-next { margin-left: auto; font-size: 12px; letter-spacing: 0.06em; color: var(--muted); }
+.pz-next { margin-left: auto; font-size: 13px; font-variant-caps: all-small-caps; letter-spacing: 0.12em; color: var(--muted); }
 .puzzle-page .panel-head h2 { white-space: nowrap; }   /* the day stays on one line ("Thu, Nov 12" wrapped on phones) */
 .puzzle-page .pz-next { text-align: right; }
 /* long grids fade out at their bottom edge instead of being cut off */
