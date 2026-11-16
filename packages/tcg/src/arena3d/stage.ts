@@ -28,7 +28,7 @@ import type { BoardLayout } from './board';
 
 export type Mood = 'menu' | 'battle';
 export interface SkyColors { top: number; bottom: number; glow: number; fog: number; fogDensity: number }
-export interface StageStats { fps: number; pixelRatio: number; drawCalls: number; triangles: number; frameMs: number }
+export interface StageStats { fps: number; pixelRatio: number; drawCalls: number; triangles: number; frameMs: number; boardUp?: boolean; boardWaits?: string; camera?: number[] }
 
 const RATIOS = [1.5, 1, 0.75];
 /** The battle bursts' pool: this many at once, of this many particles each. */
@@ -105,6 +105,8 @@ export class Stage {
   board: BoardLayout | null = null;
   /** The realm's board is up under the HTML one (risen, fitted, the camera arrived): the hall dims round it. */
   boardUp = false;
+  /** In battle, what the board still waits on before it is up: any of f (fitted), s (settled), a (camera arrived); '' when up. */
+  boardWaits = '';
   /** Called when boardUp changes: the page then drops its drawn table mat, or puts it back. */
   onBoard: ((up: boolean) => void) | null = null;
   /** Counts every change to the board's layout or the viewport: the realm rebuilds the board when it moves on. */
@@ -439,7 +441,7 @@ export class Stage {
     return p;
   }
   onUpdate(fn: (dt: number, t: number) => void): void { this.updaters.push(fn); }
-  getStats(): StageStats { return { ...this.stats }; }
+  getStats(): StageStats { return { ...this.stats, boardUp: this.boardUp, boardWaits: this.boardWaits, camera: this.camera.position.toArray().map((v) => Math.round(v * 100) / 100) }; }
   get inBattle(): boolean { return this.mood === 'battle'; }
   /** A point on screen (CSS px) to normalised device coordinates. */
   toNdc(x: number, y: number): THREE.Vector2 { return new THREE.Vector2((x / this.width) * 2 - 1, -((y / this.height) * 2 - 1)); }
