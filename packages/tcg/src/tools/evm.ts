@@ -17,7 +17,7 @@ export const SEL = {
 /** Known chains, so a builder can write `--chain liteforge` instead of URLs and addresses. */
 export const CHAINS: Record<string, { chainId: number; rpc: string; explorer: string; playerProfile?: string }> = {
   // PlayerProfile: LitNode v0.11.26 contracts/deployed.testnet.json.
-  liteforge: { chainId: 4441, rpc: 'https://rpc.testnet.liteforge.zeeve.net/', explorer: 'https://liteforge.explorer.caldera.xyz', playerProfile: '0xe2cf46ab11eAfB18c1933409E35ae68CEce88882' },
+  liteforge: { chainId: 4441, rpc: 'https://rpc.testnet.liteforge.zeeve.net/', explorer: 'https://explorer.testnet.liteforge.zeeve.net', playerProfile: '0xe2cf46ab11eAfB18c1933409E35ae68CEce88882' },
 };
 export const chainById = (chainId: number): (typeof CHAINS)[string] | null => Object.values(CHAINS).find((c) => c.chainId === chainId) ?? null;
 /** keccak256("Transfer(address,address,uint256)") */

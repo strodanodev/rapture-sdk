@@ -5,7 +5,7 @@
 // asks, remembers that they did so the next page load can restore the session without a popup, keeps address/chain
 // state in sync with the wallet's events, and turns every provider failure into a WalletError with a message that is
 // fit to show a player. It never touches keys or seed phrases, and the only wallet methods it ever issues are:
-// eth_requestAccounts / eth_accounts / eth_chainId / eth_getBalance, wallet_switchEthereumChain,
+// eth_requestAccounts / eth_accounts / eth_chainId / eth_blockNumber / eth_getBalance, wallet_switchEthereumChain,
 // wallet_addEthereumChain, wallet_revokePermissions (best effort), personal_sign and eth_sendTransaction.
 //
 // Safe to import anywhere: nothing runs (and nothing reads window/localStorage) until createWallet() is called.
@@ -23,6 +23,11 @@ export const LITEFORGE = Object.freeze({
   explorer: null,   // set chain.explorer in site.config.json once the Liteforge explorer is known
   faucet: null,
 });
+
+/** Liteforge's old RPC (Caldera) froze at this block on 2026-11-11 and then went offline. A wallet never changes the RPC of a
+ *  network it already has (wallet_addEthereumChain does not update it), so a wallet that added Liteforge before then still
+ *  talks to the dead node: its reads fail or stop here, and nothing it sends lands. */
+export const RETIRED_LITEFORGE_HEAD = 69_908_990n;
 
 /** Every `code` a WalletError can carry. The first six are the contract with the UI; not_connected and
  *  low_balance are the two extras this layer needs (the shop clients add their own on ShopError). */
@@ -401,6 +406,28 @@ export function createWallet({ chain: chainArg = LITEFORGE, provider = null, inf
     return account;
   };
 
+  /** On Liteforge, ask the wallet's own node for its head once per session (until it answers well), so a wallet still set
+   *  to the retired RPC gets told how to fix its network instead of failing with a raw node error. */
+  let walletRpcOk = false;
+  async function checkWalletRpc() {
+    if (walletRpcOk || chain.chainId !== LITEFORGE.chainId) return;
+    let head = null;
+    try { head = fromQuantity(await call("eth_blockNumber", [])); }
+    catch (e) {
+      // a wallet that cannot answer eth_blockNumber cannot tell us: do not block the player on it
+      if (e.rpcCode === 4200 || e.rpcCode === -32601) { walletRpcOk = true; return; }
+      if (e.code === "user_rejected" || e.code === "request_pending" || e.code === "no_wallet") throw e;
+      // anything else: the wallet's node is unreachable or answered junk, and head stays null
+    }
+    if (head !== null && head > RETIRED_LITEFORGE_HEAD) { walletRpcOk = true; return; }
+    const rpc = chain.rpcUrls?.[0] ?? LITEFORGE.rpcUrls[0];
+    const fix = `in your wallet, edit the ${chain.name} network (chain ${chain.chainId}) and set its RPC URL to ${rpc}, then try again.`;
+    throw new WalletError("rpc", head === null
+      ? `Your wallet cannot reach ${chain.name}. If you added this network before 11 November 2026, it still uses the old RPC address, which no longer works: ${fix}`
+      : `Your wallet's ${chain.name} network still uses the old RPC address, which stopped on 11 November 2026, so nothing sent through it would land. To fix it, ${fix}`,
+    { staleRpc: true, rpcUrl: rpc, head });
+  }
+
   /** eth_sendTransaction from the connected account. value/gas: bigint | number | decimal or 0x string. Resolves the hash. */
   async function sendTransaction({ to, data = "0x", value, gas, maxFeePerGas, maxPriorityFeePerGas } = {}) {
     const from = needAccount();
@@ -413,6 +440,7 @@ export function createWallet({ chain: chainArg = LITEFORGE, provider = null, inf
     if (now !== chain.chainId) {
       throw new WalletError("wrong_chain", `Your wallet is on a different network. Switch to ${chain.name} (chain ${chain.chainId}) before sending.`, { expected: chain.chainId, actual: now });
     }
+    await checkWalletRpc();
     const tx = { from, to, data };
     if (value != null && toBigInt(value) !== 0n) tx.value = toQuantity(value);
     if (gas != null) tx.gas = toQuantity(gas);
@@ -438,7 +466,9 @@ export function createWallet({ chain: chainArg = LITEFORGE, provider = null, inf
 
   /** The connected account's native balance in wei (bigint), as the wallet sees it. */
   async function balance() {
-    return fromQuantity(await call("eth_getBalance", [needAccount(), "latest"]));
+    const from = needAccount();
+    await checkWalletRpc();
+    return fromQuantity(await call("eth_getBalance", [from, "latest"]));
   }
 
   return {
