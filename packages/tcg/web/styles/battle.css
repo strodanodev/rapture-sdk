@@ -240,7 +240,9 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
    the empty sockets, are what the board shows; every state that moves a unit keeps the size through --stand */
 @media (min-width: 761px) { .lane .unit { --stand: rotateX(calc(var(--tilt, 0deg) * -1)) scale(1.1); } }
 /* each unit stands on the table: a soft contact shadow under its base */
-.lane .unit::before { content: ''; position: absolute; left: 6%; right: 6%; bottom: -4%; height: 16%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.7), transparent 70%); pointer-events: none; }
+.lane .unit::before { content: ''; position: absolute; left: -6%; right: -6%; bottom: -9%; height: 26%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.85) 30%, color-mix(in srgb, var(--el) 22%, transparent) 62%, transparent 74%); pointer-events: none; }   /* a contact shadow, edged with the unit's element light spilling onto the stone */
+/* the piece stands off the table: a hard drop under its frame and a rim of its element's light round it */
+.lane .unit:not(.guard, .can, .picked) .u-ring { box-shadow: 0 9px 10px -2px rgba(0, 0, 0, 0.75), 0 0 10px color-mix(in srgb, var(--el) 45%, transparent); }   /* box shadows, not filters: filters on every unit cost the 3D arena frames */
 /* whose unit is whose, at a glance: each stands in a pool of its side's colour (gold rims are rarity, not side) */
 .foe-lane .unit::before { background: radial-gradient(ellipse, rgba(255, 80, 56, 0.55), rgba(0, 0, 0, 0.35) 55%, transparent 72%); }
 .my-lane .unit::before { background: radial-gradient(ellipse, rgba(80, 160, 255, 0.55), rgba(0, 0, 0, 0.35) 55%, transparent 72%); }
