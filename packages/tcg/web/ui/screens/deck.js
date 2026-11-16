@@ -76,6 +76,13 @@ export function deckScreen(app) {
     meter.style.setProperty("--v", `${Math.round((deck.length / D.size) * 100)}%`);
     start.disabled = deck.length !== D.size;
     walletBtn.hidden = app.owned.size === 0;
+    // an owned-only match with too few held cards can't make a full deck: say so, and where more come from
+    const fieldable = Math.min(D.size, game.cards.reduce((n, def) => n + (allowed(def) ? D.maxCopies : 0), 0));
+    const short = app.requireOwned && fieldable < D.size;
+    rule.classList.toggle("err", short);
+    rule.textContent = !app.requireOwned ? "Any card may be played in practice and casual matches. Cards your wallet holds are marked, and Wallet deck builds from them."
+      : short ? `Owned-only match: support cards and the collection cards your wallet holds make ${fieldable} of the ${D.size} a deck needs. ${app.shop ? `Open packs at ${app.shop.label} to hold more` : "Hold more of the collection"}${app.owned.size ? "" : ", or connect the wallet that holds them"}.`
+      : "Owned-only match: collection cards must be in your wallet; support cards are always available.";
   }
 
   function finish() {
@@ -110,7 +117,6 @@ export function deckScreen(app) {
       try { deck = JSON.parse(localStorage.getItem(key) ?? "[]").filter((i) => Number.isInteger(i) && game.cards[i]); } catch { deck = []; }
       deck = deck.filter((i) => allowed(game.cards[i])).slice(0, D.size);
       if (!deck.length) suggest();
-      rule.textContent = app.requireOwned ? "Owned-only match: collection cards must be in your wallet; support cards are always available." : "Any card may be played in practice and casual matches. Cards your wallet holds are marked, and Wallet deck builds from them.";
     },
     enter() { app.arena.setMood("menu"); render(); stagger(grid); },
   };

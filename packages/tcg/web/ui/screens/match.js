@@ -282,7 +282,7 @@ export function matchScreen(app) {
     if (!replaying() && !s.over && announcedTurn !== `${s.turnNo}`) {
       announcedTurn = `${s.turnNo}`;
       if (myTurn) { overlays.banner("Your turn", `Turn ${s.turnNo}`); if (s.turnNo > 1) app.sound?.play("turn-yours", { delay: 0.2 }); }   // turn 1 has the war horn
-      else if (!watching && ctx.kind === "relay") { overlays.banner("Enemy turn", "", "foe"); app.sound?.play("turn-foe"); }
+      else if (!watching && (ctx.kind === "relay" || ctx.kind === "ranked")) { overlays.banner("Enemy turn", "", "foe"); app.sound?.play("turn-foe"); }
     }
     viewbar.render(s);
 
@@ -299,7 +299,7 @@ export function matchScreen(app) {
       overlays.banner(puzzleState ? (won ? "Solved" : "Not this time") : s.winner === 2 ? "Draw" : watching ? (playerName(s.p[s.winner].id) === "You" ? "You win" : `${playerName(s.p[s.winner].id)} wins`) : won ? "Victory" : "Defeat", "", outcomeKind === "loss" ? "red" : "");
       const foeLabel = watching ? playerName(foe.id) : ctx.foeLabel ?? ctx.opponent ?? "Opponent";
       setTimeout(() => app.flows.finished({ session, state: s, meIdx, puzzleState, tally: { ...tally }, outcome: outcomeKind, watching, champion: myChamp, foe: foeChamp, foeLabel, mineLabel: watching ? playerName(me.id) : "You" }), 1400);
-    } else if (s.over && !replaying() && ctx.kind === "relay" && !watching && result.open) {
+    } else if (s.over && !replaying() && (ctx.kind === "relay" || ctx.kind === "ranked") && !watching && result.open) {
       result.setDetail(`${s.turnNo} turns · ${me.life} life left · ${session.status}`);   // settlement status updates
     }
   }

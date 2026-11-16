@@ -24,6 +24,8 @@ export function homeScreen(app) {
   const items = app.relay
     ? []
     : [
+      // the ladder rating once the Ranked page has read it; the Leaderboard is one tap from there
+      item("trophy", "Ranked", () => { const s = app.online.state; return s.searching ? "Searching for an opponent…" : app.online.wager ? "Climb the LitNode ladder · zkLTC stakes" : "Climb the LitNode ladder"; }, () => void go("ranked")),
       item("gauntlet", "Gauntlet", () => { const r = app.profile().gauntlet; return r.current && !r.current.over ? `Run in progress · stage ${Math.min(r.current.wins + 1, 8)} of 8` : `Eight foes, one life · best ${r.bestStage}/8`; }, () => void go("gauntlet")),
       item("puzzle", "Daily puzzle", () => (app.puzzleSolvedToday() ? "Solved today · come back tomorrow" : `Win in one turn · streak ${sum().puzzleStreak}`), () => void go("puzzle")),
       item("user", "Profile", () => { const s = sum(); return s.played ? `${s.wins}W ${s.losses}L · ${s.played} ${s.played === 1 ? "match" : "matches"}` : "Your matches and replays"; }, () => void go("profile")),

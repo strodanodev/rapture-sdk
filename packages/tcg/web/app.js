@@ -1,7 +1,7 @@
 // Tessaract — the game client. One JSON file is the game (engine/tessaract.js and data/, built by `tessaract web`);
 // the rules here are the same code the relay and the LitNode ruleset run, so every match replays identically.
 //
-//   ./                                   title screen: practice, Gauntlet, daily puzzle, profile
+//   ./                                   title screen: practice, ranked, Gauntlet, daily puzzle, profile
 //   ?relay=ws://127.0.0.1:7830&name=a    a two-player match on a dev relay (`TCG_DEV=1 tessaract relay`)
 //   ?relay=…&watch=1                     spectate it
 //   #replay=<code>                       replay a shared match (the code is the whole match record)
@@ -12,7 +12,9 @@ import {
   decode, Op, compileGame, createRules, LocalBotSession, RelaySession, ReplaySession, PuzzleSession, encodeRecord, decodeRecord, REPLAY_PARAM,
   statsFromCore, describeEffect, createGauntlet, createPuzzles, loadProfile, saveProfile, addMatch, summarize, utcDate,
 } from "./engine/tessaract.js";
-import { createWallet } from "./lib/wallet.js";
+import { createWallet, LITEFORGE } from "./lib/wallet.js";
+import { createChain } from "./lib/chain.js";
+import { seatPlaced } from "./lib/litnode/ranked.js";
 import { createHoldings } from "./lib/holdings.js";
 import { createSound } from "./lib/sound.js";
 import { shortAddress } from "./lib/util.js";
@@ -25,6 +27,8 @@ import { selectScreen } from "./ui/screens/select.js";
 import { deckScreen } from "./ui/screens/deck.js";
 import { gauntletScreen, puzzleScreen, profileScreen } from "./ui/screens/meta.js";
 import { forgeScreen } from "./ui/screens/forge.js";
+import { rankedScreen, ladderScreen } from "./ui/screens/online.js";
+import { createOnline } from "./ui/online.js";
 import { versusScreen } from "./ui/screens/versus.js";
 import { matchScreen } from "./ui/screens/match.js";
 
@@ -36,6 +40,7 @@ const bootDone = () => document.getElementById("boot")?.classList.add("done");
 const q = new URLSearchParams(location.search);
 const RELAY = q.get("relay");
 const WATCH = !!RELAY && q.get("watch") === "1";
+const RELAY_OWNED = !!RELAY && q.get("owned") === "1";
 const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
 
 boot(0.15, "Reading the game");
@@ -118,7 +123,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && sh
 const arena = createArena(document.getElementById("arena"));
 const app = {
   game, rules, snap, byToken, arena, prefs, owned, gauntlet, puzzles, toast,
-  relay: !!RELAY, watch: WATCH, requireOwned: !!RELAY && q.get("owned") === "1",
+  // requireOwned: the deck builder offers only held collection cards (a ranked match, or ?owned=1 on a dev relay)
+  relay: !!RELAY, watch: WATCH, requireOwned: RELAY_OWNED,
   funnel: !!document.querySelector('meta[name="tessaract-funnel"]'),
   hasWallet: !!holdings,
   shop, leftForShop: () => { shopVisit = true; }, brand,
@@ -144,6 +150,8 @@ const app = {
   async toggleWallet() { if (wallet.snapshot().address) await wallet.disconnect(); else await wallet.connect(); await refreshOwned(); },
 };
 app.cards = createCards(app);
+// Ranked play, the ladder and stakes on the LitNode mesh (ui/online.js); reads go through the game's own Liteforge RPC.
+app.online = createOnline({ game, chain: createChain(LITEFORGE.rpcUrls[0]), wallet });
 
 // ------------------------------------------------------------------ sound: the realm's ambience, menu or battle music, the battle's effects
 // The library is audio/ (audio.json lists it). Three settings: everything, effects only, or silence (S toggles).
@@ -184,7 +192,9 @@ const puzzlePage = puzzleScreen(app);
 const profilePage = profileScreen(app);
 const versus = versusScreen(app);
 const match = matchScreen(app);
-for (const s of [home, select, deck, gauntletPage, puzzlePage, profilePage, app.funnel ? forgeScreen(app) : null, versus, match]) if (s) register(s);
+const rankedPage = rankedScreen(app, wallet);
+const ladderPage = ladderScreen(app);
+for (const s of [home, select, deck, gauntletPage, puzzlePage, profilePage, rankedPage, ladderPage, app.funnel ? forgeScreen(app) : null, versus, match]) if (s) register(s);
 
 // ------------------------------------------------------------------ flows
 let last = null;   // the last practice or two-player setup, for Rematch: { champion, deck, opts }
@@ -231,6 +241,29 @@ async function startMatch(champion, declaredDeck, opts = {}) {
     { names: [champion?.name ?? "Base champion", foe?.name ?? "House bot"], subs: ["You", `${["", "Easy", "Normal", "Hard"][level]} bot`], champs: [champion, foe], realm });
 }
 
+/**
+ * Queue for a ranked match on the LitNode mesh (from the Ranked page, which shows the search), then take the seat the
+ * mesh placed and wipe into the battle. The champion and the deck are checked on chain by the match's relay.
+ */
+async function startRanked(champion, declaredDeck) {
+  const online = app.online;
+  if (online.state.searching) return;
+  resetStack();
+  await go("ranked", { wipe: true, push: false });
+  const placement = await online.queue();
+  if (!placement) return;
+  let session;
+  try { session = await seatPlaced(RelaySession, rules, placement, claimOf(champion)); }
+  catch (e) { online.say(`Couldn't take the seat: ${e?.message ?? e}`, true); return; }
+  if (declaredDeck) session.declareDeck(declaredDeck);
+  // the opponent's LitNode profile name, if they have one; never hold the match up for it
+  const foeName = (await Promise.race([online.keyName(placement.opponent), wait(1500).then(() => "")])) || `Player ${placement.opponent.slice(0, 6)}`;
+  last = { champion, deck: declaredDeck, opts: { mode: "ranked" } };
+  await versusInto(session, { kind: "ranked", label: "Ranked match", opponent: foeName, foeLabel: foeName, mine: champion, placement },
+    { names: [champion?.name ?? "Base champion", foeName], subs: ["You", "Ranked · LitNode"], champs: [champion, null], realm: pickRealm(champion) },
+    () => !!session.state);
+}
+
 function closeRun() {
   const run = profile.gauntlet.current;
   if (run && !run.counted) {
@@ -271,6 +304,13 @@ app.flows = {
     await go("select");
   },
   async confirmChampion(champion, opts = {}) {
+    // a ranked match's relay accepts only collection cards the wallet holds
+    app.requireOwned = opts.mode === "ranked" || RELAY_OWNED;
+    if (opts.mode === "ranked") {
+      if (deck) { deck.open((list) => void startRanked(champion, list)); await go("deck"); }
+      else await startRanked(champion, null);
+      return;
+    }
     if (opts.mode === "gauntlet") {
       profile.gauntlet.current = gauntlet.start(randomSeed(), claimOf(champion));
       saveProf();
@@ -327,7 +367,7 @@ app.flows = {
   async leaveMatch() {
     match.detach();
     resetStack();
-    const to = context.kind === "gauntlet" ? "gauntlet" : context.kind === "puzzle" ? "puzzle" : "home";
+    const to = context.kind === "gauntlet" ? "gauntlet" : context.kind === "puzzle" ? "puzzle" : context.kind === "ranked" ? "ranked" : "home";
     await go(to, { wipe: true });
   },
 
@@ -360,7 +400,7 @@ app.flows = {
     const sub = puzzleState
       ? (puzzleState === "solved" ? `${session.actions} actions. The bot needed ${session.puzzle.par}.` : "Your turn ended without a win. Try another line.")
       : conceded ? (watching ? `${name(s.p[s.winner === 0 ? 1 : 0].id)} conceded` : s.winner === meIdx ? "Your opponent conceded" : "You conceded")
-      : `${watching ? `${name(me.id)} ${Math.max(0, me.life)} life · ${name(foe.id)} ${Math.max(0, foe.life)} life` : `${Math.max(0, me.life)} life left`}${kind === "relay" && !watching ? ` · ${session.status}` : ""}${kind === "gauntlet" ? ` · ${context.detail}` : ""}`;
+      : `${watching ? `${name(me.id)} ${Math.max(0, me.life)} life · ${name(foe.id)} ${Math.max(0, foe.life)} life` : `${Math.max(0, me.life)} life left`}${(kind === "relay" || kind === "ranked") && !watching ? ` · ${session.status}` : ""}${kind === "gauntlet" ? ` · ${context.detail}` : ""}`;
     const watchReplay = { text: "Watch replay", icon: "replay", onClick: async () => { const rec = session.record(); const code = await encodeRecord(rec); history.replaceState(null, "", `${location.pathname}${location.search}#${REPLAY_PARAM}=${code}`); await startReplay(rec, code); } };
     const menu = { text: "Menu", icon: "back", link: true, onClick: () => void app.flows.leaveMatch() };
     let buttons;
@@ -370,6 +410,10 @@ app.flows = {
       const run = profile.gauntlet.current;
       buttons = [{ text: run?.over ? (run.cleared ? "Gauntlet cleared" : "Run over") : "Choose your reward", icon: "gauntlet", primary: true, onClick: () => void app.flows.leaveMatch() }, watchReplay];
     } else if (kind === "relay") buttons = [watchReplay, menu];
+    else if (kind === "ranked") {
+      buttons = [{ text: app.online.wager ? "Stakes and ranked" : "Ranked", icon: "trophy", primary: true, onClick: () => void app.flows.leaveMatch() },
+        { text: "Leaderboard", icon: "crown", onClick: async () => { match.detach(); resetStack(); await go("ladder", { wipe: true }); } }, watchReplay, menu];
+    }
     else buttons = [{ text: "Rematch", icon: "swords", primary: true, onClick: () => void startMatch(last.champion, last.deck, last.opts) }, watchReplay, { text: "New champion", icon: "user", onClick: async () => { match.detach(); resetStack(); await go("home", { push: false }); await app.flows.choose("practice"); } }, menu];
     match.result.show({
       outcome, headline, sub,

@@ -6,6 +6,13 @@ Every rules or card change ships under a new `rulesetId`, so a game built on an 
 
 No rules change: every ruleset replays exactly as before.
 
+- **Ranked play, a leaderboard and zkLTC stakes in the site, on the LitNode mesh** (no arcade iframe needed; ported from Rapture Chess):
+  - **Ranked** (home menu): the page keeps a LitNode player key (ed25519, in the browser), finds the mesh in NodeDirectory on chain, queues for the game's `litnode.rulesetId`, checks the placement the way the arcade does (host and beacon), and takes the seat with its own CabinetShell, which signs only that match's seat and ledger. Decks are owned-only, as the relay enforces for ranked; the deck screen says how many cards the wallet can field when it is short;
+  - **wallet binding:** one transaction binds the browser's key to the wallet's LitNode PlayerProfile (`register` with a name the first time, else `bindKey`), so the relay counts the wallet's NFT champion and cards;
+  - **Leaderboard:** the Elo ladder every node folds from MatchBook (`GET /progress?ruleset=`), with profile names, your row marked;
+  - **stakes:** `<meta name="tessaract-wager" content="0x…">` in `web/index.html` names a LitNodeWager escrow deployed for the game's ruleset (Rapture Chess's `contracts/LitNodeWager.sol`). Stake under the player key, then claim a settled ranked match with the host's signed delta. Without the meta, stakes are off; the page refuses an escrow that pays another ruleset;
+  - `<meta name="tessaract-litnode" content="https://…">` (optional) is a node to read the ladder from first;
+  - LitNode's browser client is vendored in `web/lib/litnode/mesh` by `scripts/vendor-litnode.mjs` (`--check` compares the copies to their manifest). The site's CSP `connect-src` now allows `https:` and `wss:`, since node addresses come from the chain.
 - **Tessaract is now the Rapture SDK's TCG kit:**
   - the package is `@rapture-sdk/tcg`, in the Rapture SDK (`packages/tcg`, published as github.com/strodanodev/rapture-sdk). The github.com/strodanodev/tessaract repo is frozen at its last release, and games that install from its tags keep working;
   - the command is `rapture`. `tessaract` and `deckwright` run the same CLI for one more release;
