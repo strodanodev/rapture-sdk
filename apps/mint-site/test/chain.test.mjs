@@ -131,10 +131,10 @@ test("HTTP 408/425/429/5xx are retried; other 4xx fail at once", async () => {
 test("JSON-RPC errors: reverts and bad params are final, rate limits are retried", async () => {
   // a revert: code 3, data kept, isRevert, never retried
   let n = 0;
-  const fetch = jsonRpcFetch(() => { n++; throw revertRpcError("NotDealt"); });
+  const fetch = jsonRpcFetch(() => { n++; throw revertRpcError("SoldOut"); });
   const { chain } = client(fetch);
   await assert.rejects(chain.call({ to: SHOP, data: "0x50a88c7e" }), (e) =>
-    e instanceof RpcError && e.rpcCode === 3 && e.isRevert && e.transient === false && e.data === revertData("NotDealt") && e.method === "eth_call");
+    e instanceof RpcError && e.rpcCode === 3 && e.isRevert && e.transient === false && e.data === revertData("SoldOut") && e.method === "eth_call");
   assert.equal(n, 1);
 
   n = 0;

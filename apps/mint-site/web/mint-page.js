@@ -1,7 +1,7 @@
 // Mint (fixed price): the catalogue, each card with its edition count, a quantity and a Mint button.
 import { boot, el, cardFace } from "./app.js";
 import { fixedConfig, readMinter, readEditions, mint, MAX_PER_TX } from "./lib/fixed.js";
-import { formatAmount } from "./lib/packshop.js";
+import { formatAmount } from "./lib/shop.js";
 import { createHoldings } from "./lib/holdings.js";
 
 const ctx = await boot("mint");
@@ -9,7 +9,7 @@ if (ctx) {
   const { site, wallet, main, say } = ctx;
   const sym = site.chain.currency.symbol;
   if (site.mint.mode !== "fixed") {
-    main.replaceChildren(el("section", { class: "panel" }, el("h1", { text: "This drop sells packs" }), el("p", {}, el("a", { href: "packs.html", text: "Go to the packs" }))));
+    main.replaceChildren(el("section", { class: "panel" }, el("h1", { text: "This drop sells packs" }), el("p", {}, el("a", { href: "packs/index.html", text: "Go to the packs" }))));
   } else if (!site.mint.address) {
     main.replaceChildren(el("section", { class: "panel" }, el("h1", { text: "Not open yet" }), el("p", { text: "Minting opens once the minter is deployed." })));
   } else {

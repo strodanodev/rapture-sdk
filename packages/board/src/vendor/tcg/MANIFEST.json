@@ -3,7 +3,7 @@
   "from": "@rapture-sdk/tcg 0.9.15",
   "license": "Apache-2.0 (the Rapture SDK TCG kit, packages/tcg)",
   "files": {
-    "wallet.js": "844613f941da740217df2d0a09c0fbe49042e5ce40f7a9887840bfe47e44f6e6",
+    "wallet.js": "e5b21314ab85c5514d7489f1f61b2fa3a023cf26242eaec87f714fc57af8167e",
     "holdings.js": "542c06f71bd0ad712dae90a4c0648fe999cb0dc378e9bac46ca2cb9ee97fe161",
     "chain.js": "76b0b9c81e7f48e7d437a76261f12ac38ea337dee609a99342e561649abdedc6",
     "abi.js": "937d219cec92c6b8ad5c9de8f7909071e01184365bc9affd9b90600e992c26bb",

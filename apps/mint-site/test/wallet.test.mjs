@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  LITEFORGE, WALLET_ERROR_CODES, WalletError, createWallet, discoverProviders, pickProvider, normalizeError, chainParams, parseChainId,
+  LITEFORGE, RETIRED_LITEFORGE_HEAD, WALLET_ERROR_CODES, WalletError, createWallet, discoverProviders, pickProvider, normalizeError, chainParams, parseChainId,
 } from "../web/lib/wallet.js";
 import {
   ethers, ALICE, BOB, SHOP, createMockProvider, createMockWindow, walletInfo, memoryStorage, providerError, tick, flushMicrotasks, captureConsole,
@@ -655,6 +655,57 @@ test("balance() reads the connected account's balance through the wallet, as a b
   assert.deepEqual(provider.methods("eth_getBalance")[0].params, [A, "latest"]);
   provider.once("eth_getBalance", "0xzz");
   await assert.rejects(wallet.balance(), /not a hex quantity/);
+});
+
+// ------------------------------------------------------------------ the wallet's own RPC (the retired Liteforge node)
+test("a wallet still set to the retired Liteforge RPC is told how to fix it, and nothing is sent or read through it", async () => {
+  assert.equal(RETIRED_LITEFORGE_HEAD, 69_908_990n);
+  const { wallet, provider } = make();
+  await wallet.connect();
+  const send = () => wallet.sendTransaction({ to: SHOP, data: "0xc37b9bcd", value: 1n });
+  provider.once("eth_blockNumber", "0x42ab9fe");   // the retired node's frozen head
+  await assert.rejects(send(), (e) => e instanceof WalletError && e.code === "rpc" && e.staleRpc === true && e.head === RETIRED_LITEFORGE_HEAD
+    && e.rpcUrl === "https://rpc.testnet.liteforge.zeeve.net/" && /edit the LitVM Liteforge network \(chain 4441\) and set its RPC URL to https:\/\/rpc\.testnet\.liteforge\.zeeve\.net\//.test(e.message));
+  provider.once("eth_blockNumber", providerError(-32603, "Failed to fetch"));   // the retired node is offline
+  await assert.rejects(send(), (e) => e.code === "rpc" && e.staleRpc === true && e.head === null && /cannot reach LitVM Liteforge/.test(e.message));
+  provider.once("eth_blockNumber", "not a quantity");
+  await assert.rejects(send(), (e) => e.staleRpc === true && e.head === null);
+  provider.once("eth_blockNumber", providerError(-32603, "Failed to fetch"));
+  await assert.rejects(wallet.balance(), (e) => e.staleRpc === true);
+  assert.equal(provider.methods("eth_sendTransaction").length, 0, "nothing went to the dead node");
+  assert.equal(provider.methods("eth_getBalance").length, 0);
+});
+
+test("the wallet RPC check: once per session after a healthy answer, and never in the way of a player's refusal or a wallet that cannot say", async () => {
+  const { wallet, provider } = make();
+  await wallet.connect();
+  provider.once("eth_blockNumber", "0x434d029");   // well past the retired head
+  provider.once("eth_sendTransaction", HASH);
+  assert.equal(await wallet.sendTransaction({ to: SHOP }), HASH);
+  provider.once("eth_sendTransaction", HASH);
+  await wallet.sendTransaction({ to: SHOP });
+  provider.once("eth_getBalance", "0x1");
+  assert.equal(await wallet.balance(), 1n);
+  assert.equal(provider.methods("eth_blockNumber").length, 1, "asked once");
+  assert.deepEqual(provider.methods("eth_blockNumber")[0].params, []);
+
+  const other = make();
+  await other.wallet.connect();
+  other.provider.once("eth_blockNumber", providerError(4001, "User rejected the request."));
+  await rejects(other.wallet.sendTransaction({ to: SHOP }), "user_rejected");
+  // the mock wallet has no eth_blockNumber of its own (-32601): it is let through, and not asked again
+  other.provider.once("eth_sendTransaction", HASH);
+  assert.equal(await other.wallet.sendTransaction({ to: SHOP }), HASH);
+  other.provider.once("eth_sendTransaction", HASH);
+  await other.wallet.sendTransaction({ to: SHOP });
+  assert.equal(other.provider.methods("eth_blockNumber").length, 2);
+
+  // another chain is not checked at all
+  const other2 = make(createMockProvider({ chainId: 1, known: [1] }), { chain: { ...LITEFORGE, chainId: 1, chainIdHex: "0x1", name: "Mainnet" } });
+  await other2.wallet.connect();
+  other2.provider.once("eth_sendTransaction", HASH);
+  await other2.wallet.sendTransaction({ to: SHOP });
+  assert.equal(other2.provider.methods("eth_blockNumber").length, 0);
 });
 
 // ------------------------------------------------------------------ error normalisation

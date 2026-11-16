@@ -1,24 +1,19 @@
-// The deploy stages for both minters, shared by scripts/deploy.js (any network) and test/deploy.test.js. Every stage
-// reads the chain first and only sends what is missing, so a half-finished deploy can simply be re-run.
+// The deploy stages, shared by scripts/deploy.js (any network) and the tests. Every stage reads the chain first and only
+// sends what is missing, so a half-finished deploy can simply be re-run.
 //
 // fixed:  shop -> grant -> stock -> preflight -> lock -> open -> handover
-// packs:  beacon -> shop -> grant -> stock -> deck (setDeck + lock, irreversible) -> open -> handover
+// packs (PackShop v2, packs/lib/deploy-packs.js, where this kit has packs/): its own stages around the same shop,
+// grant, stock, open and handover.
 const path = require("node:path");
+const { requirePacks } = require("./packs.js");
 
-/** drand evmnet (api.drand.sh/v2/beacons/evmnet/info): the randomness PackShopV2 verifies on chain. */
-const DRAND_EVMNET = Object.freeze({
-  chainHash: "04f1e9062b8a81f848fded9c12306733282b2727ecced50032187751166ec8c3",
-  genesis: 1727521075,
-  period: 3,
-  urls: Object.freeze(["https://api.drand.sh", "https://api2.drand.sh", "https://api3.drand.sh"]),
-});
 const MINTER_ABI = [
   "function admin() view returns (address)",
   "function minters(address) view returns (bool)",
   "function setMinter(address who, bool on)",
   "function bandOf(uint8 kind) view returns (uint16 min, uint16 max)",
 ];
-const CONTRACT = { fixed: "FixedPriceMinter", packs: "PackShopV2" };
+const FIXED = "FixedPriceMinter";
 
 /**
  * Deploy `name` unless `record[key]` already has code. The CREATE address follows from the signer's nonce, so it is
@@ -45,37 +40,6 @@ async function deployOnce(ethers, { name, args = [], key, record, save = () => {
   save(record);
   log(`${name} deployed ${record[key]} (tx ${record[`${key}Tx`]})`);
   return c;
-}
-
-/** The latest published evmnet round with its signature, from the first mirror that answers. */
-async function latestBeacon(urls = DRAND_EVMNET.urls) {
-  for (const u of urls) {
-    try {
-      const r = await fetch(`${u}/v2/beacons/evmnet/rounds/latest`, { signal: AbortSignal.timeout(8000) });
-      if (r.ok) { const j = await r.json(); return { round: BigInt(j.round), signature: "0x" + j.signature }; }
-    } catch { /* next mirror */ }
-  }
-  throw new Error("no drand evmnet mirror answered");
-}
-
-/** Prove that this chain verifies drand evmnet signatures: a static proveRound call with a real, current round. */
-async function checkBeacon(ethers, { registry, log = console.log }) {
-  const { round, signature } = await latestBeacon();
-  await registry.proveRound.staticCall(signature, round);
-  log(`EvmnetRegistry verifies drand evmnet round ${round} on this chain (BN254 precompiles OK)`);
-}
-
-/** Read-only: run EvmnetRegistry's code against this chain (an eth_call state override) with a real round. */
-async function preflightBeacon(ethers, artifacts, log = console.log) {
-  const art = await artifacts.readArtifact("EvmnetRegistry");
-  const { round, signature } = await latestBeacon();
-  const probe = "0x00000000000000000000000000000000000E7e47";
-  const iface = new ethers.Interface(art.abi);
-  const verifies = (r) => ethers.provider.send("eth_call", [{ to: probe, data: iface.encodeFunctionData("proveRound", [signature, r]) }, "latest", { [probe]: { code: art.deployedBytecode } }])
-    .then(() => true, () => false);
-  const [accepts, rejectsOther] = [await verifies(round), !(await verifies(round - 1n))];
-  if (accepts && rejectsOther) log(`preflight: this chain verifies drand evmnet round ${round} and rejects it for round ${round - 1n} (BN254 precompiles OK)`);
-  else log(`preflight inconclusive (accepts ${accepts}, rejects a wrong round ${rejectsOther}): the RPC may ignore state overrides. The live run checks again before deploying the shop.`);
 }
 
 const minterAt = async (ethers, address, signer = null) => new ethers.Contract(address, MINTER_ABI, signer ?? (await ethers.getSigners())[0] ?? ethers.provider);
@@ -140,22 +104,9 @@ async function lockCatalogue(ethers, { shop, log = console.log }) {
   log(`catalogue LOCKED: ${await shop.templateCount()} templates (tx ${rc.hash})`);
 }
 
-/** Packs: set the print run and lock it, unless the shop is already locked with exactly this deck. */
-async function setDeckAndLock(ethers, { shop, counts, reserveTo, log = console.log }) {
-  const want = counts.flat().map(Number);
-  if (await shop.locked()) {
-    const have = Array.from(await shop.deckInitial(), (row) => Array.from(row, Number)).flat();
-    if (have.join() !== want.join()) throw new Error(`the shop is locked with another deck (${have.join("/")})`);
-    return log(`deck already locked: ${await shop.maxSupply()} cards`);
-  }
-  await (await shop.setDeck(counts, reserveTo)).wait();
-  const rc = await (await shop.lock()).wait();
-  log(`deck set and LOCKED: ${await shop.maxSupply()} cards, ${await shop.packsTotal()} packs, reserve ${await shop.reserveSize()} -> ${reserveTo} (tx ${rc.hash})`);
-}
-
 /** Unpause once the shop can sell. */
 async function openSales(ethers, { shop, log = console.log }) {
-  if (!(await shop.ready())) throw new Error("the shop is not ready: grant MINTER (and, for packs, lock the deck) first");
+  if (!(await shop.ready())) throw new Error("the shop is not ready: grant MINTER first (and lock a pack shop's deck)");
   if (await shop.paused()) {
     const rc = await (await shop.unpause()).wait();
     log(`sales opened (tx ${rc.hash})`);
@@ -171,15 +122,11 @@ async function handOver(ethers, { shop, to, log = console.log }) {
 }
 
 async function describe(shop, mode) {
+  if (mode !== "fixed") return requirePacks("deploy-packs.js").describe(shop);
   const c = await shop.config();
-  const common = { owner: await shop.owner(), pendingOwner: await shop.pendingOwner(), paused: c.paused_, ready: c.ready_ };
-  if (mode === "fixed") {
-    return { ...common, price: c.price_.toString(), maxPerWallet: Number(c.maxPerWallet_), locked: c.locked_, templates: Number(c.templateCount_), minted: Number(c.totalMinted_), maxSupply: Number(c.maxSupply_) };
-  }
   return {
-    ...common, price: c.price_.toString(), packSize: Number(c.packSize_), dailyLimit: Number(c.dailyLimit_), locked: await shop.locked(),
-    maxSupply: Number(c.maxSupply_), packsTotal: Number(c.packsTotal_), packsSold: Number(c.packsSold_), cardsLeft: Number(c.cardsLeft_),
-    templates: Number(c.templateCount_), nextToDeal: Number(await shop.nextToDeal()),
+    owner: await shop.owner(), pendingOwner: await shop.pendingOwner(), paused: c.paused_, ready: c.ready_,
+    price: c.price_.toString(), maxPerWallet: Number(c.maxPerWallet_), locked: c.locked_, templates: Number(c.templateCount_), minted: Number(c.totalMinted_), maxSupply: Number(c.maxSupply_),
   };
 }
 
@@ -194,13 +141,15 @@ async function deployReferenceCollection(ethers, log = console.log) {
 
 /**
  * Run the deploy for a loaded config (scripts/lib/config.js). record: the deployments file's object (mutated and
- * passed to save after every step). opts: stage ("all" or one stage name), log, save, checkBeacon (default true).
- * Returns { shop, record, granted }.
+ * passed to save after every step). opts: stage ("all" or one stage name), log, save, signer, and options the pack module
+ * reads (checkBeacon). Mode "packs" needs packs/ (lib/packs.js). Returns { shop, record, granted, extra }.
  */
-async function runDeploy(hre, cfg, record, { stage = "all", log = console.log, save = () => {}, checkBeacon: wantBeaconCheck = true, signer: by = null } = {}) {
+async function runDeploy(hre, cfg, record, opts = {}) {
+  const { stage = "all", log = console.log, save = () => {}, signer: by = null } = opts;
   const { ethers } = hre;
   const mode = cfg.mode;
-  const name = CONTRACT[mode];
+  const packs = mode === "fixed" ? null : requirePacks("deploy-packs.js");
+  const name = packs ? packs.CONTRACT : FIXED;
   const signer = by ?? (await ethers.getSigners())[0];
   const run = (s) => stage === "all" || stage === s;
   record.mode = mode;
@@ -208,22 +157,9 @@ async function runDeploy(hre, cfg, record, { stage = "all", log = console.log, s
   record.collection = { ...(record.collection ?? {}), minter: cfg.collection.minter, cards: cfg.collection.cards, tokenIdBase: cfg.collection.tokenIdBase };
   save(record);
 
-  let beacon = null;
-  if (mode === "packs") {
-    if (cfg.packs.beacon) {
-      record.beacon = cfg.packs.beacon;
-      if ((await ethers.provider.getCode(record.beacon)) === "0x") throw new Error(`packs.beacon ${record.beacon} has no code on this chain`);
-      beacon = await ethers.getContractAt("EvmnetRegistry", record.beacon, signer);
-    } else if (run("beacon") || !record.beacon) {
-      beacon = await deployOnce(ethers, { name: "EvmnetRegistry", key: "beacon", record, save, log, signer });
-    } else beacon = await ethers.getContractAt("EvmnetRegistry", record.beacon, signer);
-    if (wantBeaconCheck) await checkBeacon(ethers, { registry: beacon, log });
-  }
-
+  const extra = packs ? await packs.beforeShop(hre, cfg, record, { ...opts, run, save, log, signer, deployOnce }) : null;
   if (!run("shop") && !record.shop) throw new Error(`STAGE=${stage} needs a deployed shop: run the shop stage first`);
-  const args = mode === "fixed"
-    ? [cfg.collection.minter, signer.address, cfg.fixed.price, cfg.fixed.maxPerWallet]
-    : [cfg.collection.minter, record.beacon, signer.address, cfg.packs.price, cfg.packs.packSize, cfg.packs.dailyLimit];
+  const args = packs ? packs.shopArgs(cfg, record, signer) : [cfg.collection.minter, signer.address, cfg.fixed.price, cfg.fixed.maxPerWallet];
   const shop = run("shop")
     ? await deployOnce(ethers, { name, args, key: "shop", record, save, log, signer })
     : await ethers.getContractAt(name, record.shop, signer);
@@ -237,13 +173,11 @@ async function runDeploy(hre, cfg, record, { stage = "all", log = console.log, s
   if (!isOwner && ["stock", "preflight", "lock", "deck", "open"].some(run)) {
     log(`the signer is no longer the shop's owner (${await shop.owner()}): the remaining setup is the owner's`);
   } else {
-    if (run("stock")) await stock(ethers, { shop, templates: cfg.templates, supplies: mode === "fixed" ? cfg.supplies : null, log });
-    if (mode === "fixed") {
+    if (run("stock")) await stock(ethers, { shop, templates: cfg.templates, supplies: packs ? null : cfg.supplies, log });
+    if (packs) await packs.afterStock(hre, cfg, { shop, signer, run, log });
+    else {
       if (run("preflight") && granted) await preflightFixed(ethers, { shop, to: signer.address, log });
       if (run("lock") && cfg.fixed.lock) await lockCatalogue(ethers, { shop, log });
-    } else if (run("deck")) {
-      const reserveTo = cfg.packs.reserveTo ?? cfg.owner ?? signer.address;
-      await setDeckAndLock(ethers, { shop, counts: cfg.deck.counts, reserveTo, log });
     }
     if (run("open")) {
       if (granted) await openSales(ethers, { shop, log });
@@ -254,11 +188,11 @@ async function runDeploy(hre, cfg, record, { stage = "all", log = console.log, s
   record.owner = await shop.owner();
   record.pendingOwner = await shop.pendingOwner();
   save(record);
-  return { shop, record, granted, beacon };
+  return { shop, record, granted, extra };
 }
 
 module.exports = {
-  DRAND_EVMNET, MINTER_ABI, CONTRACT,
-  deployOnce, latestBeacon, checkBeacon, preflightBeacon, minterAdmin, grantMinter, stock, preflightFixed, lockCatalogue,
-  setDeckAndLock, openSales, handOver, describe, deployReferenceCollection, runDeploy,
+  MINTER_ABI, FIXED,
+  deployOnce, minterAdmin, grantMinter, stock, preflightFixed, lockCatalogue, openSales, handOver, describe,
+  deployReferenceCollection, runDeploy,
 };

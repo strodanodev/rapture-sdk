@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixedConfig, readMinter, readEditions, templatesOf, mint, MAX_PER_TX } from "../web/lib/fixed.js";
-import { ShopError } from "../web/lib/packshop.js";
+import { ShopError } from "../web/lib/shop.js";
 import { createWallet } from "../web/lib/wallet.js";
 import { walletChain } from "../web/lib/config.js";
 import { createChain } from "../web/lib/chain.js";
@@ -24,7 +24,7 @@ const shopErr = (code, reason) => (e) => e instanceof ShopError && e.code === co
 
 test("fixedConfig takes the minter from the site config, and refuses a packs or undeployed site", () => {
   const cfg = fixedConfig(siteFor());
-  assert.equal(cfg.packShop, MINTER);
+  assert.equal(cfg.shop, MINTER);
   assert.equal(cfg.chainId, 4441);
   assert.throws(() => fixedConfig(siteFor({ mode: "packs" })), shopErr("not_configured"));
   assert.throws(() => fixedConfig(siteFor({ address: null })), shopErr("not_configured"));

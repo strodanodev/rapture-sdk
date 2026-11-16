@@ -6,8 +6,7 @@ public on chain anyway.
 
 ## Before you deploy
 
-1. The minter is deployed and stocked, the shop holds the MINTER role on the collection, and (for packs) the keeper
-   runs. See the mint package's README.
+1. The minter is deployed and stocked, and it holds the MINTER role on the collection. See the mint package's README.
 2. `web/site.config.json` points at it (`node scripts/site-config.mjs` in the mint package writes `chain`, `mint` and
    `cards`), and the words, colours, logo and art are yours.
 3. From this folder:
@@ -50,7 +49,7 @@ host, or nothing at all if the domain is already on Vercel DNS). HTTPS is automa
 - Open the site in a browser with the developer console open: there must be no Content-Security-Policy errors. A
   blocked request means the config names a host the CSP does not allow: run `pnpm csp` and redeploy.
 - Check the response headers once: `curl -sI https://<your-site>/ | grep -i content-security-policy`.
-- Connect a wallet, mint one card (or buy and open one pack), and find it under "My cards".
+- Connect a wallet, mint one card, and find it under "My cards".
 - `site.config.json` is served with `Cache-Control: no-cache`, so a changed price or address shows on the next load.
 
 ## When something changes

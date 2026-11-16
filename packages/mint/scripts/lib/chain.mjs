@@ -1,4 +1,4 @@
-// Helpers shared by the plain-node scripts (keeper, verify, site-config, export-templates, check-config): ethers, the
+// Helpers shared by the plain-node scripts (verify, site-config, export-templates, check-config): ethers, the
 // known networks, the mint config and command-line flags. No Hardhat runtime.
 import { createRequire } from "node:module";
 
@@ -6,7 +6,6 @@ const require = createRequire(import.meta.url);
 export const ethers = require("ethers");
 export const NETWORKS = require("./networks.json");
 export const config = require("./config.js");
-export const { DRAND_EVMNET } = require("./deploy.js");
 
 /** --name value pairs and bare --flags -> { name: value | true, _: [positional] }. */
 export function parseArgs(argv = process.argv.slice(2)) {

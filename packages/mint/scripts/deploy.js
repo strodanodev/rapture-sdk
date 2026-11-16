@@ -11,12 +11,13 @@
 // admin: when the signer is not it, the run says which call the admin must make, and a re-run continues. With "owner"
 // set in the config, ownership is then offered to it (two-step: it calls acceptOwnership()).
 // Re-run after any failure: each stage reads the chain first. STAGE=<name> runs one stage (fixed: shop grant stock
-// preflight lock open handover; packs: beacon shop grant stock deck open handover).
-// Records addresses in deployments/<network>.json next to the config. SKIP_BEACON_CHECK=1 skips the live drand check.
+// preflight lock open handover; a packs config, where this kit has packs/, has its own list in packs/README.md).
+// Records addresses in deployments/<network>.json next to the config.
 const path = require("node:path");
 const hre = require("hardhat");
 const { loadConfig, LOCAL_NETWORKS, readDeployments, writeDeployments, deploymentsFile } = require("./lib/config.js");
 const D = require("./lib/deploy.js");
+const { requirePacks } = require("./lib/packs.js");
 
 async function main() {
   const { ethers, network, artifacts } = hre;
@@ -32,9 +33,10 @@ async function main() {
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   const record = readDeployments(cfg, network.name) ?? { network: network.name, chainId };
   const save = () => writeDeployments(cfg, network.name, record);
+  const packs = cfg.mode === "fixed" ? null : requirePacks("deploy-packs.js");
 
-  console.log(`${cfg.mode === "fixed" ? "FixedPriceMinter" : "PackShopV2"} for ${path.relative(process.cwd(), cfg.file)} on ${network.name} (chain ${chainId})`);
-  console.log(`templates: ${cfg.templates.length}${cfg.mode === "packs" ? `   deck: ${cfg.deck.counts.flat().reduce((a, b) => a + b, 0)} cards in packs of ${cfg.packs.packSize}` : ""}`);
+  console.log(`${packs ? packs.CONTRACT : D.FIXED} for ${path.relative(process.cwd(), cfg.file)} on ${network.name} (chain ${chainId})`);
+  console.log(`templates: ${cfg.templates.length}${packs ? `   ${packs.summary(cfg)}` : ""}`);
 
   if (local && (await ethers.provider.getCode(cfg.collection.minter)) === "0x") {
     if (!record.referenceCollection || (await ethers.provider.getCode(record.referenceCollection.minter)) === "0x") {
@@ -54,31 +56,26 @@ async function main() {
     const admin = await D.minterAdmin(ethers, cfg.collection.minter);
     if ((await ethers.provider.getCode(cfg.collection.minter)) === "0x") throw new Error(`collection.minter ${cfg.collection.minter} has no code on ${network.name}`);
     console.log(`collection minter ${cfg.collection.minter}, admin ${admin ?? "(no admin() view)"}${who && admin && admin.toLowerCase() !== who.toLowerCase() ? "  <- not the signer: it must grant MINTER itself" : ""}`);
-    if (cfg.mode === "packs" && !cfg.packs.beacon) await D.preflightBeacon(ethers, artifacts);
+    if (packs && !cfg.packs.beacon) await packs.preflight(ethers, artifacts);
     console.log(`\nDRY RUN (set MINT_CONFIRM=${network.name} to send transactions). Stages that would run:`);
-    if (cfg.mode === "fixed") {
+    if (packs) {
+      for (const line of packs.planLines(cfg)) console.log(line);
+    } else {
       console.log(`  shop       FixedPriceMinter(minter, owner=signer, price ${cfg.fixed.priceText}, ${cfg.fixed.maxPerWallet || "no"} per-wallet limit)`);
       console.log("  grant      setMinter(shop, true) on the collection minter (its admin only)");
       console.log(`  stock      addTemplates x${Math.ceil(cfg.templates.length / 10)} batches of 10 (edition sizes ${[...new Set(cfg.supplies)].join(", ")})`);
       console.log("  preflight  every template mints (static ownerMint calls, nothing sent)");
       console.log(`  lock       ${cfg.fixed.lock ? "lock(): the catalogue and edition sizes are frozen   <- irreversible" : "skipped (fixed.lock is false)"}`);
-    } else {
-      console.log(`  beacon     ${cfg.packs.beacon ? `use EvmnetRegistry ${cfg.packs.beacon}` : "EvmnetRegistry (permissionless drand evmnet verifier), then a static proveRound check"}`);
-      console.log(`  shop       PackShopV2(minter, beacon, owner=signer, price ${cfg.packs.priceText}, ${cfg.packs.packSize} cards, ${cfg.packs.dailyLimit || "no"} daily limit)`);
-      console.log("  grant      setMinter(shop, true) on the collection minter (its admin only)");
-      console.log(`  stock      addTemplates x${Math.ceil(cfg.templates.length / 10)} batches of 10`);
-      console.log(`  deck       setDeck(${cfg.deck.counts.map((r) => r.join("/")).join("  ")}) + lock()   <- irreversible`);
     }
     console.log("  open       unpause()");
     console.log(`  handover   ${cfg.owner ? `transferOwnership(${cfg.owner}); it must call acceptOwnership()` : "skipped (set \"owner\" in the config, e.g. a Safe)"}`);
-    console.log(`\nAfter it: pnpm verify, pnpm site-config${cfg.mode === "packs" ? ", and start the keeper (pnpm keeper)" : ""}.`);
+    console.log(`\nAfter it: pnpm run verify, pnpm run site-config${packs ? ", and start the keeper (packs/README.md)" : ""}.`);
     return;
   }
   if (!signer) throw new Error("no signer: set DEPLOYER_KEY");
 
-  const { shop } = await D.runDeploy(hre, cfg, record, {
-    stage: process.env.STAGE || "all", save, checkBeacon: !process.env.SKIP_BEACON_CHECK,
-  });
+  // SKIP_BEACON_CHECK=1: a packs deploy skips its live drand check (offline rehearsals)
+  const { shop } = await D.runDeploy(hre, cfg, record, { stage: process.env.STAGE || "all", save, checkBeacon: !process.env.SKIP_BEACON_CHECK });
   console.log(`\n${record.contract} state:`, await D.describe(shop, cfg.mode));
   console.log(`recorded in ${path.relative(process.cwd(), deploymentsFile(cfg, network.name))}`);
 }

@@ -21,6 +21,7 @@ const configFile = () => (fs.existsSync(path.join(WEB, "site.config.local.json")
 http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   let rel = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "index.html";
+  if (rel.endsWith("/")) rel += "index.html";                  // packs/ -> packs/index.html, as Vercel serves it
   if (rel === "site.config.json") rel = configFile();
   const file = path.resolve(WEB, rel);
   if (!file.startsWith(WEB + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {

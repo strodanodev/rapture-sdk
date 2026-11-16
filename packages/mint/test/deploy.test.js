@@ -2,30 +2,18 @@
 // Hardhat network against the reference collection, as `pnpm deploy:local` runs them on a local node.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const hre = require("hardhat");
 const { ethers } = hre;
-const { loadConfig, templateProblems, deckProblems, parseUnits } = require("../scripts/lib/config.js");
+const { loadConfig, templateProblems, parseUnits, PACKS_MISSING } = require("../scripts/lib/config.js");
+const { hasPacks } = require("../scripts/lib/packs.js");
 const D = require("../scripts/lib/deploy.js");
+const { configWith: copyOf } = require("./helpers/configs.js");
 
 const EXAMPLES = path.join(__dirname, "..", "examples");
+const configWith = (example, patch) => copyOf(path.join(EXAMPLES, example), patch);
 const rpc = (method, params = []) => ethers.provider.send(method, params);
 const quiet = () => {};
-
-function configWith(example, patch) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mint-config-"));
-  const src = path.join(EXAMPLES, example);
-  for (const f of fs.readdirSync(src)) if (f.endsWith(".json")) fs.copyFileSync(path.join(src, f), path.join(dir, f));
-  const raw = JSON.parse(fs.readFileSync(path.join(dir, "mint.config.json"), "utf8"));
-  if (raw.templates.startsWith("../")) {
-    fs.copyFileSync(path.resolve(src, raw.templates), path.join(dir, "templates.json"));
-    raw.templates = "templates.json";
-  }
-  const merged = patch(raw) ?? raw;
-  fs.writeFileSync(path.join(dir, "mint.config.json"), JSON.stringify(merged));
-  return path.join(dir, "mint.config.json");
-}
 
 describe("deploy scripts", function () {
   let signer, buyer, safe, collection, snap;
@@ -38,35 +26,36 @@ describe("deploy scripts", function () {
   afterEach(async () => { await rpc("evm_revert", [snap]); });
 
   describe("config", () => {
-    it("the shipped examples are valid (Rapture's waits for its exported templates)", () => {
-      for (const ex of ["fixed", "packs", "rapture"]) {
-        const { problems } = loadConfig(path.join(EXAMPLES, ex, "mint.config.json"));
-        assert.deepEqual(problems, [], ex);
-      }
-      const r = loadConfig(path.join(EXAMPLES, "rapture", "mint.config.json"));
-      assert.equal(r.cfg.templates, null);
-      assert.match(r.warnings[0], /export-templates/);
-      assert.deepEqual(r.cfg.deck.counts.flat().reduce((a, b) => a + b, 0), 888);
+    it("the shipped fixed-price example is valid", () => {
+      const { problems, cfg } = loadConfig(path.join(EXAMPLES, "fixed", "mint.config.json"));
+      assert.deepEqual(problems, []);
+      assert.deepEqual(cfg.supplies, [100, 100, 100, 100, 100, 100, 100, 100, 100, 10]);
     });
 
     it("reports what is wrong instead of guessing", () => {
       const file = configWith("fixed", (c) => ({ ...c, mode: "auction", owner: "me", collection: { minter: "0x12" }, fixed: { price: "1e18" } }));
       const { problems } = loadConfig(file);
       for (const want of [/mode must be/, /owner must be/, /collection.minter/]) assert.ok(problems.some((p) => want.test(p)), `${want} in ${problems.join("; ")}`);
-      const packs = configWith("packs", (c) => { c.packs.packSize = 7; c.packs.price = "0.0.1"; });
-      const p2 = loadConfig(packs).problems;
-      assert.ok(p2.some((p) => /packSize must be 1..6/.test(p)));
-      assert.ok(p2.some((p) => /packs.price must be a decimal/.test(p)));
     });
 
-    it("checks templates against the reference collection's rules, and decks against the templates", () => {
+    it("mode \"packs\" needs the pack module: where packs/ is missing it is refused with a clear reason", async () => {
+      const file = configWith("fixed", (c) => { c.mode = "packs"; c.packs = { price: "0.001", deck: "deck.json" }; });
+      const { problems } = loadConfig(file);
+      if (hasPacks()) assert.ok(!problems.includes(PACKS_MISSING));
+      else {
+        assert.deepEqual(problems, [PACKS_MISSING]);
+        assert.match(PACKS_MISSING, /PackShop v2 isn't published in this kit yet/);
+        await assert.rejects(D.describe(null, "packs"), /isn't published in this kit yet/);
+        await assert.rejects(D.runDeploy(hre, { mode: "packs" }, {}, { log: quiet }), /isn't published in this kit yet/);
+      }
+    });
+
+    it("checks templates against the reference collection's rules", () => {
       const t = JSON.parse(fs.readFileSync(path.join(EXAMPLES, "fixed", "templates.json"), "utf8")).templates[0].template;
       assert.deepEqual(templateProblems(t, 0), []);
       assert.ok(templateProblems({ ...t, design: { ...t.design, kit: 2 } }, 0).some((p) => /kit/.test(p)));
       assert.ok(templateProblems({ ...t, design: { ...t.design, name: "Bad<name>" } }, 0).some((p) => /design.name/.test(p)));
       assert.ok(templateProblems(t, 0, [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]).some((p) => /outside kind 0's band/.test(p)));
-      assert.ok(deckProblems({ counts: [[1, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]] }, 5, [t]).some((p) => /does not fill one pack/.test(p)));
-      assert.ok(deckProblems({ counts: [[5, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 9]] }, 5, [t]).some((p) => /no template of that kind/.test(p)));
       assert.equal(parseUnits("0.001"), 10n ** 15n);
       assert.equal(parseUnits("2"), 2n * 10n ** 18n);
     });
@@ -115,48 +104,6 @@ describe("deploy scripts", function () {
       const { cfg } = loadConfig(file);
       cfg.templates[3] = { ...cfg.templates[3], traits: { ...cfg.templates[3].traits, strength: 1 } };   // below its band
       await assert.rejects(D.runDeploy(hre, cfg, {}, { log: quiet }), /would not mint[\s\S]*template 3/);
-    });
-  });
-
-  describe("packs", () => {
-    it("deploys PackShopV2 against a given beacon, stocks, locks the deck and opens sales", async () => {
-      const mock = await (await ethers.getContractFactory("MockEvmnetRegistry")).deploy();
-      const file = configWith("packs", (c) => { c.collection.minter = collection.minter; c.packs.beacon = null; });
-      const { cfg, problems } = loadConfig(file);
-      assert.deepEqual(problems, []);
-      cfg.packs.beacon = await mock.getAddress();
-      const record = {};
-      const { shop } = await D.runDeploy(hre, cfg, record, { log: quiet, checkBeacon: false });
-      const s = await D.describe(shop, "packs");
-      assert.equal(s.maxSupply, 79);
-      assert.equal(s.packsTotal, 15);
-      assert.equal(s.templates, 10);
-      assert.equal(s.locked, true);
-      assert.equal(s.paused, false);
-      assert.equal(s.ready, true);
-      assert.equal(await shop.reserveTo(), signer.address);
-      assert.equal(record.beacon, await mock.getAddress());
-
-      const buy = await (await shop.connect(buyer).buyPack({ value: cfg.packs.price })).wait();
-      const ev = buy.logs.map((l) => { try { return shop.interface.parseLog(l); } catch { return null; } }).find((l) => l?.name === "PackBought");
-      await (await mock.proveRound(ethers.toUtf8Bytes("sig"), ev.args.round)).wait();
-      await rpc("evm_increaseTime", [30]);
-      const open = await (await shop.connect(buyer).openPack(ev.args.packId, [], [])).wait();
-      assert.equal(open.status, 1);
-
-      const nonce = await ethers.provider.getTransactionCount(signer.address);
-      await D.runDeploy(hre, cfg, record, { log: quiet, checkBeacon: false });
-      assert.equal(await ethers.provider.getTransactionCount(signer.address), nonce);
-    });
-
-    it("refuses to re-lock a shop with a different deck", async () => {
-      const mock = await (await ethers.getContractFactory("MockEvmnetRegistry")).deploy();
-      const { cfg } = loadConfig(configWith("packs", (c) => { c.collection.minter = collection.minter; }));
-      cfg.packs.beacon = await mock.getAddress();
-      const record = {};
-      await D.runDeploy(hre, cfg, record, { log: quiet, checkBeacon: false });
-      cfg.deck = { counts: cfg.deck.counts.map((r) => r.map((n) => n + 1)) };
-      await assert.rejects(D.runDeploy(hre, cfg, record, { log: quiet, checkBeacon: false }), /locked with another deck/);
     });
   });
 });
