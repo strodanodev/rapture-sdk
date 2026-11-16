@@ -49,6 +49,9 @@ export class Stage {
   readonly boardKey = new THREE.SpotLight(0xffffff, 0, 34, 0.42, 0.55, 1.1);
   /** The board light's strength in battle (the realm sets it with its colour). */
   boardKeyPower = 0;
+  /** The rim light's strength, and the share of it that stays on in battle (the realm sets both). */
+  rimPower = 40;
+  rimBattle = 1;
   readonly floorPlate: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial>;
   private readonly composer: EffectComposer;
   private fxaa: ShaderPass | null = null;
@@ -546,6 +549,7 @@ export class Stage {
       this.place(step, t);
       const ease = Math.min(1, step * 3);
       this.boardKey.intensity += ((this.mood === 'battle' ? this.boardKeyPower : 0) - this.boardKey.intensity) * ease;
+      this.rimLight.intensity += (this.rimPower * (this.mood === 'battle' ? this.rimBattle : 1) - this.rimLight.intensity) * ease;
       this.dim += ((this.boardUp ? 0.5 : 0) - this.dim) * ease;
       this.grade.uniforms.dim.value = this.dim;
       this.grade.uniforms.time.value = t;

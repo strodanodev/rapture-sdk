@@ -42,8 +42,12 @@ interface Preset {
   ridges: [number, number];
   /** The practical lights' colour and strength (braziers in Valhalla, the lava moat in the Underworld). */
   practical: { color: number; intensity: number };
-  /** The battle board: which of the model's stones it is cut from and its tints, its metals, its glow, its key light. */
-  board: { stone: RegExp[]; top: number; under: number; ember: number; iron: number; trim: number; glow: number; base: number; key: { color: number; power: number }; spikes: boolean };
+  /**
+   * The battle board: which of the model's stones it is cut from and its tints, its metals, its glow, its key light,
+   * and how much of the hall's rim light stays on in battle (the Underworld's red rim, aimed at the dais centre, turned
+   * a small board, a phone's, wholly red).
+   */
+  board: { stone: RegExp[]; top: number; under: number; ember: number; iron: number; trim: number; glow: number; base: number; key: { color: number; power: number }; rim: number; spikes: boolean };
 }
 
 const PRESETS: Record<RealmId, Preset> = {
@@ -61,7 +65,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0a141e, 0x132636],
     practical: { color: 0xff8a3d, intensity: 42 },
     // pale blue-grey flagstone, blued iron and gold under a cold white light
-    board: { stone: [/floor/, /stone/], top: 0x86b4c0, under: 0x1b272c, ember: 0, iron: 0x343a44, trim: 0xffbf5e, glow: 0x7fe6ff, base: 0x2c2c32, key: { color: 0xe4eeff, power: 190 }, spikes: false },
+    board: { stone: [/floor/, /stone/], top: 0x86b4c0, under: 0x1b272c, ember: 0, iron: 0x343a44, trim: 0xffbf5e, glow: 0x7fe6ff, base: 0x2c2c32, key: { color: 0xe4eeff, power: 190 }, rim: 1, spikes: false },
   },
   underworld: {
     // the fog is the horizon's own red and thick enough that the crater floor melts into it, with no hard edge
@@ -76,7 +80,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0e0302, 0x1c0504],
     practical: { color: 0xff5a1a, intensity: 34 },
     // scorched basalt over a bed of embers, black iron and copper, spiked, under a furnace-warm light
-    board: { stone: [/basalt/, /rock/], top: 0x76747a, under: 0x120b0a, ember: 0x2c0a02, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 290 }, spikes: true },
+    board: { stone: [/basalt/, /rock/], top: 0x76747a, under: 0x100a0a, ember: 0x160502, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 290 }, rim: 0.3, spikes: true },
   },
 };
 
@@ -138,7 +142,7 @@ export class Realm {
     const p = PRESETS[id], s = this.stage;
     s.setSky(p.sky, p.aurora, p.stars);
     s.keyLight.color.set(p.key.color); s.keyLight.intensity = p.key.intensity; s.keyLight.position.set(...p.key.position);
-    s.rimLight.color.set(p.rim.color); s.rimLight.intensity = p.rim.intensity;
+    s.rimLight.color.set(p.rim.color); s.rimPower = p.rim.intensity; s.rimBattle = p.board.rim;
     s.hemi.color.set(p.hemi.sky); s.hemi.groundColor.set(p.hemi.ground); s.hemi.intensity = p.hemi.intensity;
     s.scene.environmentIntensity = p.envIntensity;
     s.setFloorRadius(p.floorRadius);
