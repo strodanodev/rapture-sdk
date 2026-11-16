@@ -80,7 +80,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0e0302, 0x1c0504],
     practical: { color: 0xff5a1a, intensity: 34 },
     // scorched basalt over a bed of embers, black iron and copper, spiked, under a furnace-warm light
-    board: { stone: [/basalt/, /rock/], top: 0x262b3a, under: 0x100a0a, ember: 0x30100a, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 340 }, rim: 0.3, spikes: true },
+    board: { stone: [/basalt/, /rock/], top: 0x1e2c48, under: 0x0b0a10, ember: 0x30100a, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xd8e6ff, power: 460 }, rim: 0.1, spikes: true },
   },
 };
 

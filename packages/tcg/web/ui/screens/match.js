@@ -264,7 +264,7 @@ export function matchScreen(app) {
     if (picked) {
       const lines = app.cards.describe(picked);
       pickInfo.replaceChildren(h("b", { text: picked.name }), lines.length ? ` · ${lines.join(" · ")}` : "");
-    } else pickInfo.textContent = watching || s.turnNo > 3 ? "" : "Tap a card to play it · hold it to read it";   // a first-turns hint, not a fixture
+    } else pickInfo.textContent = watching || s.turnNo > 1 ? "" : "Tap a card to play it · hold it to read it";   // a first-turns hint, not a fixture
     requestAnimationFrame(() => { ring.refresh(); fitBoard(); aim.update(pick ? el.querySelector(".hand .tcard.picked, .unit.picked, .power.picked") : null); markHandMore(); });   // after layout: the rune circle, the 3D table, the arrow, the hand's "more" chip
 
     endBtn.disabled = !myTurn;

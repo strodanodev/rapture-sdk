@@ -206,7 +206,10 @@ export class Stage {
       fragmentShader: `uniform sampler2D tDiffuse; uniform vec3 tint; uniform vec4 focus; uniform float vig, grain, time, dim; varying vec2 vUv;
         void main(){ vec4 c = texture2D(tDiffuse, vUv);
           float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
-          c.rgb = mix(c.rgb, c.rgb * tint, (1.0 - smoothstep(0.0, 0.45, l)) * 0.7);
+          // the realm's shadow tint stays off the board when it is up: on the Underworld's dark stone the red tint was the
+          // whole colour of the board (most of all on a phone, where the board is small in the frame)
+          float onBoard = clamp(dim * 2.0, 0.0, 1.0) * (1.0 - smoothstep(0.75, 1.1, length((vUv - focus.xy) / focus.zw)));
+          c.rgb = mix(c.rgb, c.rgb * tint, (1.0 - smoothstep(0.0, 0.45, l)) * 0.7 * (1.0 - 0.85 * onBoard));
           vec2 d = (vUv - 0.5) * vec2(1.0, 0.85);
           c.rgb *= mix(1.0 - vig, 1.0, smoothstep(0.78, 0.22, length(d)));
           // in battle the hall falls back round the board (an ellipse round it on screen); the board keeps its light
