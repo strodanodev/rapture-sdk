@@ -53,6 +53,9 @@
 /* yours hangs only a little below the plate on short desktop windows, clear of a full hand's cost orbs; on the big
    portraits it sits on the plate's edge, clear of the hand's first cards */
 @media (min-width: 900px) and (min-height: 600px) and (max-height: 800px) { .plate.bottom .pl-life { bottom: -3px; } }
+/* wider screens: slimmer plates (a 60px portrait in a 58px bar), so the board between them is taller and its units a
+   fifth larger */
+@media (min-width: 900px) and (min-height: 600px) { .plate { min-height: 56px; padding-block: 2px; } .pl-face { width: 60px; height: 60px; } .pl-life { min-width: 44px; height: 44px; font-size: 22px; right: -16px; bottom: -12px; } }
 @media (min-width: 1200px) and (min-height: 900px) { .plate.bottom .pl-life { bottom: -1px; } }
 .pl-id { display: grid; gap: 3px; min-width: 0; padding-left: 10px; }   /* clear of the life badge on the portrait's corner */
 .pl-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ivory); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -268,7 +271,7 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 
 /* ------------------------------------------------------------------ the hand */
 /* The hand sits whole along the bottom edge, fanned; a card lifts and grows when you point at it. */
-.hand { --w: clamp(96px, 19.5vh, 200px); display: flex; justify-content: center; align-items: flex-start; height: calc(var(--w) * 1.4 + 34px); max-width: 100%; padding: 0 16px; margin-bottom: calc(var(--safe-b) * -1); perspective: 1000px; }
+.hand { --w: clamp(96px, 19.5vh, 200px); display: flex; justify-content: center; align-items: flex-start; height: calc(var(--w) * 1.4 + 12px); max-width: 100%; padding: 0 16px; margin-bottom: calc(var(--safe-b) * -1); perspective: 1000px; }
 /* side by side while the hand fits beside the end-turn medallion, so every card's stats and rules show; past that,
    only as much overlap as it must (stats stay clear). It fans in an arc: each card turned and dropped a little more
    toward the ends (hover, focus and a pick lift it) */
