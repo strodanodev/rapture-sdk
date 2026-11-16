@@ -124,7 +124,7 @@ export function profileScreen(app) {
       const stale = m.ruleset !== app.game.litnode.rulesetId;
       return h("li", { class: `hrow ${m.result}` },
         h("span", { class: "h-result", text: m.result === "win" ? "Victory" : m.result === "loss" ? "Defeat" : "Draw" }),
-        h("span", { class: "h-what", text: `${m.mode === "gauntlet" ? "Gauntlet" : m.mode === "relay" ? "Two-player" : "Practice"}${m.detail ? ` · ${m.detail}` : ""} · vs ${m.opponent ?? "?"}` }),
+        h("span", { class: "h-what", text: `${m.mode === "gauntlet" ? "Gauntlet" : m.mode === "ranked" ? "Ranked" : m.mode === "relay" ? "Two-player" : "Practice"}${m.detail ? ` · ${m.detail}` : ""} · vs ${m.opponent ?? "?"}` }),
         h("span", { class: "h-when tabnum", text: `${when(m.at)} · ${m.turns} turns` }),
         m.replay ? h("button", { class: "btn ghost sm", type: "button", disabled: stale, title: stale ? "Recorded under an older version of the rules" : "Watch the replay", on: { click: () => void app.flows.watchCode(m.replay) } }, icon(stale ? "alert" : "replay"), stale ? "Old version" : "Watch") : h("span"));
     });
