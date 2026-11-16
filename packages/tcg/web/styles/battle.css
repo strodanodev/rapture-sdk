@@ -270,7 +270,7 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 /* side by side while the hand fits beside the end-turn medallion, so every card's stats and rules show; past that,
    only as much overlap as it must (stats stay clear). It fans in an arc: each card turned and dropped a little more
    toward the ends (hover, focus and a pick lift it) */
-.hand .tcard { --w: inherit; margin-left: clamp(calc(var(--w) * -0.24), calc((min(100vw, 1180px) - 320px - var(--n, 1) * var(--w)) / max(var(--n, 1) - 1, 1)), 8px); transform-origin: 50% 120%; transform: rotate(calc(var(--i, 0) * 3deg)) translateY(calc(var(--i, 0) * var(--i, 0) * 2.6px)); animation: dealIn 0.45s var(--ease-out) both; }
+.hand .tcard { --w: inherit; margin-left: clamp(calc(var(--w) * -0.24), calc((min(100vw, 1180px) - 320px - var(--n, 1) * var(--w)) / max(var(--n, 1) - 1, 1)), 8px); transform-origin: 50% 120%; transform: rotate(calc(var(--i, 0) * 2.1deg)) translateY(calc(var(--i, 0) * var(--i, 0) * 1.6px)); animation: dealIn 0.45s var(--ease-out) both; }
 @media (min-width: 1100px) { .hand .tcard { margin-left: clamp(calc(var(--w) * -0.3), calc((min(100vw - 420px, 1320px) - var(--n, 1) * var(--w)) / max(var(--n, 1) - 1, 1)), 10px); } }
 .hand .tcard:first-child { margin-left: 0; }
 .hand .tcard.stay { animation: none; }   /* only a card new to the hand is dealt in */
@@ -586,8 +586,8 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
   .hand .tcard .tc-name { margin: 0; padding: 0.3em 0.7em; border-radius: 0; white-space: normal; line-height: 1.05; }
   /* no smaller than legible: at 85 px a card's em is 6.2 px, which left rules at 6.4 px and names at 7 px */
   .hand .tcard .tc-name:not(.long) { font-size: max(1.12em, 9.5px); letter-spacing: 0.02em; }
-  .hand .tcard .tc-name.long { font-size: max(1.02em, 8.5px); text-overflow: clip; letter-spacing: 0; }
-  .hand .tcard .tc-text { font-size: max(1.02em, 8.5px); }
+  .hand .tcard .tc-name.long { font-size: max(1.02em, 9px); text-overflow: clip; letter-spacing: 0; }
+  .hand .tcard .tc-text { font-size: max(1.02em, 10.5px); }   /* readable at arm's length: at 8.5px the rules line was a smudge */
   .hand .tcard :is(.tc-atk, .tc-hp) { bottom: -0.75em; }   /* and the gems hang a little lower, into the hand's bottom padding */
   .hand .tcard:hover, .hand .tcard:focus-visible { transform: translateY(-8px); }
   .hand .tcard.picked { transform: translateY(-16px); }

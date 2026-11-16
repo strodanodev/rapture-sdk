@@ -58,6 +58,7 @@ body:has(#ui > .page:not([hidden])) #arena { filter: blur(2.5px) brightness(0.86
 .logo { display: grid; justify-items: start; gap: 4px; }
 .logo-emblem { position: relative; width: 74px; height: 74px; color: var(--gold-2); margin-bottom: 10px; filter: drop-shadow(0 0 14px rgba(255, 190, 80, 0.35)); }
 .logo-emblem > svg { width: 100%; height: 100%; }
+.logo:has(.logo-word.art) .logo-emblem { display: none; }   /* a game with its own title art leads with it: the medallion above it was one mark too many */
 .logo-ring { position: absolute; inset: -9px; border-radius: 50%; border: 1px dashed rgba(255, 201, 94, 0.45); animation: spin 24s linear infinite; }
 .logo-word { position: relative; isolation: isolate; margin: 4px 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(44px, 6vw, 88px); letter-spacing: 0.06em; line-height: 0.92; text-transform: uppercase; display: grid; filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.8)); }
 .logo-word::before { content: ''; position: absolute; inset: -30% -12%; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(4, 3, 7, 0.78), rgba(4, 3, 7, 0.45) 45%, transparent 72%); }
@@ -229,7 +230,7 @@ a.menu-item:hover { text-decoration: none; }
 .ft-bar .icon-btn { width: 30px; height: 30px; }
 .ft-bar .minus { font-size: 18px; line-height: 1; }
 .ft-n { font-size: 12px; font-weight: 600; color: var(--ivory); }
-.ft-note { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ft-note { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #b8ae9a; }   /* small enough to sit inside its column (it was cut at the grid's edge) */
 .ft-note.held { color: var(--ok); }
 .deck-panel { display: flex; flex-direction: column; min-height: 0; align-self: start; max-height: 100%; }
 .deck-panel .panel-body { flex: 1 1 auto; min-height: 0; display: grid; gap: 12px; align-content: start; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
