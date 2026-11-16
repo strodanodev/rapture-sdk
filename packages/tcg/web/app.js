@@ -333,11 +333,28 @@ app.flows = {
     const foe = opp.tokenId ? byToken.get(opp.tokenId) ?? null : null;
     const session = new LocalBotSession(rules, `${run.seed}-stage-${opp.stage}`, { tokenId: me.tokenId, stats: me.stats }, { tokenId: opp.tokenId, stats: opp.stats }, { level: opp.level, foeDeck: opp.deck });
     if (deck) session.declareDeck(me.deck);
+    // One life: the match is on the record before it starts, so leaving it or closing the page counts as a loss.
+    profile.gauntlet.current = gauntlet.fight(run);
+    saveProf();
     await versusInto(session, { kind: "gauntlet", label: `Gauntlet · stage ${opp.stage}`, opponent: opp.name, foeLabel: opp.name, detail: `stage ${opp.stage}`, mine, foe },
       { names: [mine?.name ?? "Base champion", opp.name], subs: ["You", `Stage ${opp.stage} of ${gauntlet.stages}`], champs: [mine, foe], realm: opp.stage >= gauntlet.stages ? "underworld" : pickRealm(foe, "auto") });
   },
-  gauntletChoose(i) { profile.gauntlet.current = gauntlet.choose(profile.gauntlet.current, i); saveProf(); gauntletPage.render(); },
+  /** Take reward `i`; for a card, `replaces` is the deck card to give up (else the suggested one). */
+  gauntletChoose(i, replaces) { profile.gauntlet.current = gauntlet.choose(profile.gauntlet.current, i, replaces); saveProf(); gauntletPage.render(); },
   gauntletAbandon() { closeRun(); gauntletPage.render(); },
+  /** Settle a Gauntlet match that started and never reported a result as a loss; true if there was one. */
+  settleGauntlet() {
+    const run = profile.gauntlet.current;
+    if (!run?.fighting || run.over) return false;
+    const opp = gauntlet.opponent(run), lost = gauntlet.forfeit(run);
+    profile.gauntlet.current = lost;
+    closeRun();
+    profile.gauntlet.current = { ...lost, counted: true };
+    profile = addMatch(profile, { at: Date.now(), mode: "gauntlet", result: "loss", turns: 0, ruleset: game.litnode.rulesetId, ...(run.champion.tokenId ? { champion: run.champion.tokenId } : {}), opponent: opp.name, detail: `stage ${opp.stage} · left unfinished` });
+    saveProf();
+    toast(`Stage ${opp.stage} was left unfinished, so it counts as a loss.`, "err");
+    return true;
+  },
   async puzzlePlay() {
     const p = todaysPuzzle;
     if (!p) return;
@@ -386,6 +403,7 @@ app.flows = {
           const run = gauntlet.result(profile.gauntlet.current, won);
           profile.gauntlet.current = run;
           if (run.over) { closeRun(); profile.gauntlet.current = { ...run, counted: true }; }
+          saveProf(); // now, not after the replay encodes: a reload in between must not forfeit a finished match
         }
         try { replay = await encodeRecord(session.record()); } catch { /* the result still counts without a replay */ }
         profile = addMatch(profile, { at: Date.now(), mode: kind, result: s.winner === 2 ? "draw" : won ? "win" : "loss", turns: s.turnNo, ruleset: game.litnode.rulesetId, ...(champion ? { champion: String(champion.tokenId) } : {}), opponent: context.opponent, ...(replay ? { replay } : {}), ...(context.detail ? { detail: context.detail } : {}) });
@@ -442,6 +460,8 @@ window.addEventListener("hashchange", () => { void loadReplayFromHash(); });
 // A replay fragment wins over ?watch=1: "Watch replay" from the spectator view keeps the relay query in the URL.
 const opened = location.hash.startsWith(`#${REPLAY_PARAM}=`) && (await loadReplayFromHash());
 setTimeout(bootDone, 150);
+// The page closed during a Gauntlet match last time: that match is a loss, as leaving it would have been.
+app.flows.settleGauntlet();
 if (!opened) {
   if (WATCH) {
     const session = RelaySession.watch(rules, RELAY);

@@ -6,6 +6,14 @@ Every rules or card change ships under a new `rulesetId`, so a game built on an 
 
 No rules change: every ruleset replays exactly as before.
 
+- **Gauntlet rewards that do what they say** (saved runs carry over):
+  - **One life means one attempt:** a Gauntlet match is on the record before it starts (`Gauntlet.fight`). Leaving it mid-match, the browser's back button or closing the page counts as a loss (`Gauntlet.forfeit`), so a losing match can no longer be abandoned and replayed with the same draws. The pause menu says "Leave (counts as a loss)".
+  - **Blessings always change something:** a blessing is now just enough of one stat to raise a number the match uses (life, spell power, unit attack, opening hand), and a stat whose numbers are all at their maximum is not offered. Before, a fixed +12,000 often changed nothing (a base champion's strength, agility and intelligence blessings were all +0). Offers read "+1 life" instead of "+18% resilience", note a hero power the blessing would change, and the run line lists what the blessings have added. `BLESSING` is gone; `Gauntlet.gains` and `Gauntlet.blessed` report the effect.
+  - **Card offers:**
+    - summon-only tokens (cards an effect summons and the default deck doesn't hold, such as a Construct) are never dealt into Gauntlet decks or offered;
+    - the suggested swap is like for like (same type, closest cost, lower rarity), so the deck's curve holds, instead of always the cheapest common;
+    - "Choose what it replaces" lets you give up any card in your deck (`Gauntlet.choose(run, i, replaces)`);
+    - when blessings run out, a third card fills the offer.
 - **Ranked play, a leaderboard and zkLTC stakes in the site, on the LitNode mesh** (no arcade iframe needed; ported from Rapture Chess):
   - **Ranked** (home menu): the page keeps a LitNode player key (ed25519, in the browser), finds the mesh in NodeDirectory on chain, queues for the game's `litnode.rulesetId`, checks the placement the way the arcade does (host and beacon), and takes the seat with its own CabinetShell, which signs only that match's seat and ledger. Decks are owned-only, as the relay enforces for ranked; the deck screen says how many cards the wallet can field when it is short;
   - **wallet binding:** one transaction binds the browser's key to the wallet's LitNode PlayerProfile (`register` with a name the first time, else `bindKey`), so the relay counts the wallet's NFT champion and cards;

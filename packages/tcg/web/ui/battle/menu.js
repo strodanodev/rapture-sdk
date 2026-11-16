@@ -22,7 +22,7 @@ export function createBattleMenu(app, root, { session, ctx, viewing, blocked }) 
       : [
         c.kind === "relay" ? h("button", { class: "btn ghost block", type: "button", on: { click: () => void app.flows.copyViewLink(session()) } }, icon("eye"), "Copy watch link") : null,
         c.kind !== "puzzle" && !session().state?.over ? concede : null,
-        h("button", { class: "btn ghost block", type: "button", on: { click: () => { close(); void app.flows.leaveMatch(); } } }, icon("back"), c.kind === "relay" || c.kind === "ranked" ? "Leave the match" : "Leave to the menu"),
+        h("button", { class: "btn ghost block", type: "button", on: { click: () => { close(); void app.flows.leaveMatch(); } } }, icon("back"), c.kind === "relay" || c.kind === "ranked" ? "Leave the match" : c.kind === "gauntlet" && !session().state?.over ? "Leave (counts as a loss)" : "Leave to the menu"),
       ];
     menu = h("div", { class: "pause", on: { pointerdown: (e) => { if (e.target === menu) close(); } } },
       h("div", { class: "pause-panel panel frame" },

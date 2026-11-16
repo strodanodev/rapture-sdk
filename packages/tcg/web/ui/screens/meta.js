@@ -7,7 +7,10 @@ import { sigil } from "../sigil.js";
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 const when = (ms) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const STAT_LABEL = { strength: "strength (unit attack)", agility: "agility (opening hand)", resilience: "resilience (life)", intelligence: "intelligence (spell power)" };
+const STAT_NAME = { strength: "Strength", agility: "Agility", resilience: "Resilience", intelligence: "Intelligence" };
+// What a blessing changes, in the match's own numbers (Gauntlet.gains): "+1 life", never a percentage of a stat.
+const GAIN = { life: (n) => `${n} life`, spellPower: (n) => `${n} spell power`, unitAttack: (n) => `${n} attack on every unit you play`, openingHand: (n) => `${n} card${n === 1 ? "" : "s"} in your opening hand` };
+const gainText = (gains) => Object.entries(gains).filter(([, n]) => n > 0).map(([k, n]) => `+${GAIN[k](n)}`).join(", ");
 const LEVEL = ["", "Easy", "Normal", "Hard"];
 // the daily puzzle is the same for everyone on a UTC day: name that day plainly, and say when the next one comes
 const fmtDay = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -19,9 +22,42 @@ export function gauntletScreen(app) {
   const body = h("div", { class: "meta-body" });
   const el = page(app, "gauntlet-page", "The Gauntlet", "Eight foes · one life", body);
   const g = app.gauntlet;
+  /** The card offer whose swap is being chosen (an index into run.offers), or null on the offers themselves. */
+  let swapping = null;
+
+  /** A blessing's card: what it changes in a match, and a hero power it would change, if any. */
+  function blessFace(run, r) {
+    const me = g.player(run);
+    const before = app.rules.heroPower(me), after = app.rules.heroPower({ ...me, stats: { ...me.stats, [r.stat]: Math.min(65535, me.stats[r.stat] + r.amount) } });
+    const power = after && after.id !== before?.id ? `Hero power becomes ${after.name}` : null;
+    return h("div", { class: "bless" }, icon("spark"), h("b", { class: "display", text: `${STAT_NAME[r.stat]} blessing` }), h("span", { text: gainText(g.gains(run, r)) || "No change" }), power ? h("small", { text: power }) : null);
+  }
+
+  /** Pick the card a new one replaces: the suggested swap first, then every other card in the deck, cheapest first. */
+  function swapPanel(run, i) {
+    const r = run.offers[i], def = app.game.cards[r.card];
+    const counts = new Map();
+    for (const c of run.deck) counts.set(c, (counts.get(c) ?? 0) + 1);
+    const rows = [...counts.entries()].filter(([c]) => c !== r.card)
+      .sort((a, b) => (b[0] === r.replaces) - (a[0] === r.replaces) || app.game.cards[a[0]].cost - app.game.cards[b[0]].cost || app.game.cards[a[0]].name.localeCompare(app.game.cards[b[0]].name))
+      .map(([c, n]) => {
+        const d = app.game.cards[c];
+        return h("li", { class: c === r.replaces ? "suggested" : "", style: `--el:${app.elementColor(d.element)}`, data: { rarity: d.rarity ?? "common" } },
+          h("button", { class: "swap-row", type: "button", aria: { label: `Give up ${d.name} for ${def.name}` }, on: { click: () => { swapping = null; app.flows.gauntletChoose(i, c); } } },
+            h("span", { class: "dl-cost tabnum", text: d.cost }), h("span", { class: "dl-name", text: d.name }),
+            c === r.replaces ? h("span", { class: "swap-tag", text: "Suggested" }) : h("span"), h("span", { class: "dl-n tabnum", text: `×${n}` })));
+      });
+    return h("div", { class: "panel-body swap-body" },
+      h("div", { class: "offer" }, app.cards.cardFace(def)),
+      h("div", { class: "stack" },
+        h("p", { class: "lede", text: `${def.name} takes the place of one card in your deck. Pick the card to give up.` }),
+        h("ul", { class: "deck-list swap-list" }, ...rows),
+        h("button", { class: "link-btn", type: "button", on: { click: () => { swapping = null; render(); } } }, icon("back"), "Back to the rewards")));
+  }
 
   function render() {
     const run = app.profile().gauntlet.current;
+    if (!run?.offers?.[swapping] || run.offers[swapping].kind !== "card") swapping = null;
     const road = h("ol", { class: `road${run ? "" : " preview"}` });
     const stage = run ? Math.min(run.wins + 1, g.stages) : 0;
     // every stage's foe follows from the run's seed, so the whole ladder can be shown up front; before a run, a
@@ -44,17 +80,21 @@ export function gauntletScreen(app) {
         h("p", { class: "lede", text: "Eight bot matches, each harder than the last. Win and choose a reward: a better card for your deck, or a blessing for your champion. Lose once and the run is over." }),
         h("button", { class: "btn primary lg block pulse", type: "button", on: { click: () => void app.flows.choose("gauntlet") } }, icon("gauntlet"), app.snap.cards.length ? "Choose your champion" : "Begin the run")));
     } else {
-      const blessed = Object.entries(run.blessings).filter(([, v]) => v > 0).map(([k, v]) => `+${Math.round(v / 655.35)}% ${k}`);
-      const who = h("p", { class: "run-line", text: `${app.champName(run.champion.tokenId)}${blessed.length ? ` · ${blessed.join(", ")}` : ""}${run.deck.length ? ` · ${run.deck.length}-card deck` : ""}` });
+      const blessed = gainText(g.blessed(run));
+      const who = h("p", { class: "run-line", text: `${app.champName(run.champion.tokenId)}${blessed ? ` · ${blessed}` : ""}${run.deck.length ? ` · ${run.deck.length}-card deck` : ""}` });
       if (run.over) {
         panel.append(head(run.cleared ? "Gauntlet cleared" : `Fallen at stage ${stage}`, `${run.wins}/${g.stages} won`), h("div", { class: "panel-body stack" }, who,
           h("p", { class: "lede", text: run.cleared ? "All eight beaten. Start another run with a different champion." : "Your best is kept in your profile." }),
           h("button", { class: "btn primary lg block", type: "button", on: { click: () => app.flows.gauntletAbandon() } }, icon("refresh"), "New run")));
+      } else if (swapping !== null) {
+        panel.append(head(`Stage ${run.wins} won`, "Choose the swap"), swapPanel(run, swapping));
       } else if (run.offers.length) {
         const offers = h("div", { class: "offers" }, ...run.offers.map((r, i) => {
-          const face = r.kind === "card" ? app.cards.cardFace(app.game.cards[r.card]) : h("div", { class: "bless" }, icon("spark"), h("b", { class: "display", text: "Blessing" }), h("span", { text: `+${Math.round(r.amount / 655.35)}% ${STAT_LABEL[r.stat]}` }));
-          return h("div", { class: "offer" }, face, r.kind === "card" ? h("p", { class: "hint", text: `Replaces ${app.game.cards[r.replaces]?.name ?? "a card"}` }) : null,
-            h("button", { class: "btn primary sm", type: "button", on: { click: () => app.flows.gauntletChoose(i) } }, "Take it"));
+          const card = r.kind === "card";
+          return h("div", { class: "offer" }, card ? app.cards.cardFace(app.game.cards[r.card]) : blessFace(run, r),
+            card ? h("p", { class: "hint", text: `Replaces ${app.game.cards[r.replaces]?.name ?? "a card"}` }) : null,
+            h("button", { class: "btn primary sm", type: "button", on: { click: () => app.flows.gauntletChoose(i) } }, "Take it"),
+            card ? h("button", { class: "link-btn", type: "button", on: { click: () => { swapping = i; render(); } } }, "Choose what it replaces") : null);
         }));
         panel.append(head(`Stage ${run.wins} won`, "Choose a reward"), h("div", { class: "panel-body stack" }, who, stagger(offers)));
       } else {
@@ -71,7 +111,8 @@ export function gauntletScreen(app) {
     body.replaceChildren(road, panel);
     stagger(road);
   }
-  return { id: "gauntlet", el, render, enter() { app.arena.setMood("menu"); app.arena.setRealm("underworld"); render(); } };
+  // A match left without a result (the browser's back button, say) is settled as a loss before the page draws.
+  return { id: "gauntlet", el, render, enter() { app.arena.setMood("menu"); app.arena.setRealm("underworld"); swapping = null; app.flows.settleGauntlet(); render(); } };
 }
 
 export function puzzleScreen(app) {

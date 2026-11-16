@@ -75,6 +75,80 @@ test('Gauntlet: blessings raise the champion stats that go into init, and fixed-
   assert.ok(STARTER.champion(g.player(run).stats).life >= STARTER.champion().life);
 });
 
+test('Gauntlet: one attempt per stage; a match that starts and never reports a result is a loss', () => {
+  const g = createGauntlet(SAMPLE);
+  const run = g.start('forfeit');
+  assert.equal(g.forfeit(run), run, 'nothing under way: nothing to settle');
+  const fighting = g.fight(run);
+  assert.equal(fighting.fighting, 1);
+  const lost = g.forfeit(fighting);
+  assert.deepEqual([lost.over, lost.cleared, lost.wins, 'fighting' in lost], [true, false, 0, false]);
+  const won = g.result(fighting, true);
+  assert.ok(!('fighting' in won) && won.offers.length > 0, 'a reported result clears the mark');
+  assert.equal(g.forfeit(won), won, 'a match that reported its result is never forfeited');
+  assert.equal(g.fight(won), won, 'no match starts while a reward is waiting');
+});
+
+test('Gauntlet: every blessing offered changes a number the match uses, and none is offered once a stat is spent', () => {
+  for (const rules of [SAMPLE, STARTER]) {
+    const g = createGauntlet(rules);
+    for (const champion of [undefined, { stats: { strength: 30000, agility: 32000, resilience: 40000, intelligence: 10 } }]) {
+      let run = g.start(`bless-${champion ? 'c' : 'base'}`, champion);
+      for (let stage = 1; stage < STAGES; stage++) {
+        run = g.result(run, true);
+        for (const o of run.offers.filter((x) => x.kind === 'bless')) {
+          const gains = g.gains(run, o);
+          assert.ok(Object.keys(gains).length > 0 && Object.values(gains).every((n) => n! > 0), `stage ${stage}: ${o.kind === 'bless' ? o.stat : ''} blessing gains ${JSON.stringify(gains)}`);
+        }
+        const b = run.offers.findIndex((x) => x.kind === 'bless');
+        run = g.choose(run, b >= 0 ? b : 0);
+      }
+      // A base champion blessed every time ends with numbers well above its own.
+      const before = rules.champion(champion?.stats), after = rules.champion(g.player(run).stats);
+      assert.ok(after.life + after.spellPower + after.unitAttack + after.openingHand > before.life + before.spellPower + before.unitAttack + before.openingHand);
+      assert.deepEqual(g.blessed(run), Object.fromEntries((['life', 'spellPower', 'unitAttack', 'openingHand'] as const).filter((k) => after[k] !== before[k]).map((k) => [k, after[k] - before[k]])));
+    }
+    // A champion at the top of every range has nothing left to bless.
+    const max = { strength: 65535, agility: 65535, resilience: 65535, intelligence: 65535 };
+    assert.ok(g.result(g.start('max', { stats: max }), true).offers.every((o) => o.kind === 'card'));
+  }
+});
+
+test('Gauntlet: card offers skip summon-only tokens, suggest a like-for-like swap, and let you pick the card to give up', () => {
+  const g = createGauntlet(SAMPLE);
+  const { cards, deckList } = SAMPLE.game;
+  const summonedOnly = new Set<number>();
+  const walk = (n: unknown): void => { if (Array.isArray(n)) n.forEach(walk); else if (n && typeof n === 'object') { const o = n as Record<string, unknown>; if (o.op === 'summon') { const i = cards.findIndex((c) => c.id === o.card); if (i >= 0 && !deckList.includes(i)) summonedOnly.add(i); } Object.values(o).forEach(walk); } };
+  walk(SAMPLE.game.config);
+  assert.ok(summonedOnly.size > 0, 'the fixture has summon-only tokens');
+  for (let r = 0; r < 40; r++) {
+    let run = g.start(`cards-${r}`);
+    assert.ok(run.deck.every((c) => !summonedOnly.has(c)), 'no token in a starting deck');
+    for (let stage = 1; stage < STAGES; stage++) {
+      assert.ok(g.opponent(run).deck.every((c) => !summonedOnly.has(c)), 'no token in a foe deck');
+      run = g.result(run, true);
+      for (const o of run.offers) if (o.kind === 'card') {
+        assert.ok(!summonedOnly.has(o.card), `token ${cards[o.card].id} offered`);
+        assert.ok(run.deck.includes(o.replaces) && o.replaces !== o.card);
+      }
+      const i = run.offers.findIndex((o) => o.kind === 'card');
+      if (i < 0) { run = g.choose(run, 0); continue; }
+      const offer = run.offers[i] as { card: number; replaces: number };
+      // The player gives up a card of their choosing instead of the suggestion.
+      const mine = run.deck.find((c) => c !== offer.card && c !== offer.replaces)!;
+      const before = run.deck.filter((c) => c === mine).length;
+      run = g.choose(run, i, mine);
+      assert.equal(run.deck.filter((c) => c === mine).length, before - 1);
+      assert.ok(run.deck.includes(offer.card));
+    }
+  }
+  // A replacement that isn't in the deck (or is the card itself) falls back to the suggestion.
+  const run = g.result(g.start('fallback'), true);
+  const i = run.offers.findIndex((o) => o.kind === 'card');
+  const offer = run.offers[i] as { card: number; replaces: number };
+  for (const bad of [offer.card, -1, 9999]) assert.deepEqual(g.choose(run, i, bad), g.choose(run, i));
+});
+
 test('Gauntlet matches: the bot plays the opponent deck it was given', () => {
   const g = createGauntlet(SAMPLE);
   const run = g.start('decks');
