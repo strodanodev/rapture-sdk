@@ -236,6 +236,9 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 .unit.stay { animation: none; }   /* only a unit new to the board plays its entrance: a redraw doesn't replay it */
 /* a unit stands up off the tilted table, pivoting at its base */
 .lane .unit { --stand: rotateX(calc(var(--tilt, 0deg) * -1)); transform-origin: 50% 92%; transform: var(--stand); }
+/* wider screens: a unit stands a tenth larger than the recess it rises from (its foot stays put), so the pieces, not
+   the empty sockets, are what the board shows; every state that moves a unit keeps the size through --stand */
+@media (min-width: 761px) { .lane .unit { --stand: rotateX(calc(var(--tilt, 0deg) * -1)) scale(1.1); } }
 /* each unit stands on the table: a soft contact shadow under its base */
 .lane .unit::before { content: ''; position: absolute; left: 6%; right: 6%; bottom: -4%; height: 16%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.7), transparent 70%); pointer-events: none; }
 /* whose unit is whose, at a glance: each stands in a pool of its side's colour (gold rims are rarity, not side) */
@@ -245,7 +248,7 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
    front-row unit's crossed the line between the rows; stacked, they covered the portrait */
 .lane .unit .u-kw { top: auto; bottom: calc(clamp(24px, calc(var(--u, 84px) * 0.3), 38px) + 2px); flex-wrap: nowrap; width: auto; }
 /* units on the table are lit, not silhouettes: brighter art with a rim and a footlight in their element */
-.lane .unit .u-art img { filter: brightness(1.32) contrast(1.06) saturate(1.18); }
+.lane .unit .u-art img { filter: brightness(1.5) contrast(1.06) saturate(1.2); }
 .lane .unit .u-art::before { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
   background: radial-gradient(ellipse at 50% 108%, color-mix(in srgb, var(--el) 60%, transparent), transparent 58%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el) 65%, white 15%), inset 0 0 14px color-mix(in srgb, var(--el) 45%, transparent); }

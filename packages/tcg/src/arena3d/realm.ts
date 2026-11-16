@@ -65,7 +65,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0a141e, 0x132636],
     practical: { color: 0xff8a3d, intensity: 42 },
     // pale blue-grey flagstone, blued iron and gold under a cold white light
-    board: { stone: [/floor/, /stone/], top: 0x86b4c0, under: 0x1b272c, ember: 0, iron: 0x343a44, trim: 0xffbf5e, glow: 0x7fe6ff, base: 0x2c2c32, key: { color: 0xe4eeff, power: 190 }, rim: 1, spikes: false },
+    board: { stone: [/floor/, /stone/], top: 0x86b4c0, under: 0x27363c, ember: 0, iron: 0x343a44, trim: 0xffbf5e, glow: 0x7fe6ff, base: 0x2c2c32, key: { color: 0xe4eeff, power: 190 }, rim: 1, spikes: false },
   },
   underworld: {
     // the fog is the horizon's own red and thick enough that the crater floor melts into it, with no hard edge
@@ -80,7 +80,7 @@ const PRESETS: Record<RealmId, Preset> = {
     ridges: [0x0e0302, 0x1c0504],
     practical: { color: 0xff5a1a, intensity: 34 },
     // scorched basalt over a bed of embers, black iron and copper, spiked, under a furnace-warm light
-    board: { stone: [/basalt/, /rock/], top: 0x76747a, under: 0x100a0a, ember: 0x160502, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 290 }, rim: 0.3, spikes: true },
+    board: { stone: [/basalt/, /rock/], top: 0x262b3a, under: 0x100a0a, ember: 0x30100a, iron: 0x2a2224, trim: 0xe58a4c, glow: 0xff6a2a, base: 0x231a1c, key: { color: 0xf4f2f0, power: 340 }, rim: 0.3, spikes: true },
   },
 };
 
