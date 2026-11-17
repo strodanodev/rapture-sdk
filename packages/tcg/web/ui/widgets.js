@@ -1,6 +1,17 @@
 // Small shared widgets: the wallet chip, the sound button, the shop link, a side crest, and a stat tile.
 import { h, icon, toast } from "./dom.js";
 
+/**
+ * The champion's unit-attack bonus in words: "+2 attack on every unit you play", or, with `champion.unitAttack.minCost`,
+ * "+2 attack on units that cost 4 or more" (cheaper units get none). `reach` alone is "every unit you play" or "units
+ * that cost 4 or more"; `minCost` is 0 when every unit gets it.
+ */
+export function unitAttackText(game, n) {
+  const minCost = Math.max(0, Number(game?.champion?.unitAttack?.minCost ?? 0) || 0);
+  const reach = minCost > 0 ? `units that cost ${minCost} or more` : "every unit you play";
+  return { minCost, reach, text: `+${n} attack on ${reach}` };
+}
+
 const SOUND_NEXT = { on: "fx", fx: "off", off: "on" };
 const SOUND_LABEL = { on: "Sound: all", fx: "Sound: effects only", off: "Sound: off" };   // the state, not an action
 const SOUND_ICON = { on: "sound", fx: "soundFx", off: "mute" };

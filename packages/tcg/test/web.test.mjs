@@ -70,3 +70,12 @@ test("the board reads 0.10 unit states from real matches: frozen, silenced, aura
   // an old-style unit reads as before
   assert.equal(unitState({ name: "Imp", keywords: ["rush"] }, { c: 0, atk: 1, hp: 2, ready: false }).label, "Imp, 1 attack, 2 health, rush, exhausted");
 });
+
+test("the champion's unit-attack bonus is worded by unitAttack.minCost", async () => {
+  const { unitAttackText } = await import("../web/ui/widgets.js");
+  assert.deepEqual(unitAttackText(GAME, 1), { minCost: 0, reach: "every unit you play", text: "+1 attack on every unit you play" });
+  const v11 = { ...GAME, champion: { ...GAME.champion, unitAttack: { ...GAME.champion.unitAttack, minCost: 4 } } };
+  assert.deepEqual(unitAttackText(v11, 2), { minCost: 4, reach: "units that cost 4 or more", text: "+2 attack on units that cost 4 or more" });
+  const DEMO = read("./fixtures/synergy-duel.game.json");
+  assert.equal(unitAttackText(DEMO, 1).text, `+1 attack on units that cost ${DEMO.champion.unitAttack.minCost} or more`);
+});

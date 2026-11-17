@@ -28,6 +28,7 @@ No rules change for existing games: every ruleset replays exactly as before. The
   - an **aura's** share of a unit's attack or health gets a violet diamond on that gem, so a buff that lasts reads apart from one that goes with its source. The tooltip and accessible name say how much comes from an aura;
   - **battle effects:** frozen units flash with ice shards, silenced ones with a violet hush, and a bounced unit lifts off the board and flies back to its owner's hand instead of burning;
   - card text highlights the new trigger labels (End of turn, When damaged, When an ally dies);
+  - the champion's unit-attack bonus is worded by `champion.unitAttack.minCost`: with a minimum, the battle plate's chip, the champion screen's stat row ("Unit attack, cost 4+"), Gauntlet blessings and the loading tip say it reaches only units that cost that much or more ("+1 attack on units that cost 4 or more"); without one, the wording is unchanged (`unitAttackText` in `web/ui/widgets.js`);
   - `test/web.test.mjs` plays the synergy demo and checks every frozen, silenced, aura and bounced unit against the board's reading of it (`unitState` in `web/ui/cards.js`, `bouncedOf` in `web/ui/battle/fx.js`).
 
 - **Gauntlet rewards that do what they say** (saved runs carry over):

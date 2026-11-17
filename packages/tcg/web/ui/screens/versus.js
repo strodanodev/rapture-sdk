@@ -1,7 +1,7 @@
 // The match loader (Rapture Chess's versus screen): both champions crash in from the sides, the VS flashes, and a
 // gilded bar fills while the match sets up. A two-player match waits here for the opponent.
 import { h, icon } from "../dom.js";
-import { crest } from "../widgets.js";
+import { crest, unitAttackText } from "../widgets.js";
 
 const TIPS = [
   "A champion's resilience sets its life, intelligence its spell power, strength its units' attack, agility its opening hand.",
@@ -43,7 +43,9 @@ export function versusScreen(app) {
         s.sub.textContent = info.subs[i];
       });
       realm.textContent = `Battlefield · ${info.realm}`;
-      const tips = info.kind === "gauntlet" ? [...TIPS, GAUNTLET_TIP, GAUNTLET_TIP] : TIPS;
+      const minCost = unitAttackText(app.game, 0).minCost;
+      const own = minCost ? TIPS.map((t) => t.replace("strength its units' attack", `strength the attack of its units that cost ${minCost} or more`)) : TIPS;
+      const tips = info.kind === "gauntlet" ? [...own, GAUNTLET_TIP, GAUNTLET_TIP] : own;
       tip.textContent = tips[Math.floor(Math.random() * tips.length)];
       bar.style.transform = "scaleX(0)";
       el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");

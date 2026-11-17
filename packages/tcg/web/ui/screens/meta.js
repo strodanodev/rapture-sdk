@@ -2,15 +2,16 @@
 // profile (record, champions, match history with replays). The logic lives in the engine (src/meta); these only draw.
 import { h, icon, stagger } from "../dom.js";
 import { go, pageHead } from "../router.js";
-import { tile, walletChip } from "../widgets.js";
+import { tile, unitAttackText, walletChip } from "../widgets.js";
 import { sigil } from "../sigil.js";
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 const when = (ms) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const STAT_NAME = { strength: "Strength", agility: "Agility", resilience: "Resilience", intelligence: "Intelligence" };
 // What a blessing changes, in the match's own numbers (Gauntlet.gains): "+1 life", never a percentage of a stat.
-const GAIN = { life: (n) => `${n} life`, spellPower: (n) => `${n} spell power`, unitAttack: (n) => `${n} attack on every unit you play`, openingHand: (n) => `${n} card${n === 1 ? "" : "s"} in your opening hand` };
-const gainText = (gains) => Object.entries(gains).filter(([, n]) => n > 0).map(([k, n]) => `+${GAIN[k](n)}`).join(", ");
+const GAIN = { life: (n) => `+${n} life`, spellPower: (n) => `+${n} spell power`, openingHand: (n) => `+${n} card${n === 1 ? "" : "s"} in your opening hand` };
+// unit attack goes by the game: with unitAttack.minCost, only units that cost that much get it
+const gainText = (game, gains) => Object.entries(gains).filter(([, n]) => n > 0).map(([k, n]) => (k === "unitAttack" ? unitAttackText(game, n).text : GAIN[k](n))).join(", ");
 const LEVEL = ["", "Easy", "Normal", "Hard"];
 // the daily puzzle is the same for everyone on a UTC day: name that day plainly, and say when the next one comes
 const fmtDay = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -30,7 +31,7 @@ export function gauntletScreen(app) {
     const me = g.player(run);
     const before = app.rules.heroPower(me), after = app.rules.heroPower({ ...me, stats: { ...me.stats, [r.stat]: Math.min(65535, me.stats[r.stat] + r.amount) } });
     const power = after && after.id !== before?.id ? `Hero power becomes ${after.name}` : null;
-    return h("div", { class: "bless" }, icon("spark"), h("b", { class: "display", text: `${STAT_NAME[r.stat]} blessing` }), h("span", { text: gainText(g.gains(run, r)) || "No change" }), power ? h("small", { text: power }) : null);
+    return h("div", { class: "bless" }, icon("spark"), h("b", { class: "display", text: `${STAT_NAME[r.stat]} blessing` }), h("span", { text: gainText(app.game, g.gains(run, r)) || "No change" }), power ? h("small", { text: power }) : null);
   }
 
   /** Pick the card a new one replaces: the suggested swap first, then every other card in the deck, cheapest first. */
@@ -80,7 +81,7 @@ export function gauntletScreen(app) {
         h("p", { class: "lede", text: "Eight bot matches, each harder than the last. Win and choose a reward: a better card for your deck, or a blessing for your champion. Lose once and the run is over." }),
         h("button", { class: "btn primary lg block pulse", type: "button", on: { click: () => void app.flows.choose("gauntlet") } }, icon("gauntlet"), app.snap.cards.length ? "Choose your champion" : "Begin the run")));
     } else {
-      const blessed = gainText(g.blessed(run));
+      const blessed = gainText(app.game, g.blessed(run));
       const who = h("p", { class: "run-line", text: `${app.champName(run.champion.tokenId)}${blessed ? ` · ${blessed}` : ""}${run.deck.length ? ` · ${run.deck.length}-card deck` : ""}` });
       if (run.over) {
         panel.append(head(run.cleared ? "Gauntlet cleared" : `Fallen at stage ${stage}`, `${run.wins}/${g.stages} won`), h("div", { class: "panel-body stack" }, who,

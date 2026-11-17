@@ -3,7 +3,7 @@
 import { h, icon, stagger } from "../dom.js";
 import { pageHead } from "../router.js";
 import { REALMS, realmFor } from "../arena.js";
-import { shopLink, walletChip } from "../widgets.js";
+import { shopLink, unitAttackText, walletChip } from "../widgets.js";
 
 const LEVELS = [[1, "Easy"], [2, "Normal"], [3, "Hard"]];
 const MODE_COPY = {
@@ -25,18 +25,20 @@ export function selectScreen(app) {
   const stats = (c) => {
     const ch = app.rules.champion(app.statsOf(c));
     const m = app.game.champion;
-    const row = (label, value, map, accent) => {
+    const reach = unitAttackText(app.game, ch.unitAttack);
+    const row = (label, value, map, accent, title) => {
       const span = Math.max(1, map.max - map.min);
       // a stat that only counts to a few reads as pips (1 of 3), not a bar that is full at 1
       const scale = map.max <= 8
         ? h("div", { class: "pips", style: `--accent:${accent}`, aria: { label: `${value} of ${map.max}` } }, ...Array.from({ length: map.max }, (_, i) => h("i", { class: i < value ? "on" : "" })))
         : h("div", { class: "meter", style: `--accent:${accent}` }, h("i", { style: `--v:${Math.round(((value - map.min) / span) * 100)}%` }));
-      return h("div", { class: "stat-row" }, h("span", { class: "sr-k", text: label }), h("b", { class: "tabnum", text: value }), scale);
+      return h("div", { class: "stat-row", title }, h("span", { class: "sr-k", text: label }), h("b", { class: "tabnum", text: value }), scale);
     };
     return h("div", { class: "stat-rows" },
       row("Life", ch.life, m.life, "var(--danger)"),
       row("Spell power", ch.spellPower, m.spellPower, "var(--mana)"),
-      row("Unit attack", ch.unitAttack, m.unitAttack, "var(--gold-2)"),
+      // with unitAttack.minCost the bonus skips cheap units: the label says so ("Unit attack, cost 4+")
+      reach.minCost ? row(`Unit attack, cost ${reach.minCost}+`, ch.unitAttack, m.unitAttack, "var(--gold-2)", reach.text) : row("Unit attack", ch.unitAttack, m.unitAttack, "var(--gold-2)"),
       row("Opening hand", ch.openingHand, m.openingHand, "var(--ok)"));
   };
 

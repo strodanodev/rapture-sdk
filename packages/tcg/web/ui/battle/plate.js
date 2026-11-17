@@ -4,6 +4,7 @@
 // the aim prompt over your plate).
 import { Op, ENEMY_CHAMPION, describeEffect } from "../../engine/tessaract.js";
 import { h, icon } from "../dom.js";
+import { unitAttackText } from "../widgets.js";
 
 /** side: "top" (the foe's) or "bottom" (yours). inspectable(node, def) makes a relic open full size. */
 export function createPlate(app, side, { inspectable }) {
@@ -43,11 +44,12 @@ export function createPlate(app, side, { inspectable }) {
       life.textContent = String(p.life);
       life.classList.toggle("low", p.life <= Math.max(5, Math.round(p.maxLife * 0.25)));
       name.replaceChildren(...(champ ? [champ.name, h("span", { class: "pl-who", text: label })] : [label]));
+      const ua = unitAttackText(game, p.unitAttack);   // with unitAttack.minCost, only units that cost that much get it
       sub.replaceChildren(...[
         h("span", { class: "chip-mini c-deck", title: `${p.deck.length} cards left in the deck` }, h("i", { class: "cardback" }), h("b", { class: "tabnum", text: p.deck.length })),
         h("span", { class: "chip-mini c-hand", title: `${p.hand.length} cards in hand` }, icon("cards"), h("b", { class: "tabnum", text: p.hand.length })),
         p.spellPower ? h("span", { class: "chip-mini buff", title: `Spell power +${p.spellPower}` }, icon("spark"), h("b", { text: `+${p.spellPower}` })) : null,
-        p.unitAttack ? h("span", { class: "chip-mini buff", title: `Unit attack +${p.unitAttack}` }, icon("sword"), h("b", { text: `+${p.unitAttack}` })) : null].filter(Boolean));
+        p.unitAttack ? h("span", { class: "chip-mini buff", title: ua.minCost ? ua.text : `Unit attack +${p.unitAttack}` }, icon("sword"), h("b", { text: `+${p.unitAttack}` })) : null].filter(Boolean));
       const n = Math.max(p.energyCap, p.energy);
       // energy past the cap is a bonus for this turn: gold pips, and the count alone rather than a "2/1"
       const bonus = Math.max(0, p.energy - p.energyCap);
