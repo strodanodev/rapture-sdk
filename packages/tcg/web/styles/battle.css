@@ -399,6 +399,13 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 .vfx-flash.k-death { animation-duration: 0.8s; }
 .vfx-flash.k-play, .vfx-flash.k-heal { animation: vfxSoft 0.75s ease-out forwards; }
 .vfx-flash.k-play::before, .vfx-flash.k-heal::before { display: none; }   /* no rays: a soft glow */
+/* frost: a slow burst of ice shards; silence: a soft violet glow that shrinks inward; bounce: a soft lift */
+.vfx-flash.k-frost { animation-duration: 0.7s; }
+.vfx-flash.k-frost::before { background: repeating-conic-gradient(from 0deg, #fff 0 4deg, transparent 4deg 60deg); }
+.vfx-flash.k-silence, .vfx-flash.k-bounce { animation: vfxSoft 0.75s ease-out forwards; }
+.vfx-flash.k-silence { animation-name: vfxHush; }
+.vfx-flash.k-silence::before, .vfx-flash.k-bounce::before { display: none; }
+@keyframes vfxHush { 0% { opacity: 0; transform: scale(1.5); } 30% { opacity: 0.95; } 100% { opacity: 0; transform: scale(0.3); } }
 @keyframes vfxFlash { 0% { opacity: 1; transform: scale(0.15) rotate(0deg); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25) rotate(14deg); } }
 @keyframes vfxSoft { 0% { opacity: 0; transform: scale(0.4); } 30% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-24px) scale(1.15); } }
 /* a ring thrown flat across the table */
@@ -428,6 +435,10 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 .unit.vfx-buff .u-ring { animation: vfxGlowBuff 0.9s ease-out; }
 @keyframes vfxGlowHeal { 30% { box-shadow: 0 0 0 3px #7dffb0, 0 0 34px rgba(125, 255, 176, 0.9); } }
 @keyframes vfxGlowBuff { 30% { box-shadow: 0 0 0 3px var(--gold-0), 0 0 34px rgba(255, 201, 94, 0.9); } }
+.unit.vfx-frost .u-ring { animation: vfxGlowFrost 0.9s ease-out; }
+.unit.vfx-silence .u-ring { animation: vfxGlowSilence 0.9s ease-out; }
+@keyframes vfxGlowFrost { 30% { box-shadow: 0 0 0 3px #dff6ff, 0 0 34px rgba(168, 232, 255, 0.95); } }
+@keyframes vfxGlowSilence { 30% { box-shadow: 0 0 0 3px #b9a4ff, 0 0 30px rgba(185, 164, 255, 0.9); } }
 .unit.vfx-hurt .u-hp, .unit.vfx-heal .u-hp, .unit.vfx-buff .u-atk { animation: vfxNum 0.55s ease-out; }
 @keyframes vfxNum { 0% { scale: 1.8; } }
 @media (prefers-reduced-motion: reduce) { .vfx-flash, .vfx-ring { animation-duration: 0.25s; } .vfx-spark, .vfx-slash, .vfx-bolt { display: none; } .vfx-ghost.go { animation-duration: 0.3s; } }

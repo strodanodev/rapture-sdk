@@ -106,6 +106,24 @@ button.tcard:disabled { cursor: default; filter: saturate(0.4) brightness(0.6); 
 @keyframes rushGlint { from { background-position: 120% 0; } to { background-position: -40% 0; } }
 @media (prefers-reduced-motion: reduce) { .unit.shielded::after, .unit.kw-poison .u-art::after, .unit.kw-rush.can .u-art::after { animation: none; } }
 .unit.tired .u-art { filter: saturate(0.45) brightness(0.65); }
+/* frozen: iced over (a frost glaze and a pale crystal rim) until it thaws; it can't attack, so no ready glow either */
+.unit.frozen .u-art { filter: saturate(0.35) brightness(0.85) hue-rotate(-10deg); }
+.u-ice { position: absolute; inset: 0 0 8% 0; z-index: 2; border-radius: 48% 48% 14% 14% / 40% 40% 12% 12%; pointer-events: none;
+  background: linear-gradient(200deg, rgba(225, 248, 255, 0.55), rgba(140, 210, 255, 0.18) 40%, rgba(200, 240, 255, 0.42) 78%, rgba(240, 252, 255, 0.6)),
+    repeating-linear-gradient(115deg, transparent 0 9px, rgba(255, 255, 255, 0.22) 9px 10px, transparent 10px 23px);
+  box-shadow: inset 0 0 0 2px rgba(205, 242, 255, 0.95), inset 0 0 14px rgba(170, 230, 255, 0.8), 0 0 12px rgba(150, 220, 255, 0.7); }
+/* silenced: muted, its keywords struck through, a mute seal on its brow */
+.unit.silenced .u-art { filter: grayscale(0.7) brightness(0.8); }
+.u-mute { position: absolute; top: 10%; left: 50%; z-index: 4; display: grid; place-items: center; width: clamp(18px, calc(var(--u, 84px) * 0.26), 28px); aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; pointer-events: none;
+  color: #e8deff; background: radial-gradient(circle at 40% 30%, #5a4a7a, #1d1528 70%); box-shadow: 0 0 0 1.5px #b9a4ff, 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 10px rgba(185, 164, 255, 0.6); }
+.u-mute svg { width: 62%; height: 62%; }
+.u-kw i.off { text-decoration: line-through; text-decoration-thickness: 1.5px; color: #a99ab8; box-shadow: 0 0 0 1px rgba(185, 164, 255, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6); }
+/* an aura's share of a stat: a small violet diamond over the gem (it goes when the aura does; a lasting buff has none).
+   Its own element: the attack gem's clip-path would cut a pseudo-element off */
+.u-aura { position: absolute; z-index: 3; bottom: calc(clamp(24px, calc(var(--u, 84px) * 0.3), 38px) - 7px); width: 9px; height: 9px; transform: rotate(45deg); border-radius: 1px; pointer-events: none;
+  background: linear-gradient(135deg, #f1e6ff, #a07cff 55%, #5b3bc2); box-shadow: 0 0 0 1px #0b0910, 0 0 6px rgba(180, 140, 255, 0.95); }
+.u-aura.a { left: -2px; }
+.u-aura.h { right: -2px; }
 
 /* ------------------------------------------------------------------ the champion card */
 .ccard { --rar: var(--r-common); --el: var(--gold-2); position: relative; display: block; width: 100%; aspect-ratio: 5 / 7; border-radius: 8px; padding: 3px; color: var(--text); text-align: left; border: 0;

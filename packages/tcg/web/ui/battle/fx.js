@@ -1,10 +1,11 @@
 // The battle's choreography: what a change of state looks like. Read before the lanes redraw (where every unit, card
 // and portrait is on screen), played after (the redrawn tokens animate, the fallen leave burning copies behind):
 // a played unit flies in from the card, an attacker lunges and its blow lands with a slash, a spell's bolt flies to
-// its target, struck units shake, healed ones glow, gaps close. Effects land when the action's sound does (landOf).
+// its target, struck units shake, healed ones glow, frozen ones ice over, silenced ones hush, bounced ones fly back to
+// their owner's hand, gaps close. Effects land when the action's sound does (landOf).
 // The primitives are ui/battle/vfx.js's; the rules are untouched: everything here is read from two states.
 import { decode, Op, ENEMY_CHAMPION, OWN_CHAMPION } from "../../engine/tessaract.js";
-import { createVfx, ELEMENT_HEX, HIT_HEX, HEAL_HEX, SHIELD_HEX, center, base, later } from "./vfx.js";
+import { createVfx, ELEMENT_HEX, HIT_HEX, HEAL_HEX, SHIELD_HEX, FROST_HEX, SILENCE_HEX, center, base, later } from "./vfx.js";
 
 /** When an action's blow lands after it starts (ms): attacks quickly, cards as they arrive, hero powers after a charge. */
 export function landOf(before, s, game) {
@@ -52,8 +53,29 @@ export function alignBoards(before, after, prefer = new Set()) {
   return { dead, to, born: j };
 }
 
+/**
+ * Which of a side's fallen units were bounced to its hand instead (a Set of before-board indices): the copies of a card
+ * that its hand gained, beyond the card it played. The rules don't say which; a draw of the same card can look like one,
+ * so callers ask only in games that can bounce.
+ */
+export function bouncedOf(before, s, side, dead) {
+  const out = new Set();
+  if (!dead?.size) return out;
+  const x = s.last ? decode(s.last) : null;
+  const count = (hand, c) => hand.reduce((n, h) => n + (h === c ? 1 : 0), 0);
+  const played = x?.op === Op.Play && before.turn === side ? before.p[side].hand[x.a] : undefined;
+  const back = new Map();
+  for (const k of dead) {
+    const c = before.p[side].board[k].c;
+    if (!back.has(c)) back.set(c, count(s.p[side].hand, c) - count(before.p[side].hand, c) + (played === c ? 1 : 0));
+    if (back.get(c) > 0) { out.add(k); back.set(c, back.get(c) - 1); }
+  }
+  return out;
+}
+
 export function createBattleFx(root, arena, game) {
   const vfx = createVfx(root, arena);
+  const bounces = JSON.stringify(game).includes('"op":"bounce"');
   const elHex = (def) => ELEMENT_HEX[def?.element] ?? ELEMENT_HEX.neutral;
   const hexOf = (c) => elHex(game.cards[c]);
   const units = (lane) => [...lane.children].filter((n) => n.classList.contains("unit"));
@@ -101,6 +123,7 @@ export function createBattleFx(root, arena, game) {
       // that; on a side that only gained a unit they make room for it at once.
       const ghosts = [[], []];
       const wait = [0, 1].map((i) => (aligned[i]?.dead.size ? land + 160 : 0));
+      const bounced = [0, 1].map((i) => (bounces ? bouncedOf(before, s, i, aligned[i]?.dead) : new Set()));
       for (const i of [0, 1]) {
         for (const k of aligned[i]?.dead ?? []) ghosts[i][k] = vfx.ghost(old[i][k]?.node, old[i][k]?.rect);
         for (const [k, j] of aligned[i]?.to ?? []) vfx.flip(now[i][j], old[i][k]?.rect, wait[i]);
@@ -160,10 +183,15 @@ export function createBattleFx(root, arena, game) {
       }
 
       later(land, () => {
-        // the fallen burn
+        // the fallen burn; the bounced fly back to their owner's hand
         for (const i of [0, 1]) for (const k of aligned[i]?.dead ?? []) {
           const g = ghosts[i][k], r = old[i][k]?.rect;
           if (!g || !r) continue;
+          if (bounced[i].has(k)) {
+            g.recall(view.mine(i) ? rectOf(view.hand) : rectOf(view.foeHand));
+            vfx.pop(center(r), hexOf(before.p[i].board[k].c), "bounce", { size: 1, table: base(r) });
+            continue;
+          }
           g.burn();
           vfx.pop(center(r), hexOf(before.p[i].board[k].c), "death", { size: 1.2, table: base(r) });
         }
@@ -175,6 +203,9 @@ export function createBattleFx(root, arena, game) {
           else if (b.hp > a.hp) { vfx.glow(n, "heal"); vfx.pop(center(r), HEAL_HEX, "heal", { size: 0.8, table: base(r) }); }
           if (b.atk > a.atk) vfx.glow(n, "buff");
           if (a.shield && !b.shield) vfx.pop(center(r), SHIELD_HEX, "hit", { size: 0.9 });
+          // frozen (or frozen for longer), silenced
+          if (b.frozen !== undefined && (a.frozen === undefined || b.frozen > a.frozen)) { vfx.glow(n, "frost"); vfx.pop(center(r), FROST_HEX, "frost", { size: 0.9, table: base(r) }); }
+          if (b.silenced && !a.silenced) { vfx.glow(n, "silence"); vfx.pop(center(r), SILENCE_HEX, "silence", { size: 0.9, table: base(r) }); }
         }
         // the champions: a blow or a healing on the portrait (off the table: 2D sparks)
         for (const i of [0, 1]) {

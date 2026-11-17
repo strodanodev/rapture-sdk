@@ -22,6 +22,13 @@ No rules change for existing games: every ruleset replays exactly as before. The
   - `vercel.json` (and so every `create`d project) sends `no-cache` for `/assets/cards/*.json` and `/assets/arena/*.json`;
   - the service worker fetches those manifests network first instead of from its cache;
   - `app.js` fetches `assets/cards/art.json` with `cache: "no-cache"`, so even a browser holding an `immutable` copy revalidates it.
+- **The board shows 0.10's unit states (0.10.1, client only; no rules change):**
+  - a **frozen** unit is iced over until it thaws, and its accessible name says "frozen";
+  - a **silenced** unit is greyed and wears a mute seal, its printed keywords are struck through, and its keyword effects, rules text and keyword help are dropped from its token (it has none of them now);
+  - an **aura's** share of a unit's attack or health gets a violet diamond on that gem, so a buff that lasts reads apart from one that goes with its source. The tooltip and accessible name say how much comes from an aura;
+  - **battle effects:** frozen units flash with ice shards, silenced ones with a violet hush, and a bounced unit lifts off the board and flies back to its owner's hand instead of burning;
+  - card text highlights the new trigger labels (End of turn, When damaged, When an ally dies);
+  - `test/web.test.mjs` plays the synergy demo and checks every frozen, silenced, aura and bounced unit against the board's reading of it (`unitState` in `web/ui/cards.js`, `bouncedOf` in `web/ui/battle/fx.js`).
 
 - **Gauntlet rewards that do what they say** (saved runs carry over):
   - **One life means one attempt:** a Gauntlet match is on the record before it starts (`Gauntlet.fight`). Leaving it mid-match, the browser's back button or closing the page counts as a loss (`Gauntlet.forfeit`), so a losing match can no longer be abandoned and replayed with the same draws. The pause menu says "Leave (counts as a loss)".

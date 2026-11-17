@@ -7,7 +7,9 @@
 
 /** Each element's colour, for flashes and bursts. */
 export const ELEMENT_HEX = { lava: 0xff6a2a, water: 0x4fb0ff, earth: 0x6fe08a, metal: 0xd8dde6, neutral: 0xffd27a };
-export const HIT_HEX = 0xff5a3a, HEAL_HEX = 0x6fe08a, SHIELD_HEX = 0xfff0b0;
+export const HIT_HEX = 0xff5a3a, HEAL_HEX = 0x6fe08a, SHIELD_HEX = 0xfff0b0, FROST_HEX = 0xa8e8ff, SILENCE_HEX = 0xb9a4ff;
+// the 3D table's bursts know the first five kinds; the rest throw the nearest one
+const BURST_KIND = { frost: "spell", silence: "heal", bounce: "play" };
 const css = (hex) => `#${hex.toString(16).padStart(6, "0")}`;
 export const center = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 /** Where a standing unit meets the table (its base), for a burst on the 3D table. */
@@ -42,14 +44,15 @@ export function createVfx(root, arena) {
   }
 
   /**
-   * A flash at a point (CSS px): kind 'hit' | 'spell' | 'death' | 'play' | 'heal'. `table` is the point on the 3D table
-   * to throw the matching particle burst from (a unit's base); without one (a portrait, a plate) the sparks are 2D.
+   * A flash at a point (CSS px): kind 'hit' | 'spell' | 'death' | 'play' | 'heal' | 'frost' | 'silence' | 'bounce'.
+   * `table` is the point on the 3D table to throw the matching particle burst from (a unit's base); without one (a
+   * portrait, a plate) the sparks are 2D.
    */
   function pop(p, hex, kind = "hit", { size = 1, table = null } = {}) {
     if (!p) return;
     spawn(`vfx-flash k-${kind}`, p, `--c:${css(hex)};--s:${size}`, kind === "death" ? 900 : 700);
-    if (kind === "play" || kind === "death" || kind === "spell") spawn("vfx-ring", p, `--c:${css(hex)};--s:${size}`, 800);
-    if (!(table && arena?.burst?.(table.x, table.y, hex, kind)) && kind !== "play") sparks(p, hex, kind === "hit" ? 14 : 9);
+    if (kind === "play" || kind === "death" || kind === "spell" || kind === "frost") spawn("vfx-ring", p, `--c:${css(hex)};--s:${size}`, 800);
+    if (!(table && arena?.burst?.(table.x, table.y, hex, BURST_KIND[kind] ?? kind)) && kind !== "play" && kind !== "bounce") sparks(p, hex, kind === "hit" ? 14 : 9);
   }
 
   /** A slash across a point, at an angle (radians): the cut an attack leaves on what it struck. */
@@ -75,6 +78,16 @@ export function createVfx(root, arena) {
     layer.append(g);
     const gone = setTimeout(() => g.remove(), 4000);
     g.burn = () => { g.classList.add("go"); clearTimeout(gone); setTimeout(() => g.remove(), 850); };
+    /** A bounced unit: it lifts off the board and shrinks away into its owner's hand (`to`, a rect), or fades. */
+    g.recall = (to) => {
+      clearTimeout(gone);
+      const from = center(rect), end = to?.width ? center(to) : { x: from.x, y: from.y - 60 };
+      const frames = still() ? [{ opacity: 1 }, { opacity: 0 }]
+        : [{ translate: "0 0", scale: "1", opacity: 1 }, { translate: "0 -26px", scale: "1.08", opacity: 1, offset: 0.3 },
+          { translate: `${(end.x - from.x).toFixed(1)}px ${(end.y - from.y).toFixed(1)}px`, scale: "0.35", opacity: 0 }];
+      g.animate(frames, { duration: 560, easing: "cubic-bezier(.45,0,.3,1)", fill: "forwards" });
+      setTimeout(() => g.remove(), 600);
+    };
     return g;
   }
 
@@ -109,10 +122,10 @@ export function createVfx(root, arena) {
     if (!still()) el.animate([{ translate: "0 0" }, { translate: "-7px 0" }, { translate: "6px 0" }, { translate: "-3px 0" }, { translate: "0 0" }], { duration: 320, composite: "add" });
   }
 
-  /** A healed or strengthened unit glows. */
+  /** A healed, strengthened, frozen or silenced unit glows: kind 'heal' | 'buff' | 'frost' | 'silence'. */
   function glow(el, kind) {
     if (!el?.isConnected) return;
-    const cls = kind === "heal" ? "vfx-heal" : "vfx-buff";
+    const cls = `vfx-${kind}`;
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
     setTimeout(() => el.classList.remove(cls), 950);
   }

@@ -1,13 +1,13 @@
 // Card renderers: the game card (hand, deck forge, rewards), the unit token on the board, and the champion card (a
 // collection token: Rapture Chess's framed card with its foil). Colours: rarity frames the card, the element tints it.
-import { describeCard, KEYWORDS } from "../engine/tessaract.js";
+import { describeCard, KEYWORDS, TRIGGERS } from "../engine/tessaract.js";
 import { h, icon } from "./dom.js";
 import { sigil } from "./sigil.js";
 
 const KIND_RARITY = { God: "legendary", Titan: "epic", King: "rare", Demigod: "uncommon", Mortal: "common" };
 const RARITY_NAME = { legendary: "Legendary", epic: "Epic", rare: "Rare", uncommon: "Uncommon", common: "Common" };
 // Rules text: keywords and trigger labels are picked out (the text still goes in through textContent).
-const TRIGGER_LABELS = ["On play", "Last words", "Each turn", "On attack"];
+const TRIGGER_LABELS = Object.values(TRIGGERS).sort((a, b) => b.length - a.length);
 const RICH = new RegExp(`(${[...TRIGGER_LABELS, ...Object.keys(KEYWORDS)].join("|")})`, "gi");
 function richLine(text) {
   return text.split(RICH).filter(Boolean).map((part) => {
@@ -36,6 +36,25 @@ export function tilt(el, max = 10) {
   });
   el.addEventListener("pointerleave", () => { cancelAnimationFrame(raf); el.style.transform = ""; el.classList.remove("tilt"); });
   return el;
+}
+
+/**
+ * What a unit on the board is now, beyond its numbers: frozen (it can't attack until it thaws), silenced (its printed
+ * keywords, abilities and aura are gone), and the part of its attack and health an aura lends it (gone with the aura).
+ * Pure, so the tests read it from real match states. `label` is the token's accessible name.
+ */
+export function unitState(def, u) {
+  const frozen = u.frozen !== undefined, silenced = !!u.silenced;
+  const keywords = silenced ? [] : (def.keywords ?? []).map(String);
+  const [auraAtk, auraHp] = u.aura ?? [0, 0];
+  const notes = [
+    frozen ? "Frozen: it can't attack until it thaws." : null,
+    auraAtk || auraHp ? `Aura: ${[auraAtk ? `+${auraAtk} attack` : null, auraHp ? `+${auraHp} health` : null].filter(Boolean).join(", ")} while the aura lasts` : null,
+  ].filter(Boolean);
+  const label = `${def.name}, ${u.atk} attack, ${u.hp} health${keywords.length ? `, ${keywords.join(", ")}` : ""}`
+    + `${auraAtk || auraHp ? `, ${[auraAtk ? `${auraAtk} attack` : null, auraHp ? `${auraHp} health` : null].filter(Boolean).join(" and ")} from an aura` : ""}`
+    + `${frozen ? ", frozen" : ""}${silenced ? ", silenced" : ""}${u.ready || frozen ? "" : ", exhausted"}`;
+  return { frozen, silenced, aura: [auraAtk, auraHp], keywords, notes, label };
 }
 
 /**
@@ -73,19 +92,27 @@ export function createCards(app) {
     return el;
   }
 
-  /** A unit on the board: its portrait, attack and health, and its keywords as frame states. */
+  /** A unit on the board: its portrait, attack and health, and its keywords and states as frame states. */
   function unitToken(def, u) {
-    const kws = def.keywords ?? [];
+    const st = unitState(def, u);
     // Guard and Shield are drawn on the token from its state (frame and emblem, dome), so they get no text tag: the
-    // printed keyword's tag outlived a popped shield, and two stacked tags covered the portrait
-    const tags = kws.filter((k) => !/^(guard|shield)$/i.test(String(k)));
-    const el = h("button", { type: "button", class: `unit${u.guard ? " guard" : ""}${u.shield ? " shielded" : ""}${u.ready ? "" : " tired"}${kws.map((k) => ` kw-${String(k).toLowerCase().replace(/[^a-z]+/g, "-")}`).join("")}`, data: { rarity: def.rarity ?? "common" }, style: `--el:${app.elementColor(def.element)}`, title: [def.name, ...describe(def), keywordHelp(def)].filter(Boolean).join("\n") },
+    // printed keyword's tag outlived a popped shield, and two stacked tags covered the portrait. A silenced unit shows
+    // its printed keywords struck through: it has none of them now.
+    const tags = (def.keywords ?? []).filter((k) => !/^(guard|shield)$/i.test(String(k)));
+    const [auraAtk, auraHp] = u.aura ?? [0, 0];
+    const cls = ["unit", u.guard && "guard", u.shield && "shielded", !u.ready && "tired", st.frozen && "frozen", st.silenced && "silenced", ...st.keywords.map((k) => `kw-${String(k).toLowerCase().replace(/[^a-z]+/g, "-")}`)];
+    const help = st.silenced ? "Silenced: it has lost its keywords, abilities and aura." : keywordHelp(def);
+    const el = h("button", { type: "button", class: cls.filter(Boolean).join(" "), data: { rarity: def.rarity ?? "common" }, style: `--el:${app.elementColor(def.element)}`, title: [def.name, ...st.notes, ...(st.silenced ? [] : describe(def)), help].filter(Boolean).join("\n") },
       h("div", { class: "u-ring" }, artBox(def, "u-art")),
-      h("span", { class: `u-atk tabnum${u.atk > (def.attack ?? 0) ? " up" : ""}`, text: u.atk }),
-      h("span", { class: `u-hp tabnum${u.hp < (def.health ?? 0) ? " hurt" : u.hp > (def.health ?? 0) ? " up" : ""}`, text: u.hp }),
+      st.frozen ? h("span", { class: "u-ice" }) : null,
+      st.silenced ? h("span", { class: "u-mute" }, icon("mute")) : null,
+      h("span", { class: `u-atk tabnum${u.atk > (def.attack ?? 0) ? " up" : ""}${auraAtk ? " aura" : ""}`, text: u.atk }),
+      h("span", { class: `u-hp tabnum${u.hp < (def.health ?? 0) ? " hurt" : u.hp > (def.health ?? 0) ? " up" : ""}${auraHp ? " aura" : ""}`, text: u.hp }),
+      auraAtk ? h("span", { class: "u-aura a" }) : null,
+      auraHp ? h("span", { class: "u-aura h" }) : null,
       h("span", { class: "u-name", text: def.name }),
-      tags.length ? h("span", { class: "u-kw" }, ...tags.slice(0, 2).map((k) => h("i", { text: k }))) : null);
-    el.setAttribute("aria-label", `${def.name}, ${u.atk} attack, ${u.hp} health${kws.length ? `, ${kws.join(", ")}` : ""}${u.ready ? "" : ", exhausted"}`);
+      tags.length ? h("span", { class: "u-kw" }, ...tags.slice(0, 2).map((k) => h("i", { class: st.silenced ? "off" : null, text: k }))) : null);
+    el.setAttribute("aria-label", st.label);
     return el;
   }
 

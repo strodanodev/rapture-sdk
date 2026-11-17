@@ -36,3 +36,37 @@ test("index.html preloads every client module, so they load in parallel instead 
   const modules = new Set(["app.js", "engine/tessaract.js", ...walk("ui"), ...walk("lib")]);
   assert.deepEqual([...preloaded].sort(), [...modules].sort());
 });
+
+test("the board reads 0.10 unit states from real matches: frozen, silenced, aura, and bounced units", async () => {
+  const { unitState } = await import("../web/ui/cards.js");
+  const { bouncedOf, alignBoards, suspects } = await import("../web/ui/battle/fx.js");
+  const DEMO = read("./fixtures/synergy-duel.game.json");
+  const rules = createRules(compileGame(DEMO));
+  const bot = greedyBot(rules);
+  const seen = { frozen: 0, silenced: 0, aura: 0, bounced: 0 };
+  for (let m = 0; m < 16; m++) {
+    let s = rules.init(`board-${m}`, ["a", "b"], {});
+    while (!s.over) {
+      const before = s;
+      s = rules.step(s, s.phase === "decks" ? { a: bot(s, 0), b: bot(s, 1) } : { [s.p[s.turn].id]: bot(s) });
+      for (const p of s.p) for (const u of p.board) {
+        const def = DEMO.cards[u.c], st = unitState(def, u);
+        assert.ok(st.label.startsWith(`${def.name}, ${u.atk} attack, ${u.hp} health`));
+        if (u.frozen !== undefined) { seen.frozen++; assert.ok(st.frozen && st.label.includes(", frozen") && !st.label.includes("exhausted")); }
+        if (u.silenced) { seen.silenced++; assert.ok(st.silenced && st.label.includes(", silenced")); assert.deepEqual(st.keywords, []); }
+        else assert.deepEqual(st.keywords, (def.keywords ?? []).map(String));
+        if (u.aura) { seen.aura++; assert.match(st.label, / from an aura/); assert.ok(st.notes.some((n) => n.startsWith("Aura: +"))); }
+        else assert.ok(!/aura/i.test(st.label));
+      }
+      if (before.phase === "decks") continue;
+      // a bounced unit leaves the board and its card is back in its owner's hand
+      for (const i of [0, 1]) {
+        const aligned = alignBoards(before.p[i].board, s.p[i].board, suspects(before, s)[i]);
+        seen.bounced += bouncedOf(before, s, i, aligned?.dead).size;
+      }
+    }
+  }
+  assert.ok(seen.frozen && seen.silenced && seen.aura && seen.bounced, `the demo shows every state: ${JSON.stringify(seen)}`);
+  // an old-style unit reads as before
+  assert.equal(unitState({ name: "Imp", keywords: ["rush"] }, { c: 0, atk: 1, hp: 2, ready: false }).label, "Imp, 1 attack, 2 health, rush, exhausted");
+});
