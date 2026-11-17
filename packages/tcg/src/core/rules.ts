@@ -1,10 +1,10 @@
 import { declare, declaredCard, decode, encode, endTurn, ENEMY_CHAMPION, enemyUnit, Op, OWN_CHAMPION, ownUnit, targetOf } from './actions';
 import { normalizeStats } from './champion';
-import { isChosen, OPS, specOf } from './effects';
-import type { Fx, Ref } from './effects';
+import { filterOf, holds, isChosen, matches, OPS, specOf } from './effects';
+import type { Fx, Ref, World } from './effects';
 import type { CompiledGame } from './game';
 import { seededRandom, shuffle } from './rng';
-import type { AgentStats, CardDef, Effect, HeroPower, InitContext, Keyword, MatchState, PlayerState, StatMapping, StatName, TargetSpec, UnitState } from './types';
+import type { Ability, AgentStats, CardDef, Effect, HeroPower, InitContext, Keyword, MatchState, PlayerState, StatMapping, StatName, TargetSpec, Trigger, UnitFilter, UnitState } from './types';
 
 /** The client-visible projection: deck order is replaced by a count. */
 export type MatchView = Omit<MatchState, 'p'> & { p: Array<Omit<PlayerState, 'deck'> & { deck: number }> };
@@ -70,8 +70,33 @@ export function createRules(game: CompiledGame): Rules {
     return powers.findIndex((pw) => (pw.element === undefined || card?.element === pw.element) && (pw.kind === undefined || card?.kind === pw.kind) && (pw.stat === undefined || (hasStats && top === pw.stat)));
   };
 
+  // Opt-in rules (each off unless the config uses it, so older games play exactly as before).
+  /** Units that cost less get no unitAttack (0: every unit gets it). */
+  const unitAttackMinCost = config.champion.unitAttack.minCost ?? 0;
+  const hasAuras = cards.some((c) => c.type === 'unit' && c.aura);
+  /** Per card: whether it has a `damaged` ability (a hit checks this before queueing the trigger). */
+  const triggers = (on: Trigger): boolean[] => cards.map((c) => (c.abilities ?? []).some((a) => a.on === on));
+  const onDamaged = triggers('damaged');
+  const onTurnEnd = triggers('turnEnd');
+  const anyAllyDeath = triggers('allyDeath').some(Boolean);
+  /** Per card: whether a play ability has a condition (only those cards look at the board when played). */
+  const playIf = cards.map((c) => (c.abilities ?? []).some((a) => a.on === 'play' && a.if));
+
   const card = (c: number): CardDef => cards[c];
   const kw = (c: number, k: Keyword): boolean => cards[c].keywords?.includes(k) ?? false;
+  /** A unit's keyword: its card's, unless it was silenced. */
+  const has = (u: UnitState, k: Keyword): boolean => !u.silenced && kw(u.c, k);
+  /** A unit's abilities: its card's, unless it was silenced. */
+  const abilities = (u: UnitState): Ability[] => (u.silenced ? [] : card(u.c).abilities ?? []);
+  const world = (s: MatchState): World => ({ units: (side) => s.p[side].board.filter((u) => u.hp > 0), life: (side) => s.p[side].life, card });
+
+  /**
+   * Work an action leaves for its settle: units hit by damage that have a `damaged` ability (in hit order), and units
+   * leaving the board for their owner's hand. The settle every action ends with empties both, so nothing carries from
+   * one log entry to the next.
+   */
+  let damagedQueue: Array<{ side: 0 | 1; unit: UnitState }> = [];
+  const leaving = new Set<UnitState>();
   const bonus = (attackerCard: number, defenderCard: number): number => (beats[cardElement[attackerCard]][cardElement[defenderCard]] ? R.elementBonus : 0);
   const foe = (me: 0 | 1): 0 | 1 => (me === 0 ? 1 : 0);
 
@@ -93,7 +118,7 @@ export function createRules(game: CompiledGame): Rules {
   const makeUnit = (s: MatchState, side: 0 | 1, c: number): UnitState => {
     const def = card(c);
     const hp = def.health ?? 1;
-    return { c, atk: (def.attack ?? 0) + s.p[side].unitAttack, hp, max: hp, guard: kw(c, 'guard'), ready: kw(c, 'haste') || kw(c, 'rush'), fresh: true, shield: kw(c, 'shield') };
+    return { c, atk: (def.attack ?? 0) + (def.cost >= unitAttackMinCost ? s.p[side].unitAttack : 0), hp, max: hp, guard: kw(c, 'guard'), ready: kw(c, 'haste') || kw(c, 'rush'), fresh: true, shield: kw(c, 'shield') };
   };
 
   /**
@@ -111,10 +136,11 @@ export function createRules(game: CompiledGame): Rules {
       else {
         dealt = amount + (srcCard !== null ? bonus(srcCard, u.c) : 0);
         u.hp -= dealt;
-        if (srcUnit && kw(srcUnit.c, 'poison')) u.hp = Math.min(u.hp, 0);
+        if (srcUnit && has(srcUnit, 'poison')) u.hp = Math.min(u.hp, 0);
+        if (dealt > 0 && onDamaged[u.c] && !u.silenced) damagedQueue.push({ side: ref.side, unit: u });
       }
     }
-    if (dealt > 0 && srcUnit && kw(srcUnit.c, 'lifesteal')) { const P = s.p[srcSide]; P.life = Math.min(P.life + dealt, P.maxLife); }
+    if (dealt > 0 && srcUnit && has(srcUnit, 'lifesteal')) { const P = s.p[srcSide]; P.life = Math.min(P.life + dealt, P.maxLife); }
   };
 
   const fxFor = (s: MatchState, me: 0 | 1, srcUnit: UnitState | null): Fx => ({
@@ -127,16 +153,26 @@ export function createRules(game: CompiledGame): Rules {
     draw: (side, n) => draw(s, side, n),
     energy: (side, n) => { s.p[side].energy = Math.min(s.p[side].energy + n, 99); },
     summon: (side, id, n) => { const c = cardIndex[id]; for (let i = 0; i < n && s.p[side].board.length < R.boardSlots; i++) s.p[side].board.push(makeUnit(s, side, c)); },
+    shield: (u) => { u.shield = true; },
+    destroy: (r) => { r.unit.hp = Math.min(r.unit.hp, 0); },
+    silence: (u) => { u.silenced = true; u.guard = false; u.shield = false; },
+    // Frozen through its owner's next turn: the coming one, or the one after when it is its owner's turn now.
+    freeze: (r) => { r.unit.frozen = Math.max(r.unit.frozen ?? 0, s.turnNo + (r.side === s.turn ? 2 : 1)); },
+    // Off the board at this action's settle, without dying: no death or ally-death abilities fire.
+    bounce: (r) => { if (r.unit.hp > 0) { leaving.add(r.unit); r.unit.hp = 0; } },
+    breakRelics: (side, n) => { s.p[side].relics.splice(0, n); },
   });
 
   // ---------------------------------------------------------- targets
   const unitRef = (s: MatchState, side: 0 | 1, slot: number): Ref | null => { const u = s.p[side].board[slot]; return u && u.hp > 0 ? { kind: 'unit', side, unit: u } : null; };
+  /** A filtered effect can only choose units that match it. */
+  const fits = (s: MatchState, r: Ref | null, f: UnitFilter | undefined, src: CardDef | null): Ref | null => (r && f && r.kind === 'unit' && !matches(r.unit, f, world(s), src) ? null : r);
   /** The target the player chose (action target bits) for a chosen spec, or null if it isn't a legal choice. */
-  const chosenRef = (s: MatchState, me: 0 | 1, spec: TargetSpec, t: number): Ref | null => {
+  const chosenRef = (s: MatchState, me: 0 | 1, spec: TargetSpec, t: number, f?: UnitFilter, src: CardDef | null = null): Ref | null => {
     const tr = targetOf(t);
-    const enemy = tr.side === 'enemy' && tr.kind === 'unit' ? unitRef(s, foe(me), tr.slot) : null;
-    const enemyOk = enemy && enemy.kind === 'unit' && !kw(enemy.unit.c, 'elusive') ? enemy : null;
-    const own = tr.side === 'own' && tr.kind === 'unit' ? unitRef(s, me, tr.slot) : null;
+    const enemy = tr.side === 'enemy' && tr.kind === 'unit' ? fits(s, unitRef(s, foe(me), tr.slot), f, src) : null;
+    const enemyOk = enemy && enemy.kind === 'unit' && !has(enemy.unit, 'elusive') ? enemy : null;
+    const own = tr.side === 'own' && tr.kind === 'unit' ? fits(s, unitRef(s, me, tr.slot), f, src) : null;
     switch (spec) {
       case 'enemy': return tr.side === 'enemy' && tr.kind === 'champion' ? { kind: 'champion', side: foe(me) } : enemyOk;
       case 'enemy-unit': return enemyOk;
@@ -169,43 +205,103 @@ export function createRules(game: CompiledGame): Rules {
    */
   const resolveEffect = (s: MatchState, me: 0 | 1, e: Effect, t: number, chosen: boolean, check: boolean, src: { card: number | null; unit: UnitState | null; spellPower: number }): boolean => {
     const spec = specOf(e, chosen);
+    const f = filterOf(e);
+    const srcDef = src.card !== null ? card(src.card) : null;
     let refs: Ref[] = [];
     if (spec && isChosen(spec)) {
-      const r = chosenRef(s, me, spec, t);
+      const r = chosenRef(s, me, spec, t, f, srcDef);
       if (!r) return false;
       refs = [r];
     } else {
       if (chosen && t !== 0) return false;
       if (spec) refs = autoRefs(s, me, spec, src.unit);
+      if (f) { const w = world(s); refs = refs.filter((r) => r.kind !== 'unit' || matches(r.unit, f, w, srcDef)); }
     }
     if (check) return true;
     OPS[e.op].apply(fxFor(s, me, src.unit), e, me, refs, src.card, e.op === 'damage' ? src.spellPower : 0);
     return true;
   };
-  /** Whether a chosen-target effect has any legal target right now. */
-  const anyTarget = (s: MatchState, me: 0 | 1, e: Effect): boolean => {
+  /** Whether a chosen-target effect (of card `src`) has any legal target right now. */
+  const anyTarget = (s: MatchState, me: 0 | 1, e: Effect, src: CardDef | null): boolean => {
     const spec = specOf(e, true);
     if (!spec || !isChosen(spec)) return true;
     const codes = [ENEMY_CHAMPION, ...s.p[foe(me)].board.map((_, i) => enemyUnit(i)), ...s.p[me].board.map((_, i) => ownUnit(i))];
-    return codes.some((t) => chosenRef(s, me, spec, t) !== null);
+    return codes.some((t) => chosenRef(s, me, spec, t, filterOf(e), src) !== null);
   };
 
-  /** Remove dead units (firing their `death` abilities, which may chain), then end the match if a champion fell. */
+  /** One automatic ability of unit `u` (on side `me`), if its condition holds. */
+  const fireAbility = (s: MatchState, me: 0 | 1, u: UnitState, a: Ability): void => {
+    if (a.if && !holds(a.if, world(s), me, { card: card(u.c), unit: u })) return;
+    resolveEffect(s, me, a.effect, 0, false, false, { card: u.c, unit: u, spellPower: 0 });
+  };
+
+  /** Recompute every aura: each unit's bonus is the sum of the auras on its side that reach it now. */
+  const applyAuras = (s: MatchState): void => {
+    const w = world(s);
+    for (const side of [0, 1] as const) {
+      const board = s.p[side].board;
+      const sources = board.filter((u) => { const au = auraOf(u); return !!au && holds(au.if, w, side, { card: card(u.c), unit: u }); });
+      for (const u of board) {
+        let atk = 0, hp = 0;
+        for (const src of sources) {
+          const au = card(src.c).aura!;
+          const to = au.to ?? 'others';
+          if (to === 'this' ? src !== u : to === 'others' && src === u) continue;
+          if (!matches(u, au.filter, w, card(src.c))) continue;
+          atk += au.attack ?? 0;
+          hp += au.health ?? 0;
+        }
+        const [oa, oh] = u.aura ?? [0, 0];
+        if (atk === oa && hp === oh) continue;
+        u.atk += atk - oa;
+        u.max += hp - oh;
+        // Gaining health heals by as much; losing it only caps health at the new maximum (never below 1).
+        u.hp = hp > oh ? u.hp + (hp - oh) : Math.min(u.hp, u.max);
+        if (atk || hp) u.aura = [atk, hp]; else delete u.aura;
+      }
+    }
+  };
+  /** A unit's aura: its card's, unless it was silenced. */
+  const auraOf = (u: UnitState) => (u.silenced ? undefined : card(u.c).aura);
+
+  /** Take units at 0 health off the board: bounced ones go to their owner's hand (burned when it is full). */
+  const removeDead = (s: MatchState): void => {
+    for (const P of s.p) {
+      if (leaving.size) for (const u of P.board) if (leaving.has(u) && P.hand.length < R.handLimit) P.hand.push(u.c);
+      P.board = P.board.filter((u) => u.hp > 0);
+    }
+  };
+
+  /**
+   * After every action: fire queued `damaged` abilities, remove dead units (firing their `death` abilities, then
+   * their allies' `allyDeath` ones), and repeat while that does anything, up to MAX_CHAIN rounds per settle. Then
+   * recompute auras and end the match if a champion fell.
+   */
   const settle = (s: MatchState): void => {
     for (let round = 0; round < MAX_CHAIN; round++) {
+      if (damagedQueue.length) {
+        const hits = damagedQueue;
+        damagedQueue = [];
+        for (const d of hits) for (const a of abilities(d.unit)) if (a.on === 'damaged') fireAbility(s, d.side, d.unit, a);
+      }
       const dead: Array<{ side: 0 | 1; unit: UnitState }> = [];
       for (const side of [s.turn, foe(s.turn)]) for (const unit of s.p[side].board) if (unit.hp <= 0) dead.push({ side, unit });
-      if (!dead.length) break;
-      for (const p of s.p) p.board = p.board.filter((u) => u.hp > 0);
-      for (const d of dead) for (const a of card(d.unit.c).abilities ?? []) if (a.on === 'death') resolveEffect(s, d.side, a.effect, 0, false, false, { card: d.unit.c, unit: d.unit, spellPower: 0 });
+      if (!dead.length) { if (damagedQueue.length) continue; break; }
+      removeDead(s);
+      const died = leaving.size ? dead.filter((d) => !leaving.has(d.unit)) : dead;
+      for (const d of died) for (const a of abilities(d.unit)) if (a.on === 'death') fireAbility(s, d.side, d.unit, a);
+      if (anyAllyDeath) for (const d of died) for (const u of [...s.p[d.side].board]) if (u.hp > 0) for (const a of abilities(u)) if (a.on === 'allyDeath') fireAbility(s, d.side, u, a);
     }
-    for (const p of s.p) p.board = p.board.filter((u) => u.hp > 0);
+    damagedQueue = [];
+    removeDead(s);
+    leaving.clear();
+    if (hasAuras) applyAuras(s);
     const dead0 = s.p[0].life <= 0, dead1 = s.p[1].life <= 0;
     if ((dead0 || dead1) && !s.over) { s.over = true; s.winner = dead0 && dead1 ? 2 : dead0 ? 1 : 0; }
   };
 
-  const fire = (s: MatchState, me: 0 | 1, u: UnitState, on: 'turnStart' | 'attack'): void => {
-    for (const a of card(u.c).abilities ?? []) if (a.on === on && u.hp > 0) resolveEffect(s, me, a.effect, 0, false, false, { card: u.c, unit: u, spellPower: 0 });
+  const fire = (s: MatchState, me: 0 | 1, u: UnitState, on: Trigger): void => {
+    for (const a of abilities(u)) if (a.on === on && u.hp > 0) fireAbility(s, me, u, a);
   };
 
   const startTurn = (s: MatchState): void => {
@@ -231,6 +327,14 @@ export function createRules(game: CompiledGame): Rules {
     if (op === Op.End) {
       if (a !== 0 || target !== 0) return false;
       if (check) return true;
+      // End-of-turn abilities, left to right; a match they end ends here.
+      if (P.board.some((u) => onTurnEnd[u.c] && !u.silenced)) {
+        for (const u of [...P.board]) fire(s, me, u, 'turnEnd');
+        settle(s);
+        if (s.over) return true;
+      }
+      // Units frozen through this turn thaw.
+      for (const p of s.p) for (const u of p.board) if (u.frozen !== undefined && u.frozen <= s.turnNo) delete u.frozen;
       s.turn = foe(me);
       s.turnNo += 1;
       startTurn(s);
@@ -256,9 +360,12 @@ export function createRules(game: CompiledGame): Rules {
       if (def.type === 'unit') {
         if (P.board.length >= R.boardSlots) return false;
         // A play ability with a chosen target takes the action's target; with nothing to choose it fizzles (target 0).
+        // Their conditions are checked now, as the card is played (it is not on the board yet, nor its own ally).
         const onPlay = (def.abilities ?? []).filter((ab) => ab.on === 'play');
-        const aim = onPlay.find((ab) => isChosen(specOf(ab.effect, true)));
-        const fizzle = aim ? !anyTarget(s, me, aim.effect) : false;
+        const w = playIf[c] ? world(s) : null;
+        const live = onPlay.map((ab) => !ab.if || holds(ab.if, w!, me, { card: def, unit: null }));
+        const aim = onPlay.find((ab, i) => live[i] && isChosen(specOf(ab.effect, true)));
+        const fizzle = aim ? !anyTarget(s, me, aim.effect, def) : false;
         if (aim && !fizzle) { if (!resolveEffect(s, me, aim.effect, target, true, true, { card: c, unit: null, spellPower: 0 })) return false; }
         else if (target !== 0) return false;
         if (check) return true;
@@ -266,9 +373,9 @@ export function createRules(game: CompiledGame): Rules {
         P.energy -= def.cost;
         const u = makeUnit(s, me, c);
         P.board.push(u);
-        for (const ab of onPlay) {
+        for (const [i, ab] of onPlay.entries()) {
           const chosen = isChosen(specOf(ab.effect, true));
-          if (chosen && fizzle) continue;
+          if (!live[i] || (chosen && fizzle)) continue;
           resolveEffect(s, me, ab.effect, chosen ? target : 0, chosen, false, { card: c, unit: u, spellPower: 0 });
         }
         settle(s);
@@ -293,14 +400,14 @@ export function createRules(game: CompiledGame): Rules {
     }
     if (op === Op.Attack) {
       const u = P.board[a];
-      if (!u || !u.ready || u.atk <= 0) return false;
+      if (!u || !u.ready || u.atk <= 0 || (u.frozen !== undefined && s.turnNo <= u.frozen)) return false;
       const tr = targetOf(target);
       if (tr.side !== 'enemy') return false;
       const guarded = E.board.some((g) => g.guard);
       const d = tr.kind === 'unit' ? E.board[tr.slot] : null;
       if (tr.kind === 'champion') {
         // Rush lets a unit attack units the turn it lands; only haste reaches the champion that turn.
-        if (guarded || (u.fresh && !kw(u.c, 'haste'))) return false;
+        if (guarded || (u.fresh && !has(u, 'haste'))) return false;
       } else if (!d || (guarded && !d.guard)) return false;
       if (check) return true;
       u.ready = false;
@@ -344,7 +451,7 @@ export function createRules(game: CompiledGame): Rules {
     if (s.phase !== 'decks' || decode(x).op !== Op.Declare) return false;
     const c = declaredCard(x);
     const mine = s.decl![side];
-    return c < cards.length && mine.length < deckSize && mine.filter((d) => d === c).length < maxCopies;
+    return c < cards.length && cards[c].deckable !== false && mine.length < deckSize && mine.filter((d) => d === c).length < maxCopies;
   };
   /** Both decks declared: shuffle each from the match seed, draw opening hands, start turn 1. */
   const finishDecks = (s: MatchState): void => {

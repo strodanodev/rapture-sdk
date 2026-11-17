@@ -1,0 +1,583 @@
+{
+  "title": "Synergy Duel",
+  "description": "The SDK's demo of conditions, auras, filters, destroy, silence, freeze, bounce, break, the turnEnd, damaged and allyDeath triggers, unitAttack.minCost and summon-only tokens.",
+  "litnode": {
+    "rulesetId": "synergy-duel.v1",
+    "tickRate": 4,
+    "maxTicks": 600,
+    "modes": [
+      "ranked",
+      "casual"
+    ],
+    "eloK": 24
+  },
+  "elements": [
+    {
+      "id": "neutral",
+      "name": "Neutral",
+      "color": "#b8b8b8"
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "beats": [
+        "air"
+      ],
+      "color": "#ff6a3d"
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "beats": [
+        "fire"
+      ],
+      "color": "#3da5ff"
+    },
+    {
+      "id": "earth",
+      "name": "Earth",
+      "beats": [
+        "water"
+      ],
+      "color": "#8fbf4a"
+    },
+    {
+      "id": "air",
+      "name": "Air",
+      "beats": [
+        "earth"
+      ],
+      "color": "#d8f0ff"
+    }
+  ],
+  "champion": {
+    "life": {
+      "stat": "resilience",
+      "min": 18,
+      "max": 24
+    },
+    "spellPower": {
+      "stat": "intelligence",
+      "min": 0,
+      "max": 2
+    },
+    "unitAttack": {
+      "stat": "strength",
+      "min": 0,
+      "max": 1,
+      "minCost": 2
+    },
+    "openingHand": {
+      "stat": "agility",
+      "min": 4,
+      "max": 5
+    },
+    "powers": [
+      {
+        "id": "rally",
+        "name": "Rally",
+        "cost": 2,
+        "effect": {
+          "op": "buff",
+          "attack": 1,
+          "health": 1
+        }
+      }
+    ]
+  },
+  "rules": {
+    "boardSlots": 5,
+    "relicSlots": 2,
+    "handLimit": 8,
+    "energyStart": 1,
+    "energyMax": 10,
+    "energyPerTurn": 1,
+    "elementBonus": 1,
+    "fatigue": true,
+    "secondPlayerEnergy": 1,
+    "secondPlayerCards": 1
+  },
+  "cards": [
+    {
+      "id": "village-recruit",
+      "name": "Village Recruit",
+      "type": "unit",
+      "element": "neutral",
+      "kind": "Mortal",
+      "cost": 1,
+      "attack": 1,
+      "health": 2,
+      "rarity": "common",
+      "keywords": [
+        "guard"
+      ]
+    },
+    {
+      "id": "ember-squire",
+      "name": "Ember Squire",
+      "type": "unit",
+      "element": "fire",
+      "kind": "Mortal",
+      "cost": 1,
+      "attack": 2,
+      "health": 1,
+      "rarity": "common",
+      "abilities": [
+        {
+          "on": "play",
+          "if": {
+            "allies": {
+              "sameElement": true
+            }
+          },
+          "effect": {
+            "op": "buff",
+            "attack": 1,
+            "health": 1,
+            "target": "this"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tide-acolyte",
+      "name": "Tide Acolyte",
+      "type": "unit",
+      "element": "water",
+      "kind": "Mortal",
+      "cost": 2,
+      "attack": 1,
+      "health": 3,
+      "rarity": "uncommon",
+      "abilities": [
+        {
+          "on": "damaged",
+          "effect": {
+            "op": "draw",
+            "amount": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "gale-skirmisher",
+      "name": "Gale Skirmisher",
+      "type": "unit",
+      "element": "air",
+      "kind": "Beast",
+      "cost": 2,
+      "attack": 3,
+      "health": 2,
+      "rarity": "common",
+      "keywords": [
+        "rush"
+      ]
+    },
+    {
+      "id": "relic-breaker",
+      "name": "Relic Breaker",
+      "type": "unit",
+      "element": "earth",
+      "kind": "Mortal",
+      "cost": 2,
+      "attack": 2,
+      "health": 2,
+      "rarity": "common",
+      "abilities": [
+        {
+          "on": "play",
+          "effect": {
+            "op": "break"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wind-trickster",
+      "name": "Wind Trickster",
+      "type": "unit",
+      "element": "air",
+      "kind": "Spirit",
+      "cost": 3,
+      "attack": 2,
+      "health": 2,
+      "rarity": "uncommon",
+      "abilities": [
+        {
+          "on": "play",
+          "effect": {
+            "op": "bounce",
+            "target": "enemy-unit",
+            "filter": {
+              "healthAtMost": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "frost-mage",
+      "name": "Frost Mage",
+      "type": "unit",
+      "element": "water",
+      "kind": "Mortal",
+      "cost": 3,
+      "attack": 2,
+      "health": 3,
+      "rarity": "uncommon",
+      "abilities": [
+        {
+          "on": "play",
+          "effect": {
+            "op": "freeze",
+            "target": "enemy-unit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hush-oracle",
+      "name": "Hush Oracle",
+      "type": "unit",
+      "element": "air",
+      "kind": "Spirit",
+      "cost": 3,
+      "attack": 3,
+      "health": 3,
+      "rarity": "uncommon",
+      "abilities": [
+        {
+          "on": "play",
+          "effect": {
+            "op": "silence",
+            "target": "enemy-unit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stone-warden",
+      "name": "Stone Warden",
+      "type": "unit",
+      "element": "earth",
+      "kind": "Beast",
+      "cost": 3,
+      "attack": 2,
+      "health": 5,
+      "rarity": "common",
+      "keywords": [
+        "guard"
+      ],
+      "abilities": [
+        {
+          "on": "allyDeath",
+          "effect": {
+            "op": "buff",
+            "attack": 1,
+            "health": 1,
+            "target": "this"
+          }
+        }
+      ]
+    },
+    {
+      "id": "last-stand-veteran",
+      "name": "Last-Stand Veteran",
+      "type": "unit",
+      "element": "neutral",
+      "kind": "Mortal",
+      "cost": 3,
+      "attack": 2,
+      "health": 4,
+      "rarity": "uncommon",
+      "aura": {
+        "attack": 2,
+        "to": "this",
+        "if": {
+          "lifeAtMost": 12
+        }
+      }
+    },
+    {
+      "id": "king-of-embers",
+      "name": "King of Embers",
+      "type": "unit",
+      "element": "fire",
+      "kind": "King",
+      "cost": 4,
+      "attack": 3,
+      "health": 4,
+      "rarity": "rare",
+      "aura": {
+        "attack": 1,
+        "filter": {
+          "kind": "Mortal"
+        }
+      }
+    },
+    {
+      "id": "haunt-caller",
+      "name": "Haunt Caller",
+      "type": "unit",
+      "element": "air",
+      "kind": "Spirit",
+      "cost": 4,
+      "attack": 3,
+      "health": 4,
+      "rarity": "rare",
+      "abilities": [
+        {
+          "on": "allyDeath",
+          "effect": {
+            "op": "summon",
+            "card": "spirit-wisp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "executioner",
+      "name": "Executioner",
+      "type": "unit",
+      "element": "fire",
+      "kind": "Mortal",
+      "cost": 4,
+      "attack": 4,
+      "health": 3,
+      "rarity": "rare",
+      "abilities": [
+        {
+          "on": "play",
+          "if": {
+            "enemyLifeAtMost": 12
+          },
+          "effect": {
+            "op": "damage",
+            "amount": 3,
+            "target": "enemy-champion"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tide-king",
+      "name": "Tide King",
+      "type": "unit",
+      "element": "water",
+      "kind": "King",
+      "cost": 5,
+      "attack": 4,
+      "health": 5,
+      "rarity": "epic",
+      "abilities": [
+        {
+          "on": "turnEnd",
+          "effect": {
+            "op": "buff",
+            "health": 1,
+            "target": "all-own-units",
+            "filter": {
+              "kind": "Mortal"
+            }
+          }
+        },
+        {
+          "on": "play",
+          "if": {
+            "allies": {
+              "kind": "Mortal",
+              "count": 2
+            }
+          },
+          "effect": {
+            "op": "draw",
+            "amount": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "gravewyrm",
+      "name": "Gravewyrm",
+      "type": "unit",
+      "element": "earth",
+      "kind": "Beast",
+      "cost": 6,
+      "attack": 5,
+      "health": 6,
+      "rarity": "legendary",
+      "abilities": [
+        {
+          "on": "play",
+          "effect": {
+            "op": "destroy",
+            "target": "enemy-unit",
+            "filter": {
+              "attackAtMost": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "spirit-wisp",
+      "name": "Spirit Wisp",
+      "type": "unit",
+      "element": "air",
+      "kind": "Spirit",
+      "cost": 1,
+      "attack": 1,
+      "health": 1,
+      "rarity": "common",
+      "deckable": false
+    },
+    {
+      "id": "cinder-sweep",
+      "name": "Cinder Sweep",
+      "type": "spell",
+      "element": "fire",
+      "cost": 2,
+      "effect": {
+        "op": "damage",
+        "amount": 2,
+        "target": "all-enemy-units",
+        "filter": {
+          "healthAtMost": 2
+        }
+      },
+      "rarity": "uncommon"
+    },
+    {
+      "id": "royal-decree",
+      "name": "Royal Decree",
+      "type": "spell",
+      "element": "neutral",
+      "cost": 2,
+      "effect": {
+        "op": "buff",
+        "attack": 1,
+        "health": 1,
+        "target": "all-own-units",
+        "filter": {
+          "kind": "Mortal"
+        }
+      },
+      "rarity": "common"
+    },
+    {
+      "id": "execute",
+      "name": "Execute",
+      "type": "spell",
+      "element": "neutral",
+      "cost": 4,
+      "effect": {
+        "op": "destroy"
+      },
+      "rarity": "rare"
+    },
+    {
+      "id": "deep-freeze",
+      "name": "Deep Freeze",
+      "type": "spell",
+      "element": "water",
+      "cost": 2,
+      "effect": {
+        "op": "freeze",
+        "target": "all-enemy-units"
+      },
+      "rarity": "uncommon"
+    },
+    {
+      "id": "unmake",
+      "name": "Unmake",
+      "type": "spell",
+      "element": "air",
+      "cost": 2,
+      "effect": {
+        "op": "bounce",
+        "target": "any-unit"
+      },
+      "rarity": "common"
+    },
+    {
+      "id": "shatter",
+      "name": "Shatter",
+      "type": "spell",
+      "element": "earth",
+      "cost": 1,
+      "effect": {
+        "op": "break",
+        "count": 2
+      },
+      "rarity": "common"
+    },
+    {
+      "id": "spark",
+      "name": "Spark",
+      "type": "spell",
+      "element": "fire",
+      "cost": 1,
+      "effect": {
+        "op": "damage",
+        "amount": 2
+      },
+      "rarity": "common"
+    },
+    {
+      "id": "war-banner",
+      "name": "War Banner",
+      "type": "relic",
+      "element": "neutral",
+      "cost": 3,
+      "effect": {
+        "op": "buff",
+        "attack": 1,
+        "target": "newest-own-unit"
+      },
+      "rarity": "rare"
+    },
+    {
+      "id": "ember-brazier",
+      "name": "Ember Brazier",
+      "type": "relic",
+      "element": "fire",
+      "cost": 2,
+      "effect": {
+        "op": "damage",
+        "amount": 1
+      },
+      "rarity": "rare"
+    }
+  ],
+  "deck": {
+    "village-recruit": 2,
+    "ember-squire": 2,
+    "tide-acolyte": 2,
+    "gale-skirmisher": 2,
+    "relic-breaker": 2,
+    "wind-trickster": 2,
+    "frost-mage": 2,
+    "hush-oracle": 2,
+    "stone-warden": 2,
+    "last-stand-veteran": 2,
+    "king-of-embers": 1,
+    "haunt-caller": 1,
+    "executioner": 1,
+    "tide-king": 1,
+    "gravewyrm": 1,
+    "cinder-sweep": 2,
+    "royal-decree": 2,
+    "execute": 1,
+    "deep-freeze": 2,
+    "unmake": 2,
+    "shatter": 2,
+    "spark": 2,
+    "war-banner": 1,
+    "ember-brazier": 1
+  },
+  "deckRules": {
+    "mode": "declared",
+    "size": 24,
+    "maxCopies": 2
+  }
+}

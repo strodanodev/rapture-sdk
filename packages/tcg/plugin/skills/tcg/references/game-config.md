@@ -60,13 +60,17 @@ Each entry is `{ stat, min, max }`.
 
 Keep the ranges narrow: the spread is how much NFT stats matter.
 
+```json
+"unitAttack": { "stat": "strength", "min": 0, "max": 1, "minCost": 3 }
+```
+
 A player with no champion, and any stat a champion lacks, counts as 0, so they get each range's `min`. That is what LitNode hydrates for a player without a registry champion, and practice, the relay, the sim and the ruleset all use the same `normalizeStats`.
 
 | Key | Effect |
 |---|---|
 | `life` | Starting and maximum life |
 | `spellPower` | Added to damage spells and relics |
-| `unitAttack` | Added to the attack of every unit you play |
+| `unitAttack` | Added to the attack of every unit you play. Optional `minCost` (0–99): only units that cost at least that much get it (summons included), so a champion's strength doesn't double every 1/1 |
 | `openingHand` | Cards drawn before turn 1 |
 | `powers` | Optional hero powers (below) |
 
@@ -113,6 +117,7 @@ A player with no champion, and any stat a champion lacks, counts as 0, so they g
 - `cost`: 0–99.
 - `rarity`: `common`, `uncommon`, `rare`, `epic` or `legendary` (used for the ItemCard badge).
 - `art` and `token`: display only in v1.
+- `deckable`: `false` marks a summon-only token. No deck may hold it: the validator rejects it in `deck`, declared decks can't declare it, and the deck builder, random sim decks and the Gauntlet never offer it. Default `true`.
 
 **Units**
 - `attack`: 0–99. `health`: 1–99.
@@ -129,7 +134,7 @@ A player with no champion, and any stat a champion lacks, counts as 0, so they g
 | `poison` | Any damage it deals to a unit destroys that unit |
 | `elusive` | Enemy spells, powers and abilities can't choose it (area effects still hit) |
 
-- `abilities` (up to 3): `{ "on": trigger, "effect": effect }`.
+- `abilities` (up to 3): `{ "on": trigger, "effect": effect, "if"?: condition }`.
 
 | `on` | Fires | Targets |
 |---|---|---|
@@ -137,6 +142,55 @@ A player with no champion, and any stat a champion lacks, counts as 0, so they g
 | `death` | When it dies (chains up to 16 rounds per action) | Automatic only; `this` doesn't work |
 | `turnStart` | At each of its owner's turn starts, after relics | Automatic only |
 | `attack` | When it attacks, before the hit | Automatic only |
+| `turnEnd` | At the end of its owner's turn, left to right, before the turn passes | Automatic only |
+| `damaged` | Whenever it takes damage (a shield's block is not damage), even damage that destroys it | Automatic only; `this` fizzles if it died |
+| `allyDeath` | Whenever another of its owner's units dies (not when one is bounced) | Automatic only |
+
+After every action the engine settles: queued `damaged` abilities fire, dead units leave (their `death` abilities fire, then their allies' `allyDeath` ones), and that repeats while it does anything, up to 16 rounds. Then auras are recomputed and the match ends if a champion fell.
+
+- `aura` (optional): a lasting bonus while the unit is on the board and not silenced.
+
+```json
+{ "id": "king-of-embers", "kind": "King", "aura": { "attack": 1, "filter": { "kind": "Mortal" } } }
+{ "id": "last-stand-veteran", "aura": { "attack": 2, "to": "this", "if": { "lifeAtMost": 12 } } }
+```
+
+| Field | Values | Notes |
+|---|---|---|
+| `attack`, `health` | 0–20, at least one above 0 | Added to attack, and to health and maximum health |
+| `to` | `others` (default), `this`, `all` | Your other units, itself, or your units including itself |
+| `filter` | a unit filter without `attackAtMost`/`healthAtMost` | Only matching units get it |
+| `if` | a condition | Only while it holds, checked for the aura's own unit |
+
+Auras are recomputed after every action. A unit that loses an aura loses the attack and maximum health again, and its health is capped at the new maximum: losing an aura never destroys a unit. Bonuses from several auras add up.
+
+### Conditions (`if`)
+
+An ability fires only when its `if` holds: checked when the trigger fires, and for a `play` ability as the card is played (before any of its abilities resolve; the unit is not its own ally). A `play` ability with a chosen target whose condition fails takes no target (target 0). Every field given must hold.
+
+| Field | Holds when |
+|---|---|
+| `allies: filter + { count? }` | You control at least `count` (1–5, default 1) **other** units matching the filter |
+| `enemies: filter + { count? }` | The enemy controls at least `count` units matching the filter |
+| `lifeAtMost: n` | Your champion has at most n life (1–999) |
+| `enemyLifeAtMost: n` | The enemy champion has at most n life |
+
+```json
+{ "on": "play", "if": { "allies": { "sameElement": true } }, "effect": { "op": "buff", "attack": 1, "health": 1, "target": "this" } }
+{ "on": "play", "if": { "allies": { "kind": "Mortal", "count": 2 } }, "effect": { "op": "draw", "amount": 1 } }
+{ "on": "play", "if": { "enemyLifeAtMost": 12 }, "effect": { "op": "damage", "amount": 3, "target": "enemy-champion" } }
+```
+
+### Unit filters
+
+Used by conditions, auras and an effect's `filter`. Every field given must match.
+
+| Field | Matches |
+|---|---|
+| `element` | Units of that element (an `elements[].id`) |
+| `kind` | Units of that card `kind` (some card must have it) |
+| `sameElement: true` / `sameKind: true` | Units of the element / kind of the card whose ability, aura or effect it is |
+| `attackAtMost`, `healthAtMost` | Units with at most that current attack / health (0–99). Not in aura filters |
 
 **Spells** resolve once. **Relics** fire their effect at each of their owner's turn starts (automatic targets only).
 
@@ -153,12 +207,32 @@ Every op is defined once in `src/core/effects.ts`, so rules, bot, sim and card t
 | `{ "op": "buff", "attack": a, "health": h }` | +a/+h (raises max health too) | `own-unit` / `newest-own-unit` |
 | `{ "op": "shield" }` | Give a shield | `own-unit` / `newest-own-unit` |
 | `{ "op": "summon", "card": id, "count": n }` | Put n copies of a unit card on your board (no play ability) | — |
+| `{ "op": "destroy" }` | Destroy unit(s), through shields (their `death` abilities fire) | `enemy-unit` / `weakest-enemy` |
+| `{ "op": "silence" }` | Remove keywords (guard and shield included), abilities and aura. Buffs stay, and other units' auras still reach it | `enemy-unit` / `weakest-enemy` |
+| `{ "op": "freeze" }` | The unit can't attack on its owner's next turn. Frozen during its owner's own turn, it can't attack for the rest of that turn either | `enemy-unit` / `weakest-enemy` |
+| `{ "op": "bounce" }` | Return unit(s) to their owner's hand as the card, with no death (burned when the hand is full) | `enemy-unit` / `weakest-enemy` |
+| `{ "op": "break", "count": n }` | Destroy n (1–5, default 1) of the enemy's relics, oldest first | — |
+
+The unit ops (destroy, silence, freeze, bounce) take every unit target, plus `weakest-enemy`, which does nothing when the enemy has no units.
 
 Add `"target"` to choose who it hits:
 - **Chosen** (spells, hero powers, `play` abilities): `enemy` (champion or unit), `enemy-unit`, `own-unit`, `any-unit`.
 - **Automatic** (anywhere): `self`, `enemy-champion`, `all-enemy-units`, `all-own-units`, `all-units`, `weakest-enemy` (least health, leftmost; else the champion), `newest-own-unit`, `this` (the ability's own unit).
 
-The validator rejects a chosen target where no choice is possible, an op/target pair that makes no sense, and a summon of anything but a unit card.
+Add `"filter"` (a unit filter, above) to a unit-targeting effect to narrow it. A chosen target must match: with none matching, a unit's `play` ability fizzles and a spell can't be cast. An automatic one hits only matching units. It needs a unit target: `enemy-unit`, `own-unit`, `any-unit`, `all-enemy-units`, `all-own-units` or `all-units`.
+
+```json
+{ "op": "destroy", "target": "enemy-unit", "filter": { "attackAtMost": 3 } }
+{ "op": "buff", "attack": 1, "health": 1, "target": "all-own-units", "filter": { "kind": "Mortal" } }
+```
+
+The validator rejects:
+- a chosen target where no choice is possible, or an op/target pair that makes no sense;
+- a summon of anything but a unit card;
+- a filter or condition naming an element or kind the game doesn't have, or a filter on an effect without a unit target;
+- an aura on a spell or relic, and a `deckable: false` card in `deck`.
+
+Each message names the card and the field.
 
 ## Actions (`core/actions.ts`)
 
@@ -180,6 +254,7 @@ Concede is honoured on either player's frame. The gauntlet injects it for a play
 ## State
 
 - `MatchState` is what `serialize()` returns: everything. LitNode hashes it into the state root.
+- A unit carries `frozen` (the turn number it is frozen through), `silenced` and `aura` (the `[attack, health]` it holds now) only while they apply, so a game that uses none of these mechanics has exactly the state it always had.
 - **Draws** take a random card of the deck, from the seed, the entropy of every accepted action up to the turn's start (`turnEnt`), and a draw counter. Nobody can compute a draw before the opponent has finished the turn before it, yet every replay draws the same cards.
 - `view()` replaces each deck with a count.
 - `winner` is −1 while the match is live, 0 or 1 for the winning side, and 2 for a draw.

@@ -33,23 +33,65 @@ export type TargetSpec =
   | 'self' | 'enemy-champion' | 'all-enemy-units' | 'all-own-units' | 'all-units' | 'weakest-enemy' | 'newest-own-unit' | 'this';
 
 /**
+ * Which units something applies to: every field given must match (an empty filter matches every unit).
+ * `sameElement` / `sameKind` compare with the card whose effect, ability or aura it is.
+ */
+export interface UnitFilter {
+  /** One of `GameConfig.elements[].id`. */
+  element?: string;
+  /** A card `kind` (a collection trait, such as a Rapture Kind). */
+  kind?: string;
+  sameElement?: boolean;
+  sameKind?: boolean;
+  /** The unit's current attack is at most this. */
+  attackAtMost?: number;
+  /** The unit's current health is at most this. */
+  healthAtMost?: number;
+}
+
+/**
+ * When an ability fires or an aura holds: every field given must hold. Checked when the ability would fire (a
+ * `play` ability: as the card is played, before any of its abilities resolve) and, for auras, at every settle.
+ * - allies:  you control at least `count` (default 1) units matching the filter, not counting the unit itself
+ * - enemies: the enemy controls at least `count` (default 1) units matching the filter
+ * - lifeAtMost / enemyLifeAtMost: your / the enemy champion's life is at most N
+ */
+export interface Condition {
+  allies?: UnitFilter & { count?: number };
+  enemies?: UnitFilter & { count?: number };
+  lifeAtMost?: number;
+  enemyLifeAtMost?: number;
+}
+
+/**
  * What a spell, ability, hero power or relic does. Every op is defined once, in core/effects.ts.
- * - damage: deal `amount` (+ spellPower for spells) to the target(s). Default target: 'enemy' when chosen, else 'enemy-champion'
- * - heal:   restore `amount` life to your champion, or health to units (up to their maximum). Default 'self'
- * - draw:   draw `amount` cards
- * - buff:   +attack/+health to unit(s). Default 'own-unit' when chosen, else 'newest-own-unit'
- * - energy: gain `amount` energy this turn
- * - summon: put `count` (default 1) copies of unit card `card` onto your board
- * - shield: give unit(s) a shield that blocks the next damage. Default like buff
+ * - damage:  deal `amount` (+ spellPower for spells) to the target(s). Default target: 'enemy' when chosen, else 'enemy-champion'
+ * - heal:    restore `amount` life to your champion, or health to units (up to their maximum). Default 'self'
+ * - draw:    draw `amount` cards
+ * - buff:    +attack/+health to unit(s). Default 'own-unit' when chosen, else 'newest-own-unit'
+ * - energy:  gain `amount` energy this turn
+ * - summon:  put `count` (default 1) copies of unit card `card` onto your board
+ * - shield:  give unit(s) a shield that blocks the next damage. Default like buff
+ * - destroy: destroy unit(s), through shields. Default 'enemy-unit' when chosen, else 'weakest-enemy'
+ * - silence: remove unit(s)' keywords, abilities and aura (buffs stay). Default like destroy
+ * - freeze:  unit(s) can't attack on their owner's next turn (or for the rest of this one). Default like destroy
+ * - bounce:  return unit(s) to their owner's hand, as the card (burned when the hand is full). Default like destroy
+ * - break:   destroy `count` (default 1) of the enemy's relics, oldest first
+ * Unit-targeting ops take an optional `filter`: only matching units can be chosen or are hit.
  */
 export type Effect =
-  | { op: 'damage'; amount: number; target?: TargetSpec }
-  | { op: 'heal'; amount: number; target?: TargetSpec }
+  | { op: 'damage'; amount: number; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'heal'; amount: number; target?: TargetSpec; filter?: UnitFilter }
   | { op: 'draw'; amount: number }
-  | { op: 'buff'; attack?: number; health?: number; target?: TargetSpec }
+  | { op: 'buff'; attack?: number; health?: number; target?: TargetSpec; filter?: UnitFilter }
   | { op: 'energy'; amount: number }
   | { op: 'summon'; card: string; count?: number }
-  | { op: 'shield'; target?: TargetSpec };
+  | { op: 'shield'; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'destroy'; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'silence'; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'freeze'; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'bounce'; target?: TargetSpec; filter?: UnitFilter }
+  | { op: 'break'; count?: number };
 
 /**
  * - guard:     enemies must attack guards first
@@ -62,12 +104,35 @@ export type Effect =
  */
 export type Keyword = 'guard' | 'haste' | 'rush' | 'lifesteal' | 'shield' | 'poison' | 'elusive';
 
-/** When a unit's ability fires. 'play' may take a chosen target; the others are automatic. */
-export type Trigger = 'play' | 'death' | 'turnStart' | 'attack';
+/**
+ * When a unit's ability fires. 'play' may take a chosen target; the others are automatic.
+ * - play, death, turnStart (its owner's), attack (before the hit)
+ * - turnEnd:   at the end of its owner's turn
+ * - damaged:   whenever it takes damage (even damage that destroys it)
+ * - allyDeath: whenever another of its owner's units dies
+ */
+export type Trigger = 'play' | 'death' | 'turnStart' | 'attack' | 'turnEnd' | 'damaged' | 'allyDeath';
 
 export interface Ability {
   on: Trigger;
   effect: Effect;
+  /** Fires only when this holds. */
+  if?: Condition;
+}
+
+/**
+ * A unit's lasting bonus to units on its side, recomputed after every action while the unit is on the board (and
+ * not silenced). Losing an aura lowers attack and maximum health again, but never destroys a unit.
+ * - to: 'others' (default: your other units), 'this' (itself), 'all' (your units, itself included)
+ */
+export interface Aura {
+  attack?: number;
+  health?: number;
+  to?: 'others' | 'this' | 'all';
+  /** Only units that match get it. */
+  filter?: UnitFilter;
+  /** Only while this holds (checked for the aura's own unit). */
+  if?: Condition;
 }
 
 /**
@@ -108,8 +173,15 @@ export interface CardDef {
   /** Units only. */
   health?: number;
   keywords?: Keyword[];
-  /** Units only: effects that fire on play, on death, at its owner's turn start, or when it attacks. */
+  /** Units only: effects that fire on a trigger (play, death, turn start or end, attack, damaged, an ally's death). */
   abilities?: Ability[];
+  /** Units only: a lasting bonus to units on its side. */
+  aura?: Aura;
+  /**
+   * false: no deck may hold it (a summon-only token): declared decks reject it, and the deck builder, random sim
+   * decks and the Gauntlet never offer it. Default true.
+   */
+  deckable?: boolean;
   /** Spells and relics. */
   effect?: Effect;
   /** A collection trait (such as a Rapture Kind), for display and hero-power matching. */
@@ -141,8 +213,8 @@ export interface ChampionConfig {
   life: StatMapping;
   /** Bonus damage on damage spells. */
   spellPower: StatMapping;
-  /** Bonus attack on every unit you play. */
-  unitAttack: StatMapping;
+  /** Bonus attack on every unit you play; with `minCost`, only on units that cost at least that much. */
+  unitAttack: StatMapping & { minCost?: number };
   openingHand: StatMapping;
   /** Optional hero powers; see HeroPower. */
   powers?: HeroPower[];
@@ -228,6 +300,13 @@ export interface UnitState {
   fresh: boolean;
   /** Blocks the next damage. */
   shield: boolean;
+  // The fields below exist only in games that use the mechanics behind them, so older games' states are unchanged.
+  /** Frozen: can't attack until this turn number has ended. */
+  frozen?: number;
+  /** Silenced: no keywords, abilities or aura. */
+  silenced?: boolean;
+  /** The aura bonus it holds now, [attack, health] (already in atk, hp and max). */
+  aura?: [number, number];
 }
 
 export interface PlayerState {

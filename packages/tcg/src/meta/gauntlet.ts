@@ -81,10 +81,11 @@ export function createGauntlet(rules: Rules) {
   const dr = config.deckRules?.mode === 'declared' ? config.deckRules : null;
   const rank = (c: number): number => rarityRank(cards[c].rarity, cards[c].cost);
   const tokens = cards.map((c, i) => (c.token ? i : -1)).filter((i) => i >= 0);
-  // Summon-only tokens (a Construct a hero power makes) are not deck cards: never dealt into a deck or offered.
+  // Summon-only tokens (a Construct a hero power makes, or any card marked deckable: false) are not deck cards:
+  // never dealt into a deck or offered.
   const inDefault = new Set(deckList);
   const tokenIds = summoned([config.cards, config.champion.powers ?? []]);
-  const pool = cards.map((_, i) => i).filter((i) => inDefault.has(i) || !tokenIds.has(cards[i].id));
+  const pool = cards.map((_, i) => i).filter((i) => cards[i].deckable !== false && (inDefault.has(i) || !tokenIds.has(cards[i].id)));
 
   /** A legal deck of `size` cards drawn from cards whose rarity rank is at most `maxRank`, at most maxCopies each. */
   const deckFrom = (rnd: () => number, maxRank: number): number[] => {

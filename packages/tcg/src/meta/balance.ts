@@ -65,10 +65,10 @@ export function simulate(game: GameConfig, opts: SimOptions = {}): SimReport {
   const players = ['a'.repeat(64), 'b'.repeat(64)];
   const rnd = seededRandom('tcg-sim');
   const randomStats = (): AgentStats => (statsMode === 'base' ? normalizeStats(null) : { strength: rnd() % 65536, agility: rnd() % 65536, resilience: rnd() % 65536, intelligence: rnd() % 65536 });
-  /** A random legal deck: deckRules.size cards drawn from the whole card list, at most maxCopies of each. */
+  /** A random legal deck: deckRules.size cards drawn from the deckable cards, at most maxCopies of each. */
   const randomDeck = (): number[] => {
     const { size, maxCopies } = game.deckRules!;
-    const pool = game.cards.flatMap((_, c) => Array.from({ length: maxCopies }, () => c));
+    const pool = game.cards.flatMap((def, c) => (def.deckable === false ? [] : Array.from({ length: maxCopies }, () => c)));
     for (let i = pool.length - 1; i > 0; i--) { const j = rnd() % (i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     return pool.slice(0, size);
   };

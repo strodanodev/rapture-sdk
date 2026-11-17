@@ -19,9 +19,22 @@ export type BotLevel = 1 | 2 | 3;
 
 export function greedyBot(rules: Rules, { level = 2 }: { level?: BotLevel } = {}): (state: MatchState, side?: 0 | 1) => number {
   const cards = rules.game.cards;
-  const has = (u: UnitState, k: string): boolean => cards[u.c].keywords?.includes(k as never) ?? false;
+  const has = (u: UnitState, k: string): boolean => !u.silenced && (cards[u.c].keywords?.includes(k as never) ?? false);
+  // Abilities that keep paying off while the unit lives (a silenced unit has none).
+  const lasting = (u: UnitState): boolean => !u.silenced && (cards[u.c].abilities?.some((a) => a.on === 'turnStart' || a.on === 'death') ?? false);
+  const newer = (u: UnitState): boolean => !u.silenced && (cards[u.c].abilities?.some((a) => a.on === 'turnEnd' || a.on === 'damaged' || a.on === 'allyDeath') ?? false);
+  // The terms after `lasting` only apply to the newer mechanics, so games without them score exactly as before.
   const unitValue = (u: UnitState): number =>
-    u.atk * 2 + u.hp + (u.guard ? 1 : 0) + (u.shield ? u.atk + 1 : 0) + (has(u, 'lifesteal') ? u.atk * 0.5 : 0) + (has(u, 'poison') ? 3 : 0) + (cards[u.c].abilities?.some((a) => a.on === 'turnStart' || a.on === 'death') ? 2 : 0);
+    u.atk * 2 + u.hp + (u.guard ? 1 : 0) + (u.shield ? u.atk + 1 : 0) + (has(u, 'lifesteal') ? u.atk * 0.5 : 0) + (has(u, 'poison') ? 3 : 0) + (lasting(u) ? 2 : 0)
+    + (newer(u) ? 2 : 0)
+    // An aura's bonus is already in its units' stats; the source is worth a little more for keeping it up.
+    + (!u.silenced && cards[u.c].aura ? 1 : 0)
+    // A frozen unit loses its next attack.
+    - (u.frozen !== undefined ? u.atk : 0);
+  // Synergy games (conditions or auras): the order of unit plays matters, so unit plays get the setup look-ahead too.
+  const synergy = cards.some((c) => c.aura || c.abilities?.some((a) => a.if));
+  // Games that can break relics: the enemy's relics count against me too (elsewhere they are out of reach anyway).
+  const breaks = JSON.stringify([cards, rules.game.config.champion.powers ?? []]).includes('"op":"break"');
   // Life gets more valuable as it runs out, for both sides: defend when low, press when the enemy is low.
   const lifeValue = (l: number): number => 3 * l - 0.15 * Math.max(0, 15 - l) ** 2;
   const score = (s: MatchState, me: 0 | 1): number => {
@@ -29,17 +42,18 @@ export function greedyBot(rules: Rules, { level = 2 }: { level?: BotLevel } = {}
     const P = s.p[me], E = s.p[me === 0 ? 1 : 0];
     const board = (units: UnitState[]): number => units.reduce((n, u) => n + unitValue(u), 0);
     // The enemy's board next turn, past my guards: facing lethal is nearly as bad as losing.
-    const threat = E.board.reduce((n, u) => n + u.atk, 0) - P.board.filter((u) => u.guard).reduce((n, u) => n + u.hp, 0);
+    const threat = E.board.reduce((n, u) => n + (u.frozen !== undefined && u.frozen > s.turnNo ? 0 : u.atk), 0) - P.board.filter((u) => u.guard).reduce((n, u) => n + u.hp, 0);
     const danger = threat >= P.life ? 40 : 0;
     // Relics pay off over turns and spare energy enables more plays, so both count a little.
-    return lifeValue(P.life) - lifeValue(E.life) + 1.5 * (board(P.board) - board(E.board)) + P.hand.length - E.hand.length + P.relics.length * 4 + P.energy * 0.5 - danger;
+    return lifeValue(P.life) - lifeValue(E.life) + 1.5 * (board(P.board) - board(E.board)) + P.hand.length - E.hand.length + P.relics.length * 4 + P.energy * 0.5 - danger
+      - (breaks ? E.relics.length * 4 : 0);
   };
   const isSetup = (s: MatchState, x: number): boolean => {
     const { op, a } = decode(x);
     if (op === Op.Power) return true;
     if (op !== Op.Play) return false;
     const c = s.p[s.turn].hand[a];
-    return c !== undefined && cards[c].type !== 'unit';
+    return c !== undefined && (cards[c].type !== 'unit' || synergy);
   };
   /** Every non-END action with its score, best first. */
   const ranked = (state: MatchState, me: 0 | 1, deeper: boolean): Array<{ x: number; v: number }> => {

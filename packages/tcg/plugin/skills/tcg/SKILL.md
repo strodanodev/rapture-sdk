@@ -197,6 +197,8 @@ The source is `packages/tcg` in the Rapture SDK (the last Tessaract release is a
 3. If it needs a new engine primitive, add it to `Fx` and implement it in `fxFor()` in `src/core/rules.ts`.
 4. Re-run `pnpm test`, `pnpm sim`, `pnpm title` and `pnpm web`.
 
-A keyword is an entry in `KEYWORDS` (effects.ts) plus its check where it acts in rules.ts (`hit()` for damage keywords, `act()` for attack rules).
+A keyword is an entry in `KEYWORDS` (effects.ts) plus its check where it acts in rules.ts (`hit()` for damage keywords, `act()` for attack rules; read a unit's keywords with `has(unit, k)`, so silence turns them off).
+
+A trigger is an entry in `TRIGGERS` (effects.ts) plus the one place in rules.ts that fires it (`fire()` or `settle()`). Conditions and unit filters are read through the `World` the rules pass to `holds()` and `matches()` in effects.ts; a new condition field is one more line there plus its check in `checkCondition()`. Keep new rules opt-in: a unit state field exists only while it applies, so older games' states, and their replays, stay exactly the same.
 
 LitNode hosting (deferred) is in [references/litnode.md](references/litnode.md).

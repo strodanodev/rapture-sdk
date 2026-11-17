@@ -51,6 +51,16 @@ Keyword and ability prices, paid from the budget:
 | `death`: summon a 1/1 | 1 | Two at cost 5 |
 | `turnStart`: +0/+1 to itself | 1 | Grows into a wall |
 | `attack`: deal 1 to the enemy champion | 1 | Rewards attacking |
+| `play`: destroy an enemy unit | 4 | Hard removal on a body: cost 6+. With `filter: { attackAtMost: 3 }`, about 3 |
+| `play`: silence an enemy unit | 1–2 | Worth what it strips: an answer to guard walls, auras and death abilities |
+| `play`: freeze an enemy unit | 1 | Tempo; strongest against haste and big attackers |
+| `play`: bounce an enemy unit | 2 | Tempo plus a reset of its buffs; `healthAtMost` keeps it off big units |
+| `play`: break an enemy relic | 0–1 | Dead text when the enemy has none: keep it on a fair body |
+| `turnEnd`: +0/+1 to your units of a Kind | 2 | Grows a tribe every turn |
+| `damaged`: draw 1 | 1–2 | On a high-health body it draws several times |
+| `allyDeath`: +1/+1 to itself | 1 | Grows as trades happen |
+| aura: your other units of a Kind +1/+0 | 1 per unit it will usually reach | Tribal glue: price it on the King, not the Mortals |
+| condition on a `play` ability | −1 from the ability's price | The card is weaker when it misses |
 
 `tessaract import` applies a kit like this automatically (src/tools/design-kit.ts); its tiers are a good reference.
 
@@ -62,7 +72,7 @@ Keyword and ability prices, paid from the budget:
 
 Pure healing powers stall games and cut close finishes; prefer shields and buffs.
 
-Champions add `unitAttack` (0–1 by default) to every unit, so keep base attack modest.
+Champions add `unitAttack` (0–1 by default) to every unit, so keep base attack modest. With many 1-cost units, +1 attack doubles them and the champion's stat decides too many games: set `unitAttack.minCost` (2–3) so only real bodies get it.
 
 ## Spell and relic values (amount by cost)
 
@@ -79,6 +89,19 @@ Champions add `unitAttack` (0–1 by default) to every unit, so keep base attack
 - `heal` relic: amount 2, cost 2.
 - `energy` relic: amount 1, cost 3.
 - `buff` relic: +1/0 to the newest unit, cost 2.
+
+## Synergies: conditions, auras and filters
+
+Elements and Kinds only matter in deckbuilding when cards ask about them. Three tools, from cheapest to strongest:
+- **Filtered effects** ("+1/+1 to your Mortal units", "deal 2 to all enemy units with 2 or less health") reward a deck full of one Kind or element. One-shot, easy to read.
+- **Conditions** (`if`) on abilities ("on play, if you control another unit of its element: +1/+1") reward building around a Kind or element. Price the ability about one point below its unconditional cost, since it sometimes misses. `lifeAtMost` and `enemyLifeAtMost` make comeback cards and finishers.
+- **Auras** ("your other Mortal units have +1/+0") are the strongest glue: they hold as long as the source lives, so removal of the source is the counterplay. Put the aura on a rarer card (a King for the Mortals) and keep the bonus at +1.
+
+Auras are computed, not stored as history: after every action the engine recomputes each unit's bonus from the units on the board, so nothing goes stale when a source dies or is silenced, and a replay needs no extra state. A buff from a triggered ability (`turnStart` or `play` with a condition) is permanent instead: use it when the bonus should outlive the card that gave it.
+
+The answers to synergy decks are `silence` (an aura or a death ability), `destroy` with a filter, `bounce` and `freeze` for tempo, and `break` for relic decks. Give every element at least one.
+
+Mark summon-only tokens `"deckable": false` so nobody can put them in a deck.
 
 ## Elements
 

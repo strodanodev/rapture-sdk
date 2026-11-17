@@ -98,7 +98,8 @@ export function kitSupport(elements: Array<{ id: string; name: string }>, arch: 
     }
   }
   const valueElement = elements.find((e) => arch[e.id] === 'value')?.id ?? elements[0]?.id;
-  if (valueElement) out.push({ id: TOKEN, name: 'Construct', type: 'unit', element: valueElement, cost: 1, attack: 1, health: 1, rarity: 'common' });
+  // Summoned only (by kits, Assembly and the Forge power): never in a deck.
+  if (valueElement) out.push({ id: TOKEN, name: 'Construct', type: 'unit', element: valueElement, cost: 1, attack: 1, health: 1, rarity: 'common', deckable: false });
   return out;
 }
 

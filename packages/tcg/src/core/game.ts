@@ -1,4 +1,5 @@
-import { checkEffect, KEYWORDS, TRIGGERS } from './effects';
+import { checkAura, checkCondition, checkEffect, KEYWORDS, TRIGGERS } from './effects';
+import type { Catalog } from './effects';
 import type { CardDef, GameConfig, StatMapping } from './types';
 
 /** A validated config with cards indexed for the rules engine. */
@@ -54,7 +55,12 @@ export function validateGame(cfg: GameConfig): string[] {
   mapping('spellPower', ch?.spellPower, 0, 20);
   mapping('unitAttack', ch?.unitAttack, 0, 20);
   mapping('openingHand', ch?.openingHand, 0, 10);
+  const minCost = ch?.unitAttack?.minCost;
+  need(minCost === undefined || isInt(minCost, 0, 99), 'champion.unitAttack.minCost must be an integer 0-99 (units that cost less get no unitAttack)');
+  for (const k of ['life', 'spellPower', 'openingHand'] as const) need((ch?.[k] as { minCost?: unknown } | undefined)?.minCost === undefined, `champion.${k}.minCost: only unitAttack takes a minCost`);
   const unitIds = new Set((cfg.cards ?? []).filter((c) => c.type === 'unit').map((c) => c.id));
+  // What filters and conditions may name: this game's elements, and the kinds its cards have.
+  const cat: Catalog = { unitIds, elements: elementIds, kinds: new Set((cfg.cards ?? []).map((c) => c.kind).filter((k): k is string => typeof k === 'string')) };
   if (ch?.powers !== undefined) {
     need(Array.isArray(ch.powers) && ch.powers.length <= 32, 'champion.powers must be a list of at most 32 powers');
     for (const pw of Array.isArray(ch.powers) ? ch.powers : []) {
@@ -64,7 +70,7 @@ export function validateGame(cfg: GameConfig): string[] {
       need(isInt(pw?.cost, 0, 10), `${at}: cost must be an integer 0-10`);
       need(pw?.element === undefined || elementIds.has(pw.element), `${at}: unknown element ${JSON.stringify(pw?.element)}`);
       need(pw?.stat === undefined || STATS.includes(pw.stat), `${at}: stat must be one of ${STATS.join(', ')}`);
-      for (const e of checkEffect(pw?.effect, unitIds, { automatic: false, onUnit: false })) errs.push(`${at}: ${e}`);
+      for (const e of checkEffect(pw?.effect, cat, { automatic: false, onUnit: false })) errs.push(`${at}: ${e}`);
     }
   }
 
@@ -94,19 +100,25 @@ export function validateGame(cfg: GameConfig): string[] {
       need(c.abilities === undefined || (Array.isArray(c.abilities) && c.abilities.length <= 3), `${at}: abilities must be a list of at most 3`);
       for (const a of Array.isArray(c.abilities) ? c.abilities : []) {
         need(a?.on in TRIGGERS, `${at}: ability trigger must be one of ${Object.keys(TRIGGERS).join(', ')}`);
-        for (const e of checkEffect(a?.effect, unitIds, { automatic: a?.on !== 'play', onUnit: a?.on !== 'death' })) errs.push(`${at}: ${a?.on} ability: ${e}`);
+        for (const e of checkEffect(a?.effect, cat, { automatic: a?.on !== 'play', onUnit: a?.on !== 'death' })) errs.push(`${at}: ${a?.on} ability: ${e}`);
+        if (a?.if !== undefined) for (const e of checkCondition(a.if, 'if', cat)) errs.push(`${at}: ${a?.on} ability: ${e}`);
       }
+      if (c.aura !== undefined) for (const e of checkAura(c.aura, cat)) errs.push(`${at}: ${e}`);
     } else if (c.type === 'spell' || c.type === 'relic') {
       need(!!c.effect, `${at}: a ${c.type} needs an effect`);
-      if (c.effect) for (const e of checkEffect(c.effect, unitIds, { automatic: c.type === 'relic', onUnit: false })) errs.push(`${at}: ${e}`);
+      if (c.effect) for (const e of checkEffect(c.effect, cat, { automatic: c.type === 'relic', onUnit: false })) errs.push(`${at}: ${e}`);
+      need(c.aura === undefined, `${at}: only units have an aura`);
     } else {
       errs.push(`${at}: type must be unit, spell or relic`);
     }
+    need(c.deckable === undefined || typeof c.deckable === 'boolean', `${at}: deckable must be true or false`);
   }
+  const undeckable = new Set((cfg.cards ?? []).filter((c) => c.deckable === false).map((c) => c.id));
 
   let deckSize = 0;
   for (const [id, n] of Object.entries(cfg.deck ?? {})) {
     need(ids.has(id), `deck references unknown card ${id}`);
+    need(!undeckable.has(id), `deck holds ${id}, which is deckable: false (a summon-only token)`);
     need(isInt(n, 1, 60), `deck count for ${id} must be an integer 1-60`);
     deckSize += Number.isInteger(n) ? n : 0;
   }

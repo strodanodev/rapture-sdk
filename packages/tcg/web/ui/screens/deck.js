@@ -1,6 +1,7 @@
 // The deck forge (declared-deck games): every card on the left, your deck, its mana curve and the start button on the
 // right. Any card may be played in practice and casual matches; with &owned=1 the forge offers only held collection
-// cards (support cards are always free), as the relay will enforce (TCG_OWNED=1).
+// cards (support cards are always free), as the relay will enforce (TCG_OWNED=1). Summon-only tokens
+// (`deckable: false`) are never offered: the rules refuse to declare them.
 import { h, icon, stagger } from "../dom.js";
 import { pageHead } from "../router.js";
 import { walletChip } from "../widgets.js";
@@ -13,7 +14,7 @@ export function deckScreen(app) {
   const key = `deckwright.deck.${game.litnode.rulesetId}`;
   let deck = [], type = "all", onDone = null;
   const tokenOf = (def) => (def.token ? String(def.token.tokenId) : null);
-  const allowed = (def) => !app.requireOwned || !tokenOf(def) || app.owned.has(tokenOf(def));
+  const allowed = (def) => def.deckable !== false && (!app.requireOwned || !tokenOf(def) || app.owned.has(tokenOf(def)));
   const copies = (i) => deck.filter((d) => d === i).length;
   const room = (i) => allowed(game.cards[i]) && copies(i) < D.maxCopies && deck.length < D.size;
 
@@ -43,7 +44,7 @@ export function deckScreen(app) {
 
   function render() {
     typeSeg.replaceChildren(...TYPES.map(([v, label]) => h("button", { type: "button", class: type === v ? "on" : "", text: label, on: { click: () => { type = v; render(); } } })));
-    grid.replaceChildren(...game.cards.map((def, i) => [def, i]).filter(([def]) => type === "all" || def.type === type).sort((a, b) => a[0].cost - b[0].cost || a[0].name.localeCompare(b[0].name)).map(([def, i]) => {
+    grid.replaceChildren(...game.cards.map((def, i) => [def, i]).filter(([def]) => def.deckable !== false && (type === "all" || def.type === type)).sort((a, b) => a[0].cost - b[0].cost || a[0].name.localeCompare(b[0].name)).map(([def, i]) => {
       const ok = allowed(def), n = copies(i);
       const face = app.cards.cardFace(def, { tag: "button" });
       face.disabled = !ok;

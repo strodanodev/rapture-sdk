@@ -4,7 +4,20 @@ Every rules or card change ships under a new `rulesetId`, so a game built on an 
 
 ## Unreleased
 
-No rules change: every ruleset replays exactly as before.
+No rules change for existing games: every ruleset replays exactly as before. The new mechanics below are opt-in through the game JSON, and a game that uses none of them compiles, plays, replays and simulates exactly as it did (same states, so the same LitNode state roots, and the same bot moves). A game that adopts any of them needs a new `rulesetId`.
+
+- **Synergies and new card mechanics (0.10.0)**, each defined once in `src/core/effects.ts` and `types.ts` and resolved through `Fx`, with card text from `describeCard`:
+  - **conditions:** an ability's optional `if`, checked when it fires (a `play` ability's as the card is played): `allies` / `enemies` (at least `count` units matching a filter; a unit is never its own ally), `lifeAtMost` and `enemyLifeAtMost`. "On play, if you control another unit of its element: +1/+1 to itself";
+  - **unit filters** (`element`, `kind`, `sameElement`, `sameKind`, `attackAtMost`, `healthAtMost`) for conditions, auras and an effect's new `filter`, which narrows a unit target: a chosen target must match, an automatic one hits only matching units ("+1/+1 to your Mortal units", "Destroy an enemy unit with 3 or less attack");
+  - **auras:** a unit's `aura` (`attack`, `health`, `to`: others, this or all, `filter`, `if`) is recomputed after every action from the units on the board, so it never goes stale when its source dies or is silenced, and replays need no extra state. Losing an aura never destroys a unit. Chosen over triggered tribal buffs because "while you control a King" is a state, not an event: recomputing it is integer-only, costs at most 5×5 checks per side per action, and only runs in games that have an aura;
+  - **new ops:** `destroy` (through shields), `silence` (keywords, abilities and aura; buffs stay), `freeze` (no attack on the owner's next turn), `bounce` (back to the owner's hand, without dying) and `break` (the enemy's oldest relics);
+  - **new triggers:** `turnEnd`, `damaged` (also on the damage that destroys it) and `allyDeath` (not on a bounce). `damaged` abilities queue and fire in the settle after the action, which chains them with death abilities under the same 16-round bound;
+  - unit states carry `frozen`, `silenced` and `aura` only while they apply.
+- **`champion.unitAttack.minCost`:** only units that cost at least this much get the champion's unitAttack (default 0: every unit, as before). Strength's +1 attack doubled every 1/1, which made one stat decide too many matches.
+- **`deckable: false`** marks a summon-only token: the validator rejects it in `deck`, the rules refuse to declare it, and the deck builder, random sim decks (`sim --decks random`) and the Gauntlet never offer it. `tessaract import` marks its Construct token so.
+- **Bot:** values silence (a silenced unit's keywords and abilities count for nothing), freeze (a frozen unit loses its attack's worth, and frozen enemies are left out of the lethal check), the new triggers and aura sources, and, in games that can break relics, the enemy's relics. In games with conditions or auras, unit plays get the one-action look-ahead spells already had, so it plays a King before the Mortals it boosts: about 1.3x the sim time, and it beats the bot without it 65% of the time on the demo. Every new term is zero in a game without these mechanics.
+- **A demo game, `test/fixtures/synergy-duel.game.json`,** uses every new mechanic and passes the fun targets (`sim --strict`, with suggested, random and mixed decks); `scripts/check.sh tcg` sims it. `test/synergy.test.ts` covers each mechanic, the validation messages and the card text.
+- The game-config reference and the design guide document the new fields, with prices for the new abilities and a section on synergy design.
 
 - **Gauntlet rewards that do what they say** (saved runs carry over):
   - **One life means one attempt:** a Gauntlet match is on the record before it starts (`Gauntlet.fight`). Leaving it mid-match, the browser's back button or closing the page counts as a loss (`Gauntlet.forfeit`), so a losing match can no longer be abandoned and replayed with the same draws. The pause menu says "Leave (counts as a loss)".
