@@ -5,12 +5,14 @@
  * Pages, the client modules, the engine and the game data go network first: a new deploy shows on the next launch,
  * and the cached copy is the offline fallback (audio/ too: a game may replace a sound under the same name). Files
  * under assets/ are named by version (a rebuilt arena ships as a new file), so they are served from the cache once
- * seen. Cross-origin requests (fonts, RPC, relay, wallet) are never touched.
+ * seen; the manifests that name them (assets/arena/*.json, assets/cards/*.json) go network first. Cross-origin requests (fonts, RPC, relay, wallet) are never touched.
  */
 const VERSION = "tessaract-v1";
 const ROOT = new URL("./", self.location).pathname;
 const SHELL = ["./", "./manifest.webmanifest", "./favicon.svg"];
-const IMMUTABLE = new RegExp(`^${ROOT}assets/`);
+// The manifests (assets/arena/*.json, assets/cards/*.json) keep their names and point at the versioned files, so they
+// must stay fresh: network first, like data.
+const IMMUTABLE = new RegExp(`^${ROOT}assets/(?!(?:arena|cards)/[^/]+\\.json$)`);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));

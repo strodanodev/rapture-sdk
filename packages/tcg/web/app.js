@@ -46,7 +46,7 @@ const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), 
 boot(0.15, "Reading the game");
 // assets/cards/art.json (optional) names an illustration for cards with no painting: { "<card id>": "<file>" }
 const [game, snap, cardArt] = await Promise.all([fetch("./data/game.json").then((r) => r.json()), fetch("./data/collection.json").then((r) => r.json()),
-  fetch("./assets/cards/art.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}))]);
+  fetch("./assets/cards/art.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))]);
 boot(0.45, "Forging the rules");
 const rules = createRules(compileGame(game));
 const byToken = new Map(snap.cards.map((c) => [String(c.tokenId), c]));

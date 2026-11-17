@@ -18,6 +18,10 @@ No rules change for existing games: every ruleset replays exactly as before. The
 - **Bot:** values silence (a silenced unit's keywords and abilities count for nothing), freeze (a frozen unit loses its attack's worth, and frozen enemies are left out of the lethal check), the new triggers and aura sources, and, in games that can break relics, the enemy's relics. In games with conditions or auras, unit plays get the one-action look-ahead spells already had, so it plays a King before the Mortals it boosts: about 1.3x the sim time, and it beats the bot without it 65% of the time on the demo. Every new term is zero in a game without these mechanics.
 - **A demo game, `test/fixtures/synergy-duel.game.json`,** uses every new mechanic and passes the fun targets (`sim --strict`, with suggested, random and mixed decks); `scripts/check.sh tcg` sims it. `test/synergy.test.ts` covers each mechanic, the validation messages and the card text.
 - The game-config reference and the design guide document the new fields, with prices for the new abilities and a section on synergy design.
+- **Returning players see new card art and arenas:** the manifests that name the versioned art files kept their own names, and were cached as immutable, so a re-rendered card set never reached anyone who had loaded the old one. Now:
+  - `vercel.json` (and so every `create`d project) sends `no-cache` for `/assets/cards/*.json` and `/assets/arena/*.json`;
+  - the service worker fetches those manifests network first instead of from its cache;
+  - `app.js` fetches `assets/cards/art.json` with `cache: "no-cache"`, so even a browser holding an `immutable` copy revalidates it.
 
 - **Gauntlet rewards that do what they say** (saved runs carry over):
   - **One life means one attempt:** a Gauntlet match is on the record before it starts (`Gauntlet.fight`). Leaving it mid-match, the browser's back button or closing the page counts as a loss (`Gauntlet.forfeit`), so a losing match can no longer be abandoned and replayed with the same draws. The pause menu says "Leave (counts as a loss)".
