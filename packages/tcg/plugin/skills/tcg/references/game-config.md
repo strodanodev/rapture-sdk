@@ -15,7 +15,7 @@ The types are defined in `src/core/types.ts` and validated by `validateGame()` i
 | `cards` | `CardDef[]` | The card pool |
 | `deck` | `{ cardId: copies }` | The default deck (5–120 cards). With fixed decks every player plays it; with declared decks it's the suggested and fallback deck |
 | `deckRules` | `{ mode, size, maxCopies }`? | How decks are chosen; omit for `fixed`. See below |
-| `cardBack` | string? | Asset path for the client |
+| `cardBack` | string? | The card back the client shows on the deck piles and the foe's hand: a path on the site (`./assets/brand/back.webp`). A `<meta name="tessaract-card-back">` in `web/index.html` takes precedence, and is the better home for a game already on LitNode: the ruleset bundle embeds the whole config, so changing `cardBack` changes its build hash (not its rules) |
 
 ## `deckRules` (wallet decks)
 

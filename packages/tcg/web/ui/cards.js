@@ -73,16 +73,23 @@ export function createCards(app) {
     return h("div", { class: cls }, art ? h("img", { src: art, alt: "", loading: "lazy", decoding: "async", draggable: false, class: art.includes("/assets/cards/") ? "render" : null }) : sigil(def));
   };
 
+  // Long names and rules step their type down by length. The classes add up: "long" (a name past 12 characters, rules
+  // past 34) and "xlong" (rules past 52) are the drawn card's steps; a painted frame (cards.css, :root.card-frame) has a
+  // narrower name plate and rules window, so it also reads "mid" (a name past 9) and the name's "xlong" (past 13), and
+  // the rules' "xxlong" (past 92). The drawn card ignores those, and looks as it always did.
+  const nameSize = (n) => `${n > 9 ? " mid" : ""}${n > 12 ? " long" : ""}${n > 13 ? " xlong" : ""}`;
+  const textSize = (n) => `${n > 52 ? " xlong" : n > 34 ? " long" : ""}${n > 92 ? " xxlong" : ""}`;
+
   /** A full card. `tag` "button" makes it clickable; `small` is the relic size. */
   function cardFace(def, { tag = "div", small = false, cost = def.cost } = {}) {
     const text = describe(def);
     const el = h(tag, { class: `tcard t-${def.type}${small ? " small" : ""}`, data: { rarity: def.rarity ?? "common", el: def.element ?? "neutral", ...(def.kind ? { kind: def.kind } : {}) }, style: `--el:${app.elementColor(def.element)}`, title: keywordHelp(def) || undefined, ...(tag === "button" ? { type: "button" } : {}) },
       h("div", { class: "tc-frame" },
         artBox(def, "tc-art"),
-        h("div", { class: def.name.length > 12 ? "tc-name long" : "tc-name", text: def.name }),
+        h("div", { class: `tc-name${nameSize(def.name.length)}`, text: def.name }),
         h("div", { class: "tc-type", text: typeLine(def) }),
         // long rules text steps down a size or two rather than clipping ("…the enemy champio")
-        h("div", { class: `tc-text${text.join(" ").length > 52 ? " xlong" : text.join(" ").length > 34 ? " long" : ""}` }, ...text.map((t) => h("p", null, ...richLine(t))))),
+        h("div", { class: `tc-text${textSize(text.join(" ").length)}` }, ...text.map((t) => h("p", null, ...richLine(t))))),
       h("span", { class: "tc-cost tabnum", text: cost }),
       def.type === "unit" ? h("span", { class: "tc-atk tabnum", text: def.attack }) : null,
       def.type === "unit" ? h("span", { class: "tc-hp tabnum", text: def.health }) : null,

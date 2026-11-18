@@ -67,6 +67,46 @@ button.tcard:disabled { cursor: default; filter: saturate(0.4) brightness(0.6); 
 .tc-name.long { font-size: 0.9em; letter-spacing: 0.01em; }
 .tcard.small .tc-name { margin: 0; font-size: 0.85em; clip-path: none; }
 
+/* ------------------------------------------------------------------ the game card on a painted frame (opt-in)
+   A game with its own frame names it in index.html, <meta name="tessaract-card-frame" content="./assets/brand/…">, and
+   app.js sets :root.card-frame and --card-frame. The frame is a full-card 5:7 image with a transparent art window,
+   laid over the art; the card's parts are placed on it by percentage, for a frame drawn to this geometry:
+     the window       12.9%–87.3% across, 9.9%–82.4% down (an ornament may rise into its foot, to 78% at the centre)
+     the name plate   19%–81% across, centred 88.7% down (dark ink: the plate is meant to be light, like parchment)
+     the cost seat    centred 12.2% across, 8.4% down        the rarity seat   centred 50% across, 6% down
+     attack, health   centred 7% and 93% across, 95% down
+   Inside the window the art fills 9%–45% down, the type line sits on its foot, and the rules fill 45.5%–78%. Every
+   place is a percentage of the card, so the layout holds at every size and on the phone hand's taller 5:8 card (the
+   frame stretches with it). The rules and names step down more than on the drawn card (cards.js: mid, xlong,
+   xxlong): the window and plate are narrower. */
+:root.card-frame .tcard { padding: 0; border-radius: 3.8% / 2.7%; background: #0b0910; }
+:root.card-frame .tc-frame { position: absolute; inset: 0; display: block; height: auto; border-radius: inherit; }
+:root.card-frame .tc-frame::after { inset: 0; border: 0; border-radius: 0; background: var(--card-frame) 0 0 / 100% 100% no-repeat; }
+/* the art runs a little under the window's edge, so no seam shows */
+:root.card-frame .tc-art { position: absolute; left: 12%; right: 12%; top: 9%; height: 36%; }
+:root.card-frame .tc-art::after { background: linear-gradient(180deg, transparent 55%, rgba(11, 9, 16, 0.92)); }   /* the type line is set on the art's foot */
+:root.card-frame .tc-name { position: absolute; left: 19%; right: 19%; top: 88.7%; transform: translateY(-50%); margin: 0; padding: 0; isolation: auto; font-size: 1em; letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--rar) 28%, #2a1708); background: none; clip-path: none; text-shadow: 0 1px 0 rgba(255, 244, 214, 0.55); }   /* inked on the plate, in a shade of the rarity */
+:root.card-frame .tc-name::before { content: none; }
+:root.card-frame .tc-name:is(.mid, .long) { font-size: 0.88em; letter-spacing: 0; }
+:root.card-frame .tc-name.xlong { font-size: 0.78em; }
+:root.card-frame .tc-type { position: absolute; z-index: 3; left: 14%; right: 14%; top: 40.5%; height: 4.5%; padding: 0 0.3em; color: color-mix(in srgb, var(--el) 55%, #e8dcc4); text-shadow: 0 1px 3px #000, 0 0 6px #000; }
+:root.card-frame .tc-text { position: absolute; z-index: 3; left: 13.6%; right: 13.6%; top: 45.5%; bottom: 22%; margin: 0; padding: 0.25em 0.35em; font-size: 1.1em; line-height: 1.2; }
+:root.card-frame .tc-text.long { font-size: 0.95em; line-height: 1.14; }
+:root.card-frame .tc-text.xlong { font-size: 0.84em; line-height: 1.1; }
+:root.card-frame .tcard:not(.t-unit) .tc-text { font-size: 1.22em; line-height: 1.16; }
+:root.card-frame .tcard:not(.t-unit) .tc-text.long { font-size: 1.06em; line-height: 1.12; }
+:root.card-frame .tcard:not(.t-unit) .tc-text.xlong { font-size: 0.94em; line-height: 1.08; }
+/* the longest rules (~100 characters and up): smallest, read in full when the card is held up */
+:root.card-frame .tcard .tc-text.xlong.xxlong { font-size: 0.72em; line-height: 1.08; gap: 0.12em; }
+:root.card-frame .tcard.t-unit .tc-text { padding-bottom: 0.25em; }   /* the attack and health gems sit on the frame, not over the rules */
+:root.card-frame :is(.tc-cost, .tc-atk, .tc-hp) { translate: -50% -50%; }
+:root.card-frame .tc-cost { left: 12.2%; top: 8.4%; }
+:root.card-frame .tc-atk { left: 7%; top: 95%; bottom: auto; }
+:root.card-frame .tc-hp { left: 93%; right: auto; top: 95%; bottom: auto; }
+:root.card-frame .tc-gem { z-index: 3; left: 50%; right: auto; top: 6%; width: 1.1em; height: 1.1em; translate: -50% -50%; }
+:root.card-frame .tcard.small .tc-art { height: 73%; }   /* no rules at relic size: the art fills the window */
+
 /* ------------------------------------------------------------------ the unit token on the board */
 .unit { --rar: var(--r-common); --el: var(--neutral); position: relative; width: var(--u, 84px); height: calc(var(--u, 84px) * 1.22); padding: 0; border: 0; background: none; color: var(--text); flex: none; transition: transform 0.22s var(--ease-out), filter 0.22s; }
 .u-ring { position: absolute; inset: 0 0 8% 0; padding: 3px; border-radius: 48% 48% 14% 14% / 40% 40% 12% 12%; background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 90%, white), color-mix(in srgb, var(--rar) 45%, black) 50%, color-mix(in srgb, var(--rar) 80%, white));

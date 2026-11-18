@@ -106,7 +106,11 @@ let shopVisit = false;
 // The game's own brand, all optional, in index.html: <meta name="tessaract-logo" content="./assets/brand/…" data-alt="…"
 // data-sub="…"> is a title image shown in place of the game's name (with an optional line under it), <meta
 // name="tessaract-presenter" content="…"> reads "… presents" above it, and <meta name="tessaract-mark" content="…"
-// data-alt="…"> is a small mark beside the season badge. Images come from this site only.
+// data-alt="…"> is a small mark beside the season badge. <meta name="tessaract-card-frame" content="…"> lays the game
+// cards out on the game's own painted frame (cards.css, :root.card-frame: a 5:7 image drawn to that geometry, with a
+// transparent art window), and <meta name="tessaract-card-back" content="…"> (or the game config's cardBack) is the back
+// on the deck piles and the foe's hand; without them the cards and backs are drawn as before. Images come from this
+// site only.
 const brand = (() => {
   const meta = (n) => document.querySelector(`meta[name="${n}"]`);
   const local = (m) => { try { const u = new URL(m?.content ?? "", location.href); return m?.content && u.origin === location.origin ? u.href : null; } catch { return null; } };
@@ -115,8 +119,15 @@ const brand = (() => {
     logo: logo ? { src: logo, alt: l.dataset.alt?.trim() || game.title, sub: l.dataset.sub?.trim() || "" } : null,
     mark: mark ? { src: mark, alt: m.dataset.alt?.trim() || "" } : null,
     presenter: meta("tessaract-presenter")?.content?.trim() || null,
+    cardFrame: local(meta("tessaract-card-frame")),
+    cardBack: local(meta("tessaract-card-back")) ?? local({ content: game.cardBack }),
   };
 })();
+for (const [cls, url] of [["card-frame", brand.cardFrame], ["card-back", brand.cardBack]]) {
+  if (!url) continue;
+  document.documentElement.classList.add(cls);
+  document.documentElement.style.setProperty(`--${cls}`, `url("${url}")`);
+}
 document.addEventListener("visibilitychange", () => { if (!document.hidden && shopVisit) { shopVisit = false; void refreshOwned(); } });
 
 // ------------------------------------------------------------------ the app: what every screen reads

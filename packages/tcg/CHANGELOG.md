@@ -2,6 +2,15 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
+## 0.10.3 (2026-11-18): a game's own card frame and card back
+
+Client only: no rules change, every ruleset replays exactly as before. A game that names neither looks exactly as it did.
+
+- **A painted card frame:** `<meta name="tessaract-card-frame" content="./assets/brand/…">` in `web/index.html` lays the game cards out on the game's own frame (`app.js` sets `:root.card-frame` and `--card-frame`; the layout is in `styles/cards.css`). The frame is a full-card 5:7 image with a transparent art window, drawn over the art, and the card's parts sit on it by percentage: the art and its type line in the top of the window, the rules under them, the name on a light plate below the window, the cost on a top-left seat, the rarity gem in a top-centre medallion, attack and health on the bottom corners. A frame must be drawn to that geometry (the comment over the rules gives every measure). The layout holds at every card size and on the phone hand's 5:8 card.
+- **Smaller type to fit the frame:** the window and name plate are narrower than the drawn card, so on a frame names step down from 10 and 14 characters and the longest rules (past 92 characters) get one more size. `cardFace` adds the classes (`mid`, a name's `xlong`, the rules' `xxlong`) next to the existing `long` and `xlong`, which keep their meaning, so the drawn card is unchanged.
+- **A card back:** `<meta name="tessaract-card-back" content="…">`, or the game config's `cardBack` (documented before but never read; the meta suits a game already on LitNode, whose ruleset bundle embeds the config), replaces the drawn back on the deck piles, the foe's hand and the deck chip (`:root.card-back`, `--card-back`).
+- Both images come from the site itself, like the logo and mark. Rapture TCG is the first game to use them.
+
 ## 0.10.2 (2026-11-18): smoother board effects, fresh arena manifests
 
 Client only: no rules change, every ruleset replays exactly as before.

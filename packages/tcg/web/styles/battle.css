@@ -67,6 +67,7 @@
 .chip-mini b { font-weight: 600; }
 .chip-mini.buff { border-color: color-mix(in srgb, var(--gold-2) 55%, transparent); color: var(--gold-0); background: rgba(255, 201, 94, 0.1); }
 .cardback { width: 9px; height: 12px; border-radius: 2px; background: linear-gradient(135deg, var(--gold-3), #3a2a14 70%); box-shadow: inset 0 0 0 1px var(--gold-2); }
+:root.card-back .cardback { border-radius: 1px; background: var(--card-back) center / 100% 100%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }   /* a game's own card back (app.js, from <meta name="tessaract-card-back">) */
 /* the deck piles, the foe's fan and your energy crystal carry these on wider screens: no second copy in the chips */
 @media (min-width: 900px) and (min-height: 600px) { .chip-mini.c-deck, .chip-mini.c-hand, .plate.bottom .pl-energy { display: none; } }
 .pl-energy { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
@@ -173,6 +174,7 @@ body:has(#arena.board3d) :is(.tm-ring, .tm-edge, .tm-band, .tm-rim) { display: n
     box-shadow: inset 0 0 0 2px #0b0910, inset 0 0 0 3px var(--gold-3), 0 6px 14px rgba(0, 0, 0, 0.6); }
   .deck-pile { display: grid; place-items: center; position: absolute; right: calc(100% + 18px); top: 50%; width: 48px; height: 66px; transform: translateY(-50%); }
   .deck-pile i { position: absolute; inset: 0; border-radius: 4px; background: repeating-linear-gradient(45deg, rgba(255, 201, 94, 0.07) 0 3px, transparent 3px 9px), linear-gradient(160deg, #3b2650, #150c1e 70%); box-shadow: inset 0 0 0 2px #0b0910, inset 0 0 0 3px var(--gold-3), 0 3px 8px rgba(0, 0, 0, 0.6); }
+  :root.card-back :is(.foe-hand i, .deck-pile i) { border-radius: 3px; background: var(--card-back) center / 100% 100%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 4px 10px rgba(0, 0, 0, 0.6); }   /* the game's own back, in place of the drawn one */
   .deck-pile i:nth-child(2) { transform: translate(-3px, -3px); }
   .deck-pile i:nth-child(3) { transform: translate(-6px, -6px); }
   .deck-pile b { position: relative; transform: translate(-6px, -6px); min-width: 30px; padding: 2px 6px; border-radius: 999px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--gold-0); background: rgba(8, 6, 12, 0.88); box-shadow: 0 0 0 1px var(--gold-3); }
@@ -294,6 +296,10 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
 .hand .tcard .tc-name:not(.long) { font-size: max(1.08em, 10px); }
 .hand .tcard .tc-type { font-size: max(0.78em, 8.5px); }
 @media (min-width: 761px) { .hand .tcard .tc-name.long { font-size: max(0.9em, 10px); letter-spacing: 0; padding-inline: 0.6em; } }
+/* on a painted frame (cards.css, :root.card-frame) the name sits on the frame's plate, which is narrower */
+:root.card-frame .hand .tcard .tc-name { font-size: max(1em, 10px); padding-inline: 0; }
+:root.card-frame .hand .tcard .tc-name:is(.mid, .long) { font-size: max(0.88em, 9.5px); }
+:root.card-frame .hand .tcard .tc-name.xlong { font-size: max(0.78em, 9px); }
 /* wider screens: the hand rests on a forged tray, an arched rail under the cards, so the foot of the table reads as
    furniture when the hand is small (it was an empty dark third) */
 @media (min-width: 761px) {
@@ -607,6 +613,14 @@ body:has(#arena.board3d) .match:has(.hand .tcard.t-unit.can:is(:hover, :focus-vi
   .hand .tcard .tc-name.long { font-size: max(1.02em, 9px); text-overflow: clip; letter-spacing: 0; }
   .hand .tcard .tc-text { font-size: max(1.02em, 10.5px); }   /* readable at arm's length: at 8.5px the rules line was a smudge */
   .hand .tcard :is(.tc-atk, .tc-hp) { bottom: -0.75em; }   /* and the gems hang a little lower, into the hand's bottom padding */
+  /* on a painted frame: the rules sit in the window under the art (still three lines at most), the name on the plate to
+     its notched ends, and the gems on the frame's own seats */
+  :root.card-frame .hand .tcard .tc-frame { padding-bottom: 0; }
+  :root.card-frame .hand .tcard .tc-text:is(.xlong.xxlong, *) { top: 47%; bottom: 21%; left: 14.5%; right: 14.5%; margin: 0; padding: 0; box-shadow: none; align-content: start; font-size: max(1.02em, 10.5px); line-height: 1.15; }
+  :root.card-frame .hand .tcard .tc-name { left: 15.5%; right: 15.5%; padding: 0; white-space: nowrap; line-height: 1.15; font-size: max(1.06em, 9.5px); }
+  :root.card-frame .hand .tcard .tc-name:is(.mid, .long) { font-size: max(0.96em, 9px); text-overflow: ellipsis; }
+  :root.card-frame .hand .tcard .tc-name.xlong { font-size: max(0.86em, 8px); letter-spacing: -0.02em; }
+  :root.card-frame .hand .tcard :is(.tc-atk, .tc-hp) { bottom: auto; }
   .hand .tcard:hover, .hand .tcard:focus-visible { transform: translateY(-8px); }
   .hand .tcard.picked { transform: translateY(-16px); }
   /* the cards past the hand's edge, counted in a gold chip over it (a tap scrolls to them) */
