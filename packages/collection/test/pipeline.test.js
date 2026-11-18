@@ -39,8 +39,8 @@ describe('metadata pipeline', function () {
     assert.ok(doc);
     assert.equal(keccak256(doc.data), t.card.design.designHash);
     assert.equal(doc.name, `${t.card.design.designHash.slice(2)}.json`);
-    const art = t.files.find((f) => f.name.endsWith('.png'));
-    assert.equal(art?.name, `${sha256(fakeRead('ser-brightwall.png')).slice(2)}.png`);
+    const art = t.files.find((f) => f.name.endsWith('.svg'));
+    assert.equal(art?.name, `${sha256(fakeRead('ser-brightwall.svg')).slice(2)}.svg`);
     assert.equal(t.card.design.overridesHash, keccak256('{"tcg":{"cost":4}}'));
     assert.equal(t.card.traits.bodyparts, 2 + (1 << 8));   // Helm 2, Cloak 1
   });
@@ -54,7 +54,7 @@ describe('metadata pipeline', function () {
     bad((r) => { delete r.tokens[1].kit; }, /must name a kit/);
     bad((r) => { r.tokens[0].kit = 'Horn'; }, /names no kit/);
     bad((r) => { r.tokens[0].name = 'Ser <b>'; }, /may only use/);
-    bad((r) => { r.tokens[0].art = 'art/x.webp'; }, /must be a \.png file/);
+    bad((r) => { r.tokens[0].art = 'art/x.webp'; }, /must be a \.svg file/);
     bad((r) => { r.tokens[0].parts = { Helm: 3 }; }, /outside 0\.\.2/);
     bad((r) => { r.tokens[0].alignment = 255; }, /alignment: out of range/);
     assert.throws(() => example('starter', (r) => { r.setId = 0; }), /setId/);

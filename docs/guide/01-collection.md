@@ -63,7 +63,8 @@ The Blender harness turns a config into files. Each script runs headless:
   ```bash
   blender --background --python blender/render_cards.py -- --config examples/starter/blender/cards.json
   ```
-  Point each token's `art` at its render (`renders.json` lists them).
+  Point each token's `art` at its render (`renders.json` lists them). Every image in a collection shares one
+  `images.ext`: the starter ships SVG placeholders, so set it to `"png"` (or render WebP) when you switch to renders.
 - **Avatars:** `export_avatars.py` turns rigged GLB/FBX characters into game-ready GLBs. It keeps the clips a game
   plays (idle, attack, hit, death), drops helper objects, compresses with Draco and writes an uncompressed twin.
   These are the token's `avatar` and `avatarPlain`.

@@ -6,7 +6,7 @@
   "registry": {
     "liteforge": "0x38DF2543e039E775D3f674f7414df43e4eF2f883"
   },
-  "images": { "base": "", "ext": "png" },
+  "images": { "base": "", "ext": "svg" },
   "info": {
     "description": "A starter collection made with the Rapture SDK: every token is a playable ERC-6699 champion.",
     "image": "",

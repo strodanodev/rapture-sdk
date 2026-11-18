@@ -13,7 +13,7 @@ What is in the package:
 | `scripts/` | Hardhat deploy, mint and verify scripts, and a local-chain registry stand-in |
 | `blender/` | a Blender harness: card renders, avatar GLB export with Draco, scene export, HDR grading, alpha keying |
 | `tools/meshy_gen.py` | an optional Meshy text-to-3D generator (your API key) |
-| `examples/` | `starter` (a complete example with placeholder art) and `rapture` (Rapture ARC 1's configuration, by reference) |
+| `examples/` | `starter` (a complete example with SVG placeholder art) and `rapture` (Rapture ARC 1's configuration, by reference) |
 
 The guide walks through it end to end: [docs/guide/01-collection.md](../../docs/guide/01-collection.md).
 
@@ -228,7 +228,8 @@ blender --background --python blender/<script>.py -- --config <file.json> [--onl
 Each script's header lists its config keys. The harness needs nothing beyond Blender (numpy ships with it). Scripts
 that build a scene start from factory settings and never save the .blend, so a user's open scenes are not touched.
 
-Examples: `examples/starter/blender/cards.json` renders the starter's three cards with the built-in card. The configs
+Examples: `examples/starter/blender/cards.json` renders the starter's three cards with the built-in card, as PNGs:
+point the tokens' `art` at the renders and set `images.ext` to `"png"`. The configs
 in `examples/rapture/blender/` point at Rapture's sources (champion avatars, the forge hall, its bakes, the Chess
 logo) by monorepo path.
 
