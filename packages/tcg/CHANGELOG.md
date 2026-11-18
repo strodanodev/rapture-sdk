@@ -2,7 +2,7 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
-## Unreleased
+## 0.10.1 (2026-11-18): synergies, new card mechanics, and their states on the board
 
 No rules change for existing games: every ruleset replays exactly as before. The new mechanics below are opt-in through the game JSON, and a game that uses none of them compiles, plays, replays and simulates exactly as it did (same states, so the same LitNode state roots, and the same bot moves). A game that adopts any of them needs a new `rulesetId`.
 
