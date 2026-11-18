@@ -2,6 +2,13 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
+## 0.10.2 (2026-11-18): smoother board effects, fresh arena manifests
+
+Client only: no rules change, every ruleset replays exactly as before.
+
+- **No forced layouts when effects land.** When a move's blows, heals, freezes and silences landed, the board read each surviving unit's position right after starting the previous unit's glow, and every flash re-read the effect layer's box, so each unit cost a full style and layout pass ("Freeze all enemy units" or a board-wide heal paid it once per unit). The effects now read every position first and then play, the layer's box is read once a frame, and a glow or shake forces a reflow only to restart an animation that is still running. In a measured synergy-demo match the effect timers had spent about 1 s in forced layout; they now cause no long frames.
+- **Arena manifests skip the HTTP cache.** `assets/arena/arena.json` (the realm files and posters) is fetched with `cache: "no-cache"`, like `assets/cards/art.json`, so a redeployed arena is picked up on the next load instead of after the browser's heuristic cache expires.
+
 ## 0.10.1 (2026-11-18): synergies, new card mechanics, and their states on the board
 
 No rules change for existing games: every ruleset replays exactly as before. The new mechanics below are opt-in through the game JSON, and a game that uses none of them compiles, plays, replays and simulates exactly as it did (same states, so the same LitNode state roots, and the same bot moves). A game that adopts any of them needs a new `rulesetId`.

@@ -183,12 +183,17 @@ export function createBattleFx(root, arena, game) {
       }
 
       later(land, () => {
+        // every position first, then the effects: reading a rect after an effect's DOM write forces a layout, once
+        // per unit when the two interleave
+        const handTo = [0, 1].map((i) => (bounced[i].size ? (view.mine(i) ? rectOf(view.hand) : rectOf(view.foeHand)) : null));
+        const alive = [0, 1].map((i) => [...(aligned[i]?.to ?? [])].map(([k, j]) => ({ k, j, r: rectOf(now[i][j]) })));
+        const champ = [0, 1].map((i) => portrait(i));
         // the fallen burn; the bounced fly back to their owner's hand
         for (const i of [0, 1]) for (const k of aligned[i]?.dead ?? []) {
           const g = ghosts[i][k], r = old[i][k]?.rect;
           if (!g || !r) continue;
           if (bounced[i].has(k)) {
-            g.recall(view.mine(i) ? rectOf(view.hand) : rectOf(view.foeHand));
+            g.recall(handTo[i]);
             vfx.pop(center(r), hexOf(before.p[i].board[k].c), "bounce", { size: 1, table: base(r) });
             continue;
           }
@@ -196,8 +201,8 @@ export function createBattleFx(root, arena, game) {
           vfx.pop(center(r), hexOf(before.p[i].board[k].c), "death", { size: 1.2, table: base(r) });
         }
         // the survivors: hurt, healed, strengthened, shields broken
-        for (const i of [0, 1]) for (const [k, j] of aligned[i]?.to ?? []) {
-          const a = before.p[i].board[k], b = s.p[i].board[j], n = now[i][j], r = rectOf(n);
+        for (const i of [0, 1]) for (const { k, j, r } of alive[i]) {
+          const a = before.p[i].board[k], b = s.p[i].board[j], n = now[i][j];
           if (!a || !b || !r) continue;
           if (b.hp < a.hp) { vfx.shake(n); if (!struck.has(`${i}:${k}`)) vfx.pop(center(r), HIT_HEX, "hit", { size: 0.75, table: base(r) }); }
           else if (b.hp > a.hp) { vfx.glow(n, "heal"); vfx.pop(center(r), HEAL_HEX, "heal", { size: 0.8, table: base(r) }); }
@@ -209,7 +214,7 @@ export function createBattleFx(root, arena, game) {
         }
         // the champions: a blow or a healing on the portrait (off the table: 2D sparks)
         for (const i of [0, 1]) {
-          const d = s.p[i].life - before.p[i].life, r = portrait(i);
+          const d = s.p[i].life - before.p[i].life, r = champ[i];
           if (!d || !r || struck.has(`${i}:champ`)) continue;
           vfx.pop(center(r), d < 0 ? HIT_HEX : HEAL_HEX, d < 0 ? "hit" : "heal", { size: d < 0 ? 1.2 : 1 });
         }

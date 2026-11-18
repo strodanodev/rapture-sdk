@@ -23,8 +23,13 @@ export function createVfx(root, arena) {
   root.append(layer);
   arena?.mountFx?.(layer);   // the 3D bursts' canvas, over the board
   const still = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // positions inside the layer (it covers the battle screen, which may not start at the window's corner)
-  const local = (p) => { const b = layer.getBoundingClientRect(); return { x: p.x - b.left, y: p.y - b.top }; };
+  // positions inside the layer (it covers the battle screen, which may not start at the window's corner). Its box is
+  // read once a frame: reading it after each spawn forced a layout per effect (a "freeze all" landed dozens at once).
+  let box = null;
+  const layerBox = () => { if (!box) { box = layer.getBoundingClientRect(); requestAnimationFrame(() => { box = null; }); } return box; };
+  const local = (p) => { const b = layerBox(); return { x: p.x - b.left, y: p.y - b.top }; };
+  // (re)start a CSS animation class: only a running one needs the forced reflow that restarts it
+  const restart = (el, cls) => { if (el.classList.contains(cls)) { el.classList.remove(cls); void el.offsetWidth; } el.classList.add(cls); };
   const spawn = (cls, p, style = "", ms = 900) => {
     const q = local(p), e = document.createElement("i");
     e.className = cls;
@@ -117,7 +122,7 @@ export function createVfx(root, arena) {
   /** A struck unit shakes and flashes red. */
   function shake(el) {
     if (!el?.isConnected) return;
-    el.classList.remove("vfx-hurt"); void el.offsetWidth; el.classList.add("vfx-hurt");
+    restart(el, "vfx-hurt");
     setTimeout(() => el.classList.remove("vfx-hurt"), 560);
     if (!still()) el.animate([{ translate: "0 0" }, { translate: "-7px 0" }, { translate: "6px 0" }, { translate: "-3px 0" }, { translate: "0 0" }], { duration: 320, composite: "add" });
   }
@@ -126,7 +131,7 @@ export function createVfx(root, arena) {
   function glow(el, kind) {
     if (!el?.isConnected) return;
     const cls = `vfx-${kind}`;
-    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    restart(el, cls);
     setTimeout(() => el.classList.remove(cls), 950);
   }
 

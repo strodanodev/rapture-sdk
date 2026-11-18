@@ -88,7 +88,7 @@ export function createArena(root) {
     img.onload = () => { if (posters[api.realm] === file) { poster.style.backgroundImage = `url("${url}")`; root.classList.add("postered"); } };
     img.src = url;
   };
-  fetch(new URL("./assets/arena/arena.json", location.href)).then((r) => (r.ok ? r.json() : null)).then((m) => { posters = m?.posters ?? {}; showPoster(); }, () => {});
+  fetch(new URL("./assets/arena/arena.json", location.href), { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((m) => { posters = m?.posters ?? {}; showPoster(); }, () => {});
   const api = {
     realm: "valhalla",
     mood: "menu",
@@ -149,7 +149,7 @@ export function createArena(root) {
       // Safari's three.js texture path needs the DOM, which a worker doesn't have
       if (/^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent)) throw new Error("Safari: OffscreenCanvas textures unsupported");
       // assets/arena/arena.json may name each realm's file (a rebuilt arena ships under a new name past the cache)
-      const files = await fetch(`${base}arena.json`).then((r) => (r.ok ? r.json() : null)).then((m) => m?.realms ?? {}, () => ({}));
+      const files = await fetch(`${base}arena.json`, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((m) => m?.realms ?? {}, () => ({}));
       const head = await fetch(`${base}${files[api.realm] ?? `${api.realm}.glb`}`, { method: "HEAD" });
       if (!head.ok) throw new Error(`no arena model (${head.status})`);
       canvas = h("canvas", { class: "ar-3d", aria: { hidden: "true" } });
