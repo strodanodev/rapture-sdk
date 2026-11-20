@@ -302,6 +302,21 @@ a.menu-item:hover { text-decoration: none; }
 .stage.lost .st-face img { filter: grayscale(0.4) brightness(0.55) sepia(0.6) hue-rotate(-30deg) saturate(2); }
 .road.preview .st-face img { filter: grayscale(0.35) brightness(0.62) contrast(1.1); }   /* the road ahead: dimmed, still in colour */
 .road.preview .stage:first-child .st-face img { filter: none; }   /* the first foe is the one you meet next */
+/* unlocks: the stage that unlocks a champion, the goal line, and the champion a run unlocked */
+.st-prize { position: absolute; right: 4px; bottom: 4px; z-index: 3; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #201404; background: var(--gold-1); box-shadow: 0 0 14px rgba(255, 201, 94, 0.7); }
+.st-prize svg { width: 13px; height: 13px; }
+.run-goal { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--gold-1); }
+.run-goal svg { width: 16px; height: 16px; flex: none; }
+.run-goal.won { color: var(--ok); }
+.unlock-reveal { display: grid; grid-template-columns: 112px 1fr; gap: 16px; align-items: center; padding: 12px; border: 1px solid var(--gold-2); border-radius: 4px; background: radial-gradient(circle at 15% 50%, rgba(255, 201, 94, 0.16), transparent 60%); animation: rise 0.5s var(--ease-out) both; }
+.unlock-reveal h3 { margin: 2px 0 4px; color: var(--ivory); }
+.locked-note { display: flex; align-items: center; gap: 8px; margin: 0; }
+/* where unlocks are kept: the arcade account, or (a guest) this browser, with a way to sign in */
+.account-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.account-note > svg { width: 16px; height: 16px; flex: none; color: var(--gold-2); }
+.account-note.in > svg { color: var(--ok); }
+.account-note .btn { margin-left: auto; }
+.locked-note svg { width: 15px; height: 15px; flex: none; color: var(--gold-1); }
 .road.preview .stage:last-child .st-face { border-color: var(--gold-3); }
 .st-mark { position: absolute; right: 6px; top: 6px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #241604; background: radial-gradient(circle at 50% 30%, #ffe7a8, #c98a28 75%); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 .st-mark svg { width: 14px; height: 14px; }

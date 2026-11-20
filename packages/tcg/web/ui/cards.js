@@ -4,7 +4,7 @@ import { describeCard, KEYWORDS, TRIGGERS } from "../engine/tessaract.js";
 import { h, icon } from "./dom.js";
 import { sigil } from "./sigil.js";
 
-const KIND_RARITY = { God: "legendary", Titan: "epic", King: "rare", Demigod: "uncommon", Mortal: "common" };
+const KIND_RARITY = { God: "legendary", Titan: "epic", Demigod: "rare", King: "uncommon", Mortal: "common" };
 const RARITY_NAME = { legendary: "Legendary", epic: "Epic", rare: "Rare", uncommon: "Uncommon", common: "Common" };
 // Rules text: keywords and trigger labels are picked out (the text still goes in through textContent).
 const TRIGGER_LABELS = Object.values(TRIGGERS).sort((a, b) => b.length - a.length);
@@ -124,7 +124,7 @@ export function createCards(app) {
   }
 
   /** A collection token as a champion: Rapture Chess's framed card, rarity by Kind, element gem and foil. */
-  function championCard(c, { tag = "div", owned = false, eager = false, tilted = false } = {}) {
+  function championCard(c, { tag = "div", owned = false, locked = false, eager = false, tilted = false } = {}) {
     const def = tokenCard.get(String(c.tokenId));
     const rarity = def?.rarity ?? KIND_RARITY[c.kind] ?? "common";
     const el = h(tag, { class: "ccard", data: { rarity }, style: `--el:${app.elementColor(String(c.element ?? "").toLowerCase())}`, ...(tag === "button" ? { type: "button", title: c.name } : {}) },
@@ -133,7 +133,9 @@ export function createCards(app) {
           h("span", { class: "kind", text: c.kind ?? RARITY_NAME[rarity] }), h("span", { class: "gem", title: c.element ?? "" })),
         h("div", { class: "cplate" }, h("div", { class: "name", text: c.name }), h("div", { class: "sub", text: [c.element, c.faction].filter(Boolean).join(" · ") }))),
       h("span", { class: "foil" }),
-      owned ? h("span", { class: "badge owned" }, icon("check"), "Held") : null);
+      owned ? h("span", { class: "badge owned" }, icon("check"), "Held") : null,
+      locked ? h("span", { class: "lock", title: "Locked" }, icon("lock")) : null);
+    if (locked) { el.classList.add("locked"); el.setAttribute("aria-label", `${c.name}, locked`); }
     if (tilted || tag === "button") tilt(el);
     return el;
   }

@@ -1,7 +1,8 @@
 // The deck forge (declared-deck games): every card on the left, your deck, its mana curve and the start button on the
 // right. Any card may be played in practice and casual matches; with &owned=1 the forge offers only held collection
-// cards (support cards are always free), as the relay will enforce (TCG_OWNED=1). Summon-only tokens
-// (`deckable: false`) are never offered: the rules refuse to declare them.
+// cards (support cards are always free), as the relay will enforce (TCG_OWNED=1). With unlocks on (app.progression),
+// practice offers the collection cards the player has unlocked or holds, and Suggested builds from those and the
+// stock list. Summon-only tokens (`deckable: false`) are never offered: the rules refuse to declare them.
 import { h, icon, stagger } from "../dom.js";
 import { pageHead } from "../router.js";
 import { walletChip } from "../widgets.js";
@@ -12,9 +13,11 @@ export function deckScreen(app) {
   const { game, rules } = app;
   const D = game.deckRules;
   const key = `deckwright.deck.${game.litnode.rulesetId}`;
-  let deck = [], type = "all", onDone = null;
+  let deck = [], type = "all", onDone = null, mode = "practice";
   const tokenOf = (def) => (def.token ? String(def.token.tokenId) : null);
-  const allowed = (def) => def.deckable !== false && (!app.requireOwned || !tokenOf(def) || app.owned.has(tokenOf(def)));
+  // ranked (and an owned-only relay) is the wallet's cards; practice is everything, or what's unlocked
+  const allowed = (def) => def.deckable !== false && (!tokenOf(def) || (app.requireOwned ? app.owned.has(tokenOf(def)) : app.canUse(tokenOf(def), mode)));
+  const progressive = () => !!app.progression && !app.requireOwned && mode === "practice";
   const copies = (i) => deck.filter((d) => d === i).length;
   const room = (i) => allowed(game.cards[i]) && copies(i) < D.maxCopies && deck.length < D.size;
 
@@ -37,6 +40,11 @@ export function deckScreen(app) {
 
   function suggest() {
     deck = [];
+    if (progressive()) {
+      // the player's own collection cards first, then the stock list: a new player's deck is their starter and the stock
+      game.cards.forEach((def, i) => { if (tokenOf(def)) while (room(i)) deck.push(i); });
+      for (const i of app.progression.stock) if (room(i)) deck.push(i);
+    }
     for (const i of rules.game.suggestedDeck) if (room(i)) deck.push(i);
     for (const i of rules.game.deckList) if (room(i)) deck.push(i);
     for (let i = 0; i < game.cards.length && deck.length < D.size; i++) while (room(i)) deck.push(i);
@@ -57,7 +65,7 @@ export function deckScreen(app) {
         h("div", { class: "ft-bar" },
           h("button", { class: "icon-btn sm", type: "button", disabled: !n, aria: { label: `Remove ${def.name}` }, on: { click: () => { deck.splice(deck.lastIndexOf(i), 1); render(); } } }, h("span", { class: "minus", text: "−" })),
           h("span", { class: "ft-n tabnum", text: `${n}/${D.maxCopies}` }),
-          h("span", { class: `ft-note${held ? " held" : ""}`, text: !ok ? "Not in wallet" : held ? "Held" : tokenOf(def) ? "" : "Support" })));
+          h("span", { class: `ft-note${held ? " held" : ""}`, text: !ok ? (progressive() ? "Locked" : "Not in wallet") : held ? "Held" : tokenOf(def) ? "" : "Support" })));
     }));
     // The deck: one row per card, cheapest first, and the curve by cost (7+ in the last bar).
     const counts = new Map();
@@ -81,7 +89,8 @@ export function deckScreen(app) {
     const fieldable = Math.min(D.size, game.cards.reduce((n, def) => n + (allowed(def) ? D.maxCopies : 0), 0));
     const short = app.requireOwned && fieldable < D.size;
     rule.classList.toggle("err", short);
-    rule.textContent = !app.requireOwned ? "Any card may be played in practice and casual matches. Cards your wallet holds are marked, and Wallet deck builds from them."
+    rule.textContent = progressive() ? "Support cards and the champions you've unlocked or hold. Win stages in the Gauntlet to unlock more."
+      : !app.requireOwned ? "Any card may be played in practice and casual matches. Cards your wallet holds are marked, and Wallet deck builds from them."
       : short ? `Owned-only match: support cards and the collection cards your wallet holds make ${fieldable} of the ${D.size} a deck needs. ${app.shop ? `Open packs at ${app.shop.label} to hold more` : "Hold more of the collection"}${app.owned.size ? "" : ", or connect the wallet that holds them"}.`
       : "Owned-only match: collection cards must be in your wallet; support cards are always available.";
   }
@@ -112,9 +121,10 @@ export function deckScreen(app) {
 
   return {
     id: "deck", el,
-    /** Open for a champion; `done(deck)` runs with the finished deck (card indices). */
-    open(done) {
+    /** Open for a champion; `done(deck)` runs with the finished deck (card indices). `m`: the match's mode. */
+    open(done, m = "practice") {
       onDone = done;
+      mode = m;
       try { deck = JSON.parse(localStorage.getItem(key) ?? "[]").filter((i) => Number.isInteger(i) && game.cards[i]); } catch { deck = []; }
       deck = deck.filter((i) => allowed(game.cards[i])).slice(0, D.size);
       if (!deck.length) suggest();

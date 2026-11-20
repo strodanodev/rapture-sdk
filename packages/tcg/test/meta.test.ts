@@ -5,7 +5,7 @@ import test from 'node:test';
 import { LocalBotSession, PuzzleSession } from '../src/client/session';
 import { compileGame, createRules, endTurn, greedyBot, validateGame } from '../src/core/index';
 import type { GameConfig, MatchState } from '../src/core/index';
-import { addMatch, createGauntlet, createPuzzles, emptyProfile, loadProfile, MAX_MATCHES, saveProfile, STAGES, summarize } from '../src/meta/index';
+import { addMatch, addUnlock, cardUnlocked, createGauntlet, createPuzzles, emptyProfile, emptyUnlocks, loadProfile, loadUnlocks, MAX_MATCHES, mergeUnlocks, pickStarter, saveProfile, saveUnlocks, STAGES, START_HEAT, HEAT_MIN, HEAT_MAX, UNLOCK_AT, starterChoices, summarize, unlockedTokens } from '../src/meta/index';
 import type { MatchEntry, Store } from '../src/meta/index';
 
 const load = (p: string): GameConfig => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8')) as GameConfig;
@@ -147,6 +147,85 @@ test('Gauntlet: card offers skip summon-only tokens, suggest a like-for-like swa
   const i = run.offers.findIndex((o) => o.kind === 'card');
   const offer = run.offers[i] as { card: number; replaces: number };
   for (const bad of [offer.card, -1, 9999]) assert.deepEqual(g.choose(run, i, bad), g.choose(run, i));
+});
+
+test('unlocks: one starter of the starter kind, earned cards without duplicates, wallet cards open, storage round trips', () => {
+  // the fixture's collection cards carry no kind: call its commons Mortals
+  const game = compileGame({ ...load('./fixtures/sample-duel.game.json'), cards: load('./fixtures/sample-duel.game.json').cards.map((c) => (c.token && c.rarity === 'common' ? { ...c, kind: 'Mortal' } : c)) });
+  const choices = starterChoices(game, 'Mortal');
+  assert.ok(choices.length > 0 && choices.every((id) => game.cards.find((c) => c.token && String(c.token.tokenId) === id)!.kind === 'Mortal'));
+  const other = game.cards.find((c) => c.token && c.kind !== 'Mortal')!.token!.tokenId;
+  let u = emptyUnlocks('g');
+  assert.equal(pickStarter(u, String(other), choices), u, 'only a starter-kind card can be the starter');
+  u = pickStarter(u, choices[0], choices);
+  assert.equal(pickStarter(u, choices[1], choices), u, 'the starter is picked once');
+  u = addUnlock(addUnlock(u, '77'), '77');
+  assert.deepEqual(u.earned, ['77']);
+  assert.equal(addUnlock(u, choices[0]), u, 'the starter is not earned again');
+  const open = unlockedTokens(u, ['900']);
+  assert.deepEqual([...open].sort(), [choices[0], '77', '900'].sort());
+  assert.ok(cardUnlocked({}, open), 'support cards are always open');
+  assert.ok(cardUnlocked({ token: { tokenId: '900' } }, open) && !cardUnlocked({ token: { tokenId: '901' } }, open));
+  const store = memory();
+  saveUnlocks(store, u);
+  assert.deepEqual(loadUnlocks(store, 'g.v9'), u, 'unlocks outlive ruleset versions');
+  // signing in: the account's starter wins, this device's starter is kept as earned, unlocks add up
+  const device = { ...emptyUnlocks('g'), starter: '5', earned: ['6'], heat: 1 };
+  assert.deepEqual(mergeUnlocks(device, { starter: '7', earned: ['6', '8'], heat: -3 }), { ...device, starter: '7', earned: ['6', '8', '5'], heat: -3 });
+  assert.deepEqual(mergeUnlocks(device, { starter: null, earned: [], heat: null }), device, 'an empty account keeps the device as it is');
+  store.data.set('deckwright.unlocks.g', JSON.stringify({ ...u, earned: ['not-an-id'] }));
+  assert.deepEqual(loadUnlocks(store, 'g.v1'), emptyUnlocks('g'), 'a bad record starts fresh');
+});
+
+test('Gauntlet, locked run: starter plus the stock list, common support rewards, an unlock at UNLOCK_AT wins', () => {
+  const g = createGauntlet(SAMPLE);
+  const { cards } = SAMPLE.game;
+  const dr = SAMPLE.game.config.deckRules!;
+  const starter = String(cards.find((c) => c.token && c.rarity === 'common')!.token!.tokenId);
+  const allowed = (c: number) => !cards[c].token || String(cards[c].token!.tokenId) === starter;
+  const support = cards.map((_, i) => i).filter((i) => !cards[i].token && cards[i].deckable !== false);
+  const stock = support.flatMap((c) => [c, c]);
+  for (let r = 0; r < 20; r++) {
+    let run = g.start(`locked-${r}`, undefined, 0, { unlocked: [starter], stock });
+    assert.deepEqual([run.locked, run.heat], [true, START_HEAT]);
+    assert.equal(run.deck.length, dr.size);
+    assert.ok(run.deck.every(allowed), 'only the starter and support cards in the deck');
+    assert.equal(run.deck.filter((c) => cards[c].token).length, dr.maxCopies, 'the starter is in the deck, maxCopies times');
+    assert.deepEqual(run.deck.filter((c) => !cards[c].token), stock.slice(0, dr.size - dr.maxCopies), 'then the stock list, in order');
+    let unlock: string | undefined;
+    for (let stage = 1; stage < STAGES; stage++) {
+      run = g.result(run, true, [starter]);
+      if (stage < UNLOCK_AT) assert.equal(run.unlock, undefined, `no unlock after ${stage} wins`);
+      if (stage === UNLOCK_AT) {
+        unlock = run.unlock;
+        assert.ok(unlock && unlock !== starter && cards.some((c) => c.token && String(c.token.tokenId) === unlock), 'the goal stage unlocks a locked collection card');
+        const lostAfter = g.result(g.choose(run, 0), false, [starter]);
+        assert.equal(lostAfter.unlock, unlock, 'kept when the run is lost later');
+        assert.equal(g.heatAfter(lostAfter, START_HEAT), START_HEAT + 1, 'reaching the goal raises heat');
+      }
+      if (stage > UNLOCK_AT) assert.equal(run.unlock, unlock, 'one unlock per run');
+      assert.ok(run.offers.length > 0);
+      for (const o of run.offers) if (o.kind === 'card') assert.ok(!cards[o.card].token && (cards[o.card].rarity ?? 'common') === 'common', `stage ${stage} offers ${cards[o.card].id}`);
+      run = g.choose(run, 0);
+      assert.ok(run.deck.every(allowed));
+    }
+    assert.equal(g.heatAfter(g.result(g.start(`short-${r}`, undefined, 0, { unlocked: [starter], heat: 0 }), false), 0), -1, 'falling short lowers heat');
+  }
+  // every collection card unlocked: nothing left to unlock
+  const all = cards.filter((c) => c.token).map((c) => String(c.token!.tokenId));
+  let run = g.start('everything', undefined, 0, { unlocked: all });
+  for (let stage = 1; stage <= UNLOCK_AT; stage++) run = g.choose(g.result(run, true, all), 0);
+  assert.equal(run.unlock, undefined);
+  // heat shifts the foes, within its range; heat 0 is the plain ladder
+  const plain = g.start('heat', undefined, 0);
+  assert.ok(!('locked' in plain) && !('heat' in plain), 'runs started without unlocks are unchanged');
+  const at = (heat: number) => g.opponent({ ...g.start('heat', undefined, 0, { unlocked: [starter], heat }), wins: 2 });
+  assert.deepEqual(at(0), g.opponent({ ...plain, wins: 2 }));
+  assert.ok(at(HEAT_MIN).level <= at(0).level && at(0).level <= at(HEAT_MAX).level);
+  const sum = (o: { stats: Record<string, number> }) => Object.values(o.stats).reduce((a, b) => a + b, 0);
+  assert.ok(sum(at(HEAT_MIN)) < sum(at(0)) && sum(at(0)) < sum(at(HEAT_MAX)));
+  assert.equal(g.start('x', undefined, 0, { unlocked: [], heat: 99 }).heat, HEAT_MAX);
+  assert.equal(g.heatAfter(plain, 2), 2, 'an open run leaves heat alone');
 });
 
 test('Gauntlet matches: the bot plays the opponent deck it was given', () => {

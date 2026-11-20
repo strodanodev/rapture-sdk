@@ -187,6 +187,12 @@ button.tcard:disabled { cursor: default; filter: saturate(0.4) brightness(0.6); 
 .ccard .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.06em; color: var(--ivory); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9); line-height: 1.15; }
 .ccard .sub { margin-top: 3px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .ccard .owned { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); z-index: 3; }
+/* a champion the player can't use yet: in shadow, with a lock over the art */
+.ccard.locked .inner { filter: grayscale(0.95) brightness(0.42); }
+.ccard.locked .foil { display: none; }
+.ccard .lock { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 3; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--gold-1); background: rgba(10, 8, 14, 0.78); border: 1px solid var(--line-strong); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); }
+.ccard .lock svg { width: 20px; height: 20px; }
+button.ccard.locked:hover { box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55); }
 .ccard[data-rarity='legendary'] .foil { opacity: 0.4; }
 .ccard:hover .foil, .ccard.tilt .foil, .tcard.tilt .foil { opacity: 0.85; }
 button.ccard:hover { box-shadow: 0 22px 46px rgba(0, 0, 0, 0.6), 0 0 30px color-mix(in srgb, var(--rar) 45%, transparent); }

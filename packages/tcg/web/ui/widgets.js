@@ -60,3 +60,23 @@ export function crest(side, cls = "") {
 export function tile(value, label) {
   return h("div", { class: "tile" }, h("b", { class: "tabnum", text: value }), h("span", { text: label }));
 }
+
+/**
+ * Where the player's champion unlocks are kept (games with an account, lib/account.js): signed in on the arcade, a
+ * quiet line; a guest, a button that signs in through the arcade (or opens the game there). null without an account.
+ */
+export function accountNote(app) {
+  if (!app.account()) return null;
+  const el = h("div", { class: "account-note" });
+  const draw = () => {
+    const a = app.account();
+    el.classList.toggle("in", a.signedIn);
+    el.replaceChildren(...(a.signedIn
+      ? [icon("check"), h("span", { text: `Champions saved to ${a.email ?? "your arcade account"}` })]
+      : [icon("user"), h("span", { text: "Playing as a guest: your champions stay in this browser." }),
+        h("button", { class: "btn ghost sm", type: "button", on: { click: () => void app.signIn() } }, icon(a.framed ? "user" : "external"), a.framed ? "Sign in to keep them" : "Sign in on the arcade")]));
+  };
+  draw();
+  app.onAccount(draw);
+  return el;
+}

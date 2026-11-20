@@ -11,6 +11,16 @@
  *
  * One life means one attempt: `fight` marks the match as under way before it starts, and a match that never
  * reports a result (left mid-match, the page closed) is settled as a loss by `forfeit`.
+ *
+ * Locked runs (meta/unlocks.ts; `start` is given the player's unlocked token ids): the deck is the unlocked
+ * collection cards, then the game's stock list of support cards; card rewards are common support cards only;
+ * winning UNLOCK_AT stages unlocks one random locked collection card on the spot (`run.unlock`), kept even if
+ * the run is lost later. Blessings work as in any run.
+ *
+ * Dynamic difficulty: a locked run carries the player's `heat`, which shifts every stage's foe (stats, deck
+ * rarity, bot level) up or down the ladder. A run that reaches UNLOCK_AT raises heat by one, a run that falls
+ * short lowers it (`heatAfter`), so each player settles where they unlock about every other run. Heat 0 is the
+ * plain ladder. It never touches the rules: every match still replays under the game's rulesetId.
  */
 import { seededRandom } from '../core/rng';
 import type { Rules } from '../core/rules';
@@ -19,6 +29,11 @@ import type { BotLevel } from '../core/bot';
 import type { AgentStats, StatName } from '../core/types';
 
 export const STAGES = 8;
+/** A locked run unlocks a collection card when it wins this many stages. */
+export const UNLOCK_AT = 3;
+/** Heat's range: negative is gentler than the plain ladder, positive is harder. New players start at START_HEAT. */
+export const HEAT_MIN = -6, HEAT_MAX = 6, START_HEAT = -2;
+const clampHeat = (h: number): number => Math.max(HEAT_MIN, Math.min(HEAT_MAX, Math.round(Number.isFinite(h) ? h : START_HEAT)));
 const STATS: StatName[] = ['strength', 'agility', 'resilience', 'intelligence'];
 const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 /** What a champion brings to a match (`Rules['champion']`): the numbers a blessing can raise. */
@@ -45,6 +60,20 @@ export interface GauntletRun {
   fighting?: number;
   /** Set once a finished run has been added to the profile's totals. */
   counted?: boolean;
+  /** A locked run: started with the player's unlocks. */
+  locked?: true;
+  /** A locked run's difficulty shift (see `heatAfter`); absent means 0, the plain ladder. */
+  heat?: number;
+  /** The token id this run unlocked when it won UNLOCK_AT stages (absent until then, or when nothing was left). */
+  unlock?: string;
+}
+
+/** A locked run's settings: the player's unlocked token ids, their heat, and the game's stock list. */
+export interface LockedRun {
+  unlocked: Iterable<string>;
+  heat?: number;
+  /** Support cards (indices) that fill the deck after the unlocked collection cards, in order. */
+  stock?: number[];
 }
 
 export type Reward =
@@ -98,6 +127,44 @@ export function createGauntlet(rules: Rules) {
     return deck;
   };
 
+  const isSupport = (c: number): boolean => !cards[c].token;
+  const unlockedCard = (c: number, unlocked: Set<string>): boolean => unlocked.has(String(cards[c].token!.tokenId));
+  /**
+   * A locked run's deck: every unlocked collection card (maxCopies each, in a seeded order, as many as fit), then
+   * the stock list in order (none given: support cards up to rare, shuffled). Too few: any support card, and last
+   * the suggested deck, so the deck is always legal. A new player's deck is their starter plus the stock list.
+   */
+  const lockedDeck = (rnd: () => number, unlocked: Set<string>, stock?: number[]): number[] => {
+    if (!dr) return [];
+    const shuffled = (list: number[]): number[] => { for (let i = list.length - 1; i > 0; i--) { const j = rnd() % (i + 1); [list[i], list[j]] = [list[j], list[i]]; } return list; };
+    const copies = (c: number): number[] => Array.from({ length: dr.maxCopies }, () => c);
+    const deck = shuffled(pool.filter((c) => !isSupport(c) && unlockedCard(c, unlocked))).flatMap(copies).slice(0, dr.size);
+    const fill = (list: number[]): void => { for (const c of list) if (deck.length < dr.size && pool.includes(c) && deck.filter((d) => d === c).length < dr.maxCopies) deck.push(c); };
+    fill(stock ? stock.filter((c) => cards[c] && isSupport(c)) : shuffled(pool.filter((c) => isSupport(c) && rank(c) <= 2).flatMap(copies)));
+    fill(pool.filter(isSupport).flatMap(copies));
+    fill(rules.game.suggestedDeck);
+    return deck;
+  };
+
+  /**
+   * A foe's strength at `stage`, shifted by a locked run's heat: tier 1-8 is the plain ladder's stage 1-8. Below
+   * it, foes get weaker stats and commons-only decks; above it, everything is at the top.
+   */
+  const foeAt = (run: Pick<GauntletRun, 'heat'>, stage: number) => {
+    const t = stage + (run.heat ?? 0);
+    return {
+      base: Math.max(0, Math.min(65535, 4000 + t * 3500)),
+      level: (t <= 2 ? 1 : t <= 6 ? 2 : 3) as BotLevel,
+      maxRank: t <= 0 ? 0 : t <= 2 ? 1 : t <= 5 ? 2 : t <= 7 ? 3 : 4,
+    };
+  };
+
+  /** A locked run's unlock: one random deckable collection card the player can't use yet, or none. */
+  const unlockFor = (run: GauntletRun, unlocked: Set<string>): string | undefined => {
+    const locked = pool.filter((c) => !isSupport(c) && !unlockedCard(c, unlocked));
+    return locked.length ? String(cards[locked[seededRandom(`${run.seed}|unlock`)() % locked.length]].token!.tokenId) : undefined;
+  };
+
   const championStats = (run: Pick<GauntletRun, 'champion' | 'blessings'>): Required<AgentStats> => {
     const s = { ...run.champion.stats };
     for (const k of STATS) s[k] = Math.min(65535, s[k] + (run.blessings[k] ?? 0));
@@ -149,9 +216,10 @@ export function createGauntlet(rules: Rules) {
     const rnd = seededRandom(`${run.seed}|offers|${run.wins}`);
     const cardOffers: Reward[] = [];
     if (dr && run.deck.length) {
-      // Card offers get rarer as the run goes on.
+      // Card offers get rarer as the run goes on; a locked run offers common support cards only.
       const minRank = Math.min(4, Math.floor(run.wins / 2));
-      const candidates = pool.filter((c) => rank(c) >= minRank && run.deck.filter((d) => d === c).length < dr.maxCopies);
+      const offerable = (c: number): boolean => (run.locked ? isSupport(c) && rank(c) === 0 : rank(c) >= minRank);
+      const candidates = pool.filter((c) => offerable(c) && run.deck.filter((d) => d === c).length < dr.maxCopies);
       const seen = new Set<number>();
       for (let tries = 0; cardOffers.length < 3 && tries < 80 && candidates.length; tries++) {
         const card = candidates[rnd() % candidates.length];
@@ -180,23 +248,36 @@ export function createGauntlet(rules: Rules) {
 
   return {
     stages: STAGES,
-    /** A new run with the chosen champion (or none). Declared-deck games start from a deck of commons to rares. */
-    start(seed: string, champion?: { tokenId?: string; stats?: AgentStats }, now = Date.now()): GauntletRun {
+    /**
+     * A new run with the chosen champion (or none). Declared-deck games start from a deck of commons to rares;
+     * given `locked` (the player's unlocks, heat and the game's stock list), a locked run.
+     */
+    start(seed: string, champion?: { tokenId?: string; stats?: AgentStats }, now = Date.now(), locked?: LockedRun): GauntletRun {
+      const rnd = seededRandom(`${seed}|start`);
       return {
         v: 1, seed, wins: 0, over: false, cleared: false,
         champion: { ...(champion?.tokenId ? { tokenId: String(champion.tokenId) } : {}), stats: normalizeStats(champion?.stats) },
-        deck: deckFrom(seededRandom(`${seed}|start`), 2),
+        deck: locked ? lockedDeck(rnd, new Set([...locked.unlocked].map(String)), locked.stock) : deckFrom(rnd, 2),
         blessings: {}, offers: [], started: now,
+        ...(locked ? { locked: true as const, heat: clampHeat(locked.heat ?? START_HEAT) } : {}),
       };
     },
-    /** Who stage `wins + 1` is: stronger stats, rarer decks and a smarter bot as the run goes on. */
+    /** Who stage `wins + 1` is: stronger stats, rarer decks and a smarter bot as the run goes on (shifted by heat). */
     opponent(run: GauntletRun): Opponent {
       const stage = run.wins + 1;
       const rnd = seededRandom(`${run.seed}|stage|${stage}`);
       const tokenId = tokens.length ? cards[tokens[rnd() % tokens.length]].token!.tokenId : undefined;
-      const base = Math.min(65535, 4000 + stage * 3500);
-      const stats = normalizeStats(Object.fromEntries(STATS.map((k) => [k, base + (rnd() % 8000) - 4000])));
-      return { stage, name: STAGE_NAMES[stage - 1] ?? `Stage ${stage}`, level: stage <= 2 ? 1 : stage <= 6 ? 2 : 3, ...(tokenId ? { tokenId: String(tokenId) } : {}), stats, deck: deckFrom(rnd, stage <= 2 ? 1 : stage <= 5 ? 2 : stage <= 7 ? 3 : 4) };
+      const foe = foeAt(run, stage);
+      const stats = normalizeStats(Object.fromEntries(STATS.map((k) => [k, Math.max(0, foe.base + (rnd() % 8000) - 4000)])));
+      return { stage, name: STAGE_NAMES[stage - 1] ?? `Stage ${stage}`, level: foe.level, ...(tokenId ? { tokenId: String(tokenId) } : {}), stats, deck: deckFrom(rnd, foe.maxRank) };
+    },
+    /**
+     * A finished locked run's effect on the player's heat: up one if it won UNLOCK_AT stages, down one if not.
+     * Anything else (an open run, a run still going) leaves `heat` as it is.
+     */
+    heatAfter(run: GauntletRun, heat: number): number {
+      if (!run.locked || !run.over) return clampHeat(heat);
+      return clampHeat(heat + (run.wins >= UNLOCK_AT ? 1 : -1));
     },
     /** What you bring to the next match: your champion with its blessings, and your deck. */
     player(run: GauntletRun): { tokenId?: string; stats: Required<AgentStats>; deck: number[] } {
@@ -210,13 +291,18 @@ export function createGauntlet(rules: Rules) {
     forfeit(run: GauntletRun): GauntletRun {
       return run.fighting && !run.over ? { ...settled(run), over: true } : run;
     },
-    /** Record a match. A win offers rewards (or clears the run after the last stage); a loss or draw ends it. */
-    result(run: GauntletRun, won: boolean): GauntletRun {
+    /**
+     * Record a match. A win offers rewards (or clears the run after the last stage); a loss or draw ends it.
+     * The win that brings a locked run to UNLOCK_AT picks its unlock from the cards not in `unlocked` (the
+     * player's unlocks now); the caller grants `run.unlock` as soon as it appears.
+     */
+    result(run: GauntletRun, won: boolean, unlocked: Iterable<string> = []): GauntletRun {
       if (run.over || run.offers.length) return run;
       if (!won) return { ...settled(run), over: true };
       const wins = run.wins + 1;
-      const next = { ...settled(run), wins };
-      return wins >= STAGES ? { ...next, over: true, cleared: true } : { ...next, offers: offersFor(next) };
+      const unlock = run.locked && wins === UNLOCK_AT ? unlockFor(run, new Set([...unlocked].map(String))) : undefined;
+      const next = { ...settled(run), wins, ...(unlock ? { unlock } : {}) };
+      return wins < STAGES ? { ...next, offers: offersFor(next) } : { ...next, over: true, cleared: true };
     },
     /**
      * Take one of the offered rewards (index into `run.offers`). For a card, `replaces` may name any other card

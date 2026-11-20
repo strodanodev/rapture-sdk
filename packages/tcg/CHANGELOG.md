@@ -2,6 +2,16 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
+## 0.10.4 (2026-11-21): champion unlocks
+
+No rules change: every ruleset replays exactly as before, and a game without `web/data/progression.json` plays exactly as it did.
+
+- **Unlocks** (`src/meta/unlocks.ts`): one starter of a chosen Kind (`starterChoices`, `pickStarter`), cards earned in the Gauntlet (`addUnlock`), and the wallet's cards, together `unlockedTokens`. Support cards are always open. The record is kept per game without its version (`deckwright.unlocks.<game>`), so it outlives balance patches; `mergeUnlocks` joins a device's record with an account's when the player signs in (the account's starter wins, nothing is lost).
+- **Locked Gauntlet runs:** `Gauntlet.start(seed, champion, now, { unlocked, heat, stock })` deals the unlocked collection cards and then the game's stock list, offers common support cards as card rewards (blessings as before), and the win that brings the run to `UNLOCK_AT` (3) stages unlocks one random locked collection card (`run.unlock`), kept even if the run is lost later. `Gauntlet.heatAfter(run, heat)` gives the player's next `heat` after a run; heat 0 is the plain ladder. Runs started without unlocks are unchanged.
+- **The client** reads `web/data/progression.json`: a first-time player picks a starter, champion select and the deck forge draw locked cards in shadow with a lock, the Gauntlet page shows the goal and reveals an unlock, and the profile counts unlocked champions. Ranked champion select now shows the champions the wallet doesn't hold as locked, and plays the base champion with one, as the relay would.
+- **Accounts** (`web/lib/account.js`): a `tessaract-account` meta names the game's own unlocks API and the LitNode arcade. Inside the arcade's frame the game asks for the AIR session (`cabinet:air`), merges the account's unlocks with this browser's and saves new ones to it; outside it, a guest keeps unlocks in the browser and is offered the arcade to sign in.
+- `ui/cards.js`: the Kind → rarity fallback follows the order the cards print (Mortal, King, Demigod, Titan, God).
+
 ## 0.10.3 (2026-11-18): a game's own card frame and card back
 
 Client only: no rules change, every ruleset replays exactly as before. A game that names neither looks exactly as it did.

@@ -11,7 +11,9 @@
 import {
   decode, Op, compileGame, createRules, LocalBotSession, RelaySession, ReplaySession, PuzzleSession, encodeRecord, decodeRecord, REPLAY_PARAM,
   statsFromCore, describeEffect, createGauntlet, createPuzzles, loadProfile, saveProfile, addMatch, summarize, utcDate,
+  loadUnlocks, saveUnlocks, starterChoices, pickStarter, addUnlock, unlockedTokens, mergeUnlocks,
 } from "./engine/tessaract.js";
+import { createAccount } from "./lib/account.js";
 import { createWallet, LITEFORGE } from "./lib/wallet.js";
 import { createChain } from "./lib/chain.js";
 import { seatPlaced } from "./lib/litnode/ranked.js";
@@ -45,8 +47,10 @@ const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), 
 
 boot(0.15, "Reading the game");
 // assets/cards/art.json (optional) names an illustration for cards with no painting: { "<card id>": "<file>" }
-const [game, snap, cardArt] = await Promise.all([fetch("./data/game.json").then((r) => r.json()), fetch("./data/collection.json").then((r) => r.json()),
-  fetch("./assets/cards/art.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))]);
+// data/progression.json (optional) turns on character unlocks: { "starterKind": "<Kind>", "stock": { "<card id>": copies } }
+const [game, snap, cardArt, progressionCfg] = await Promise.all([fetch("./data/game.json").then((r) => r.json()), fetch("./data/collection.json").then((r) => r.json()),
+  fetch("./assets/cards/art.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+  fetch("./data/progression.json").then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
 boot(0.45, "Forging the rules");
 const rules = createRules(compileGame(game));
 const byToken = new Map(snap.cards.map((c) => [String(c.tokenId), c]));
@@ -71,6 +75,56 @@ let profile = loadProfile(store, game.litnode.rulesetId);
 const saveProf = () => saveProfile(store, profile);
 const gauntlet = createGauntlet(rules);
 const puzzles = createPuzzles(rules);
+
+// Character unlocks (data/progression.json; off without it, or without a collection): a new player picks one starter of
+// `starterKind`, wins more in the Gauntlet, and plays practice and the Gauntlet with those, the support cards and the
+// collection cards their wallet holds. The Gauntlet deals a new player's deck from the stock list. Ranked is the wallet's
+// cards either way (the relay checks them on chain).
+const progression = (() => {
+  if (!progressionCfg || !snap.cards.length) return null;
+  const kind = String(progressionCfg.starterKind ?? "");
+  const starters = starterChoices(rules.game, kind);
+  if (!starters.length) { console.warn(`[tessaract] progression.json: no collection card of kind "${kind}" to start with; unlocks are off`); return null; }
+  const stock = Object.entries(progressionCfg.stock ?? {}).flatMap(([id, n]) => {
+    const i = rules.game.cardIndex[id];
+    if (i === undefined) { console.warn(`[tessaract] progression.json: unknown stock card ${id}`); return []; }
+    return Array.from({ length: Math.max(0, Math.min(10, Math.floor(Number(n) || 0))) }, () => i);
+  });
+  return { kind, starters, stock };
+})();
+let unlocks = loadUnlocks(store, game.litnode.rulesetId);
+// Unlocks follow the player's arcade sign-in when the page names an account API (lib/account.js); a guest's stay here.
+const account = progression ? createAccount() : null;
+const accountListeners = new Set();
+const accountChanged = () => { for (const fn of accountListeners) fn(); };
+let pushTimer = null;
+/** Keep the record here and, once someone is signed in on the arcade, in their account too. */
+const saveUnl = () => {
+  saveUnlocks(store, unlocks);
+  if (!account?.state().signedIn) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    account.push(unlocks).then((back) => { if (back) { unlocks = mergeUnlocks(unlocks, back); saveUnlocks(store, unlocks); } })
+      .catch((e) => console.warn("[tessaract] could not save unlocks to the account", e));
+  }, 400);
+};
+/** Signed in on the arcade: bring the account's unlocks here, and this browser's (a guest's progress) up to it. */
+async function syncAccount() {
+  if (!account?.framed) return;
+  try {
+    const s = await account.session();
+    if (s.signedIn) {
+      const remote = await account.pull();
+      if (remote) {
+        unlocks = mergeUnlocks(unlocks, remote);
+        const back = await account.push(unlocks);
+        if (back) unlocks = mergeUnlocks(unlocks, back);
+        saveUnlocks(store, unlocks);
+      }
+    }
+  } catch (e) { console.warn("[tessaract] could not reach the account", e); }
+  accountChanged();
+}
 let todaysPuzzle;   // undefined until generated; null when the day has none
 let puzzleBusy = false;
 
@@ -141,6 +195,30 @@ const app = {
   shop, leftForShop: () => { shopVisit = true; }, brand,
   elementColor, artOf, nameOf, statsOf,
   champName: (tokenId) => (tokenId ? byToken.get(String(tokenId))?.name ?? `#${tokenId}` : "Base champion"),
+  // ---- unlocks: what a mode lets the player field (see `progression` above)
+  progression,
+  /** The collection token ids `mode` lets this player use, or null when every card is open. */
+  unlockedIn(mode) {
+    if (mode === "ranked") return app.hasWallet ? new Set(owned) : null;
+    if (mode === "relay") return RELAY_OWNED ? new Set(owned) : null;
+    return progression ? unlockedTokens(unlocks, owned) : null;
+  },
+  /** May this collection token be used in `mode`? (Support cards have no token and are always open.) */
+  canUse(tokenId, mode) { const open = app.unlockedIn(mode); return !open || open.has(String(tokenId)); },
+  needsStarter: () => !!progression && !unlocks.starter,
+  /** The arcade account behind the unlocks: null without one; else { signedIn, email, framed }. */
+  account: () => (account ? { signedIn: account.state().signedIn, email: account.state().user?.email ?? null, framed: account.framed } : null),
+  onAccount: (fn) => { accountListeners.add(fn); },
+  /** Keep unlocks on every device: sign in through the arcade (inside it), or open the game there (outside it). */
+  async signIn() {
+    if (!account) return;
+    if (!account.framed) { location.assign(account.signInUrl); return; }
+    await account.login();
+    await syncAccount();
+    if (account.state().signedIn) toast("Signed in: your champions are saved to your account");
+  },
+  /** { unlocked, total } collection cards, for the profile; null without unlocks. */
+  unlockCount: () => (progression ? { unlocked: [...unlockedTokens(unlocks, owned)].filter((id) => byToken.has(id)).length, total: snap.cards.length } : null),
   heroPowerOf(c) {
     const p = rules.heroPower(claimOf(c) ?? {});
     return p ? { name: p.name, cost: p.cost, text: describeEffect(p.effect, nameOf) } : null;
@@ -281,6 +359,7 @@ function closeRun() {
     profile.gauntlet.runs++;
     profile.gauntlet.bestStage = Math.max(profile.gauntlet.bestStage, run.wins);
     if (run.cleared) profile.gauntlet.cleared++;
+    if (run.locked) { unlocks = { ...unlocks, heat: gauntlet.heatAfter(run, unlocks.heat) }; saveUnl(); }
   }
   profile.gauntlet.current = null;
   saveProf();
@@ -310,27 +389,39 @@ const watchUrl = () => `${location.origin}${location.pathname}?relay=${encodeURI
 app.flows = {
   /** Open champion select for a mode; a game without a collection skips straight on with the base champion. */
   async choose(mode) {
+    // unlocks on, no starter yet: practice and the Gauntlet begin with picking one
+    if (!RELAY && app.needsStarter() && (mode === "practice" || mode === "gauntlet")) { select.setMode("starter", mode); await go("select"); return; }
     select.setMode(RELAY ? "relay" : mode);
     if (!snap.cards.length) { await app.flows.confirmChampion(null, { mode: RELAY ? "relay" : mode }); return; }
     await go("select");
+  },
+  /** The starter pick: keep it, then carry on to champion select for the mode the player came for. */
+  pickStarter(champion, next) {
+    if (!progression || !champion) return;
+    unlocks = pickStarter(unlocks, String(champion.tokenId), progression.starters);
+    saveUnl();
+    toast(`${champion.name} is yours. Win in the Gauntlet to unlock more champions.`);
+    select.setMode(next);
+    select.enter();
   },
   async confirmChampion(champion, opts = {}) {
     // a ranked match's relay accepts only collection cards the wallet holds
     app.requireOwned = opts.mode === "ranked" || RELAY_OWNED;
     if (opts.mode === "ranked") {
-      if (deck) { deck.open((list) => void startRanked(champion, list)); await go("deck"); }
+      if (deck) { deck.open((list) => void startRanked(champion, list), "ranked"); await go("deck"); }
       else await startRanked(champion, null);
       return;
     }
     if (opts.mode === "gauntlet") {
-      profile.gauntlet.current = gauntlet.start(randomSeed(), claimOf(champion));
+      const locked = progression ? { unlocked: app.unlockedIn("gauntlet"), heat: unlocks.heat, stock: progression.stock } : undefined;
+      profile.gauntlet.current = gauntlet.start(randomSeed(), claimOf(champion), undefined, locked);
       saveProf();
       resetStack();
       await go("gauntlet", { push: false });
       return;
     }
     if (deck) {
-      deck.open((list) => void startMatch(champion, list, opts));
+      deck.open((list) => void startMatch(champion, list, opts), RELAY ? "relay" : "practice");
       await go("deck");
       return;
     }
@@ -411,8 +502,10 @@ app.flows = {
       } else {
         const won = s.winner === meIdx;
         if (kind === "gauntlet" && profile.gauntlet.current) {
-          const run = gauntlet.result(profile.gauntlet.current, won);
+          const before = profile.gauntlet.current.unlock;
+          const run = gauntlet.result(profile.gauntlet.current, won, app.unlockedIn("gauntlet") ?? []);
           profile.gauntlet.current = run;
+          if (run.unlock && run.unlock !== before) { unlocks = addUnlock(unlocks, run.unlock); saveUnl(); toast(`New champion unlocked: ${app.champName(run.unlock)}`); }
           if (run.over) { closeRun(); profile.gauntlet.current = { ...run, counted: true }; }
           saveProf(); // now, not after the replay encodes: a reload in between must not forfeit a finished match
         }
@@ -473,6 +566,9 @@ const opened = location.hash.startsWith(`#${REPLAY_PARAM}=`) && (await loadRepla
 setTimeout(bootDone, 150);
 // The page closed during a Gauntlet match last time: that match is a loss, as leaving it would have been.
 app.flows.settleGauntlet();
+// inside the arcade: the account's unlocks join this browser's, and follow the arcade's sign-in and sign-out
+account?.onChange(() => { void syncAccount(); });
+void syncAccount();
 if (!opened) {
   if (WATCH) {
     const session = RelaySession.watch(rules, RELAY);

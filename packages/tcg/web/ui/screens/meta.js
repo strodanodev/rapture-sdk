@@ -2,8 +2,9 @@
 // profile (record, champions, match history with replays). The logic lives in the engine (src/meta); these only draw.
 import { h, icon, stagger } from "../dom.js";
 import { go, pageHead } from "../router.js";
-import { tile, unitAttackText, walletChip } from "../widgets.js";
+import { accountNote, tile, unitAttackText, walletChip } from "../widgets.js";
 import { sigil } from "../sigil.js";
+import { UNLOCK_AT } from "../../engine/tessaract.js";
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 const when = (ms) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -13,6 +14,8 @@ const GAIN = { life: (n) => `+${n} life`, spellPower: (n) => `+${n} spell power`
 // unit attack goes by the game: with unitAttack.minCost, only units that cost that much get it
 const gainText = (game, gains) => Object.entries(gains).filter(([, n]) => n > 0).map(([k, n]) => (k === "unitAttack" ? unitAttackText(game, n).text : GAIN[k](n))).join(", ");
 const LEVEL = ["", "Easy", "Normal", "Hard"];
+// the road's colour by stage
+const stageLevel = (i) => (i <= 2 ? 1 : i <= 6 ? 2 : 3);
 // the daily puzzle is the same for everyone on a UTC day: name that day plainly, and say when the next one comes
 const fmtDay = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const untilNext = () => { const n = new Date(); const next = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1); return `next puzzle in ${Math.max(1, Math.ceil((next - n.getTime()) / 3.6e6))}h`; };
@@ -25,6 +28,7 @@ export function gauntletScreen(app) {
   const g = app.gauntlet;
   /** The card offer whose swap is being chosen (an index into run.offers), or null on the offers themselves. */
   let swapping = null;
+  const note = accountNote(app);   // where unlocks are kept: the arcade account, or this browser
 
   /** A blessing's card: what it changes in a match, and a hero power it would change, if any. */
   function blessFace(run, r) {
@@ -65,26 +69,37 @@ export function gauntletScreen(app) {
     // ladder seeded by the day shows the kind of foes waiting, in shadow and unnamed (a real run draws its own)
     const seeded = run ?? { seed: `preview-${new Date().toISOString().slice(0, 10)}` };
     const foes = Array.from({ length: g.stages }, (_, k) => g.opponent({ ...seeded, wins: k }));
+    const unlocking = !!app.progression;
     for (let i = 1; i <= g.stages; i++) {
       const state = run && i <= run.wins ? "won" : run && i === stage && !run.over ? "next" : run?.over && i === stage && !run.cleared ? "lost" : "";
       const opp = foes[i - 1], card = opp?.tokenId ? app.byToken.get(String(opp.tokenId)) : null;
-      road.append(h("li", { class: `stage ${state}` },
+      // the stage that unlocks a champion carries a mark until the run has passed it
+      const prize = unlocking && i === UNLOCK_AT && (!run || (run.locked && run.wins < UNLOCK_AT));
+      road.append(h("li", { class: `stage ${state}${prize ? " prize" : ""}`, title: prize ? "Win this stage to unlock a new champion" : undefined },
         h("div", { class: "st-face" }, card?.art ? h("img", { src: card.art, alt: "", loading: "lazy", decoding: "async" }) : icon(i === g.stages ? "crown" : "foe"),
-          state === "won" ? h("span", { class: "st-mark" }, icon("check")) : state === "lost" ? h("span", { class: "st-mark" }, icon("close")) : null),
+          state === "won" ? h("span", { class: "st-mark" }, icon("check")) : state === "lost" ? h("span", { class: "st-mark" }, icon("close")) : null,
+          prize ? h("span", { class: "st-prize" }, icon("gem")) : null),
         h("span", { class: "st-n", text: i === g.stages ? "Final" : `Stage ${i}` }),
-        h("span", { class: "st-name", data: { level: opp?.level ?? 0 }, text: run && opp ? (card?.name ?? opp.name) : opp ? `${LEVEL[opp.level] ?? ""}` : "" })));   // before a run: how hard each step is
+        // before a run: how hard each step is (with unlocks on, the foe's title instead)
+        h("span", { class: "st-name", data: { level: unlocking ? stageLevel(i) : opp?.level ?? 0 }, text: run && opp ? (card?.name ?? opp.name) : opp ? (unlocking ? opp.name : `${LEVEL[opp.level] ?? ""}`) : "" })));
     }
     const panel = h("div", { class: "panel frame meta-panel" });
     const head = (t, badge) => h("div", { class: "panel-head" }, h("h2", { text: t }), badge ? h("span", { class: "badge outline", text: badge }) : null);
     if (!run) {
       panel.append(head("A new run"), h("div", { class: "panel-body stack" },
         h("p", { class: "lede", text: "Eight bot matches, each harder than the last. Win and choose a reward: a better card for your deck, or a blessing for your champion. Lose once and the run is over." }),
+        app.progression ? h("p", { class: "run-goal" }, icon("gem"), h("span", { text: `Win ${UNLOCK_AT} stages in a run to unlock a new champion for good.` })) : null,
         h("button", { class: "btn primary lg block pulse", type: "button", on: { click: () => void app.flows.choose("gauntlet") } }, icon("gauntlet"), app.snap.cards.length ? "Choose your champion" : "Begin the run")));
     } else {
       const blessed = gainText(app.game, g.blessed(run));
       const who = h("p", { class: "run-line", text: `${app.champName(run.champion.tokenId)}${blessed ? ` · ${blessed}` : ""}${run.deck.length ? ` · ${run.deck.length}-card deck` : ""}` });
+      // a locked run: how far to the unlock, or what it unlocked
+      const goal = !run.locked ? null
+        : run.unlock ? h("p", { class: "run-goal won" }, icon("gem"), h("span", { text: `Unlocked this run: ${app.champName(run.unlock)}` }))
+        : run.wins < UNLOCK_AT && !run.over ? h("p", { class: "run-goal" }, icon("gem"), h("span", { text: `Win ${UNLOCK_AT - run.wins} more ${UNLOCK_AT - run.wins === 1 ? "stage" : "stages"} to unlock a new champion` })) : null;
+      const unlocked = run.unlock ? app.byToken.get(String(run.unlock)) : null;
       if (run.over) {
-        panel.append(head(run.cleared ? "Gauntlet cleared" : `Fallen at stage ${stage}`, `${run.wins}/${g.stages} won`), h("div", { class: "panel-body stack" }, who,
+        panel.append(head(run.cleared ? "Gauntlet cleared" : `Fallen at stage ${stage}`, `${run.wins}/${g.stages} won`), h("div", { class: "panel-body stack" }, who, goal,
           h("p", { class: "lede", text: run.cleared ? "All eight beaten. Start another run with a different champion." : "Your best is kept in your profile." }),
           h("button", { class: "btn primary lg block", type: "button", on: { click: () => app.flows.gauntletAbandon() } }, icon("refresh"), "New run")));
       } else if (swapping !== null) {
@@ -97,19 +112,25 @@ export function gauntletScreen(app) {
             h("button", { class: "btn primary sm", type: "button", on: { click: () => app.flows.gauntletChoose(i) } }, "Take it"),
             card ? h("button", { class: "link-btn", type: "button", on: { click: () => { swapping = i; render(); } } }, "Choose what it replaces") : null);
         }));
-        panel.append(head(`Stage ${run.wins} won`, "Choose a reward"), h("div", { class: "panel-body stack" }, who, stagger(offers)));
+        // the win that unlocked a champion shows it before the rewards
+        const reveal = unlocked && run.wins === UNLOCK_AT
+          ? h("div", { class: "unlock-reveal" }, h("div", { class: "ur-card" }, app.cards.championCard(unlocked, { eager: true, tilted: true })),
+            h("div", { class: "stack" }, h("span", { class: "eyebrow", text: "New champion unlocked" }), h("h3", { class: "display", text: unlocked.name }),
+              h("p", { class: "hint", text: "Yours for good: field it in practice and in your next Gauntlet run." })))
+          : null;
+        panel.append(head(`Stage ${run.wins} won`, "Choose a reward"), h("div", { class: "panel-body stack" }, reveal, who, goal, stagger(offers)));
       } else {
         const opp = g.opponent(run);
         const foe = opp.tokenId ? app.byToken.get(String(opp.tokenId)) : null;
-        panel.append(head(`Stage ${stage}: ${opp.name}`, `${LEVEL[opp.level]} bot`), h("div", { class: "panel-body stage-body" },
+        panel.append(head(`Stage ${stage}: ${opp.name}`, run.locked ? `Stage ${stage} of ${g.stages}` : `${LEVEL[opp.level]} bot`), h("div", { class: "panel-body stage-body" },
           h("div", { class: "stage-foe" }, foe ? app.cards.championCard(foe, { eager: true }) : h("div", { class: "ccard base" }, h("div", { class: "inner" }, icon("foe")))),
-          h("div", { class: "stack" }, who,
+          h("div", { class: "stack" }, who, goal,
             h("p", { class: "lede", text: `${foe ? foe.name : "The base champion"} waits${opp.deck.length && stage > 1 ? " with a stronger deck than the last" : ""}.` }),
             h("button", { class: "btn primary lg block pulse", type: "button", on: { click: () => void app.flows.gauntletFight() } }, icon("swords"), "Fight"),
             h("button", { class: "link-btn", type: "button", on: { click: () => app.flows.gauntletAbandon() } }, icon("flag"), "Abandon run"))));
       }
     }
-    body.replaceChildren(road, panel);
+    body.replaceChildren(road, panel, ...(note ? [note] : []));
     stagger(road);
   }
   // A match left without a result (the browser's back button, say) is settled as a loss before the page draws.
@@ -147,6 +168,7 @@ export function puzzleScreen(app) {
 export function profileScreen(app) {
   const body = h("div", { class: "meta-body" });
   const el = page(app, "profile-page", "Profile", "Your record", body);
+  const profileNote = accountNote(app);
   function render() {
     const prof = app.profile(), sum = app.summary();
     const tiles = h("div", { class: "tiles big" },
@@ -154,7 +176,8 @@ export function profileScreen(app) {
       tile(sum.wins + sum.losses ? pct(sum.winRate) : "–", "win rate"),
       tile(String(sum.streak), `streak · best ${sum.bestStreak}`),
       tile(prof.gauntlet.bestStage ? `${prof.gauntlet.bestStage}/8` : "–", prof.gauntlet.cleared ? `Gauntlet · ${prof.gauntlet.cleared} cleared` : "Gauntlet best stage"),
-      tile(String(sum.puzzleStreak), "puzzle streak"));
+      tile(String(sum.puzzleStreak), "puzzle streak"),
+      ...(app.unlockCount() ? [tile(`${app.unlockCount().unlocked}/${app.unlockCount().total}`, "champions unlocked")] : []));
     const champs = sum.byChampion.length
       ? h("div", { class: "panel frame meta-panel" }, h("div", { class: "panel-head" }, h("h2", { text: "Your champions" })),
         h("ol", { class: "champ-records panel-body" }, ...sum.byChampion.slice(0, 6).map((c) => {
@@ -177,6 +200,7 @@ export function profileScreen(app) {
       h("div", { class: "ph-card" }, topCard ? app.cards.championCard(topCard, { eager: true }) : h("div", { class: "ccard base" }, h("div", { class: "inner" }, icon("emblem")))),
       h("div", { class: "ph-body" },
         h("p", { class: "ph-who" }, icon("user"), h("b", { text: app.walletShort?.() || "Guest" }), app.walletShort?.() ? "" : h("span", { text: "a profile kept on this device" })),
+        profileNote,
         h("span", { class: "eyebrow", text: topCard ? "Your most-played champion" : "Your record" }),
         h("h2", { class: "display ph-name", text: topCard ? topCard.name : "No matches yet" }),
         h("p", { class: "ph-record tabnum", text: `${sum.wins} won · ${sum.losses} lost` }),

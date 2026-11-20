@@ -121,6 +121,7 @@ A node can therefore host a Rapture SDK title and settle its matches on chain wi
 **The meta loop** (all offline, in the browser):
 - **Profile:** wins, streaks, a record per champion, and recent matches with their replays. It's kept in the browser's local storage.
 - **Gauntlet:** eight bot matches of rising difficulty. Win and pick a reward: a better card for your deck, or a blessing (a stat boost) for your champion. Lose once and the run is over.
+- **Champion unlocks (optional):** with `web/data/progression.json`, a new player starts with one champion and wins more in the Gauntlet; the wallet's NFTs are always open. With a `tessaract-account` meta and an API of your own, unlocks follow the player's LitNode arcade sign-in.
 - **Daily puzzle:** "win this turn". The puzzle is the same for every player on a date and always winnable, and a solution is a replayable record.
 - None of it changes the rules: blessings are champion stats passed to `init`, so every match still replays under the game's `rulesetId`.
 
