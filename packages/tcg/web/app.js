@@ -47,7 +47,7 @@ const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), 
 
 boot(0.15, "Reading the game");
 // assets/cards/art.json (optional) names an illustration for cards with no painting: { "<card id>": "<file>" }
-// data/progression.json (optional) turns on character unlocks: { "starterKind": "<Kind>", "stock": { "<card id>": copies } }
+// data/progression.json (optional) turns on character unlocks: { "starterKind": "<Kind>", "starters"?: ["<card id>", …], "stock": { "<card id>": copies } }
 const [game, snap, cardArt, progressionCfg] = await Promise.all([fetch("./data/game.json").then((r) => r.json()), fetch("./data/collection.json").then((r) => r.json()),
   fetch("./assets/cards/art.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
   fetch("./data/progression.json").then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
@@ -83,7 +83,13 @@ const puzzles = createPuzzles(rules);
 const progression = (() => {
   if (!progressionCfg || !snap.cards.length) return null;
   const kind = String(progressionCfg.starterKind ?? "");
-  const starters = starterChoices(rules.game, kind);
+  // `starters` narrows the pick to a few cards of that kind (one per element, say); without it, every one is offered
+  const ofKind = starterChoices(rules.game, kind);
+  const listed = Array.isArray(progressionCfg.starters)
+    ? progressionCfg.starters.map((id) => String(rules.game.cards[rules.game.cardIndex[id]]?.token?.tokenId ?? "")).filter((t) => ofKind.includes(t))
+    : [];
+  if (Array.isArray(progressionCfg.starters) && listed.length !== progressionCfg.starters.length) console.warn(`[tessaract] progression.json: some starters are not collection cards of kind "${kind}"`);
+  const starters = listed.length ? listed : ofKind;
   if (!starters.length) { console.warn(`[tessaract] progression.json: no collection card of kind "${kind}" to start with; unlocks are off`); return null; }
   const stock = Object.entries(progressionCfg.stock ?? {}).flatMap(([id, n]) => {
     const i = rules.game.cardIndex[id];

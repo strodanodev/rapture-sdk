@@ -2,6 +2,12 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
+## 0.10.5 (2026-11-23): a chosen few starters
+
+Client only: no rules change.
+
+- `web/data/progression.json` takes an optional `starters` list of card ids. The starter pick offers only those (each must be a collection card of `starterKind`); without it, every card of the Kind is offered, as before. Rapture TCG lists one Mortal per element, so the pick is a choice of hero power rather than ten near-identical champions.
+
 ## 0.10.4 (2026-11-21): champion unlocks
 
 No rules change: every ruleset replays exactly as before, and a game without `web/data/progression.json` plays exactly as it did.
