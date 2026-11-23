@@ -76,3 +76,27 @@ export function unlockedTokens(unlocks: Unlocks, owned: Iterable<string> = []): 
 
 /** May this card be used? Support cards always; a collection card when its token is unlocked. */
 export const cardUnlocked = (card: { token?: { tokenId: string } }, unlocked: Set<string>): boolean => !card.token || unlocked.has(String(card.token.tokenId));
+
+/**
+ * The practice bot's deck when unlocks are on, built like the player's own: as many collection cards as the player
+ * may use (`usable`), its champion's card first and the rest at random, maxCopies each, then the stock list, then the
+ * suggested deck if anything is still missing. A new player (one starter) meets one character and the stock list, the
+ * deck they hold themselves; as unlocks grow the bot's deck grows with them, up to a full collection deck.
+ * `rnd` is a seeded source of non-negative integers (`seededRandom`).
+ */
+export function practiceDeck(game: CompiledGame, opts: { champion?: string | null; usable: number; stock?: number[]; rnd: () => number }): number[] {
+  const dr = game.config.deckRules?.mode === 'declared' ? game.config.deckRules : null;
+  if (!dr) return [];
+  const { cards } = game;
+  const collection = cards.map((_, i) => i).filter((i) => cards[i].token && cards[i].deckable !== false);
+  const own = opts.champion == null ? -1 : collection.find((i) => String(cards[i].token!.tokenId) === String(opts.champion)) ?? -1;
+  const rest = collection.filter((i) => i !== own);
+  for (let i = rest.length - 1; i > 0; i--) { const j = opts.rnd() % (i + 1); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+  const picks = [...(own >= 0 ? [own] : []), ...rest].slice(0, Math.max(0, Math.floor(opts.usable)));
+  const deck: number[] = [];
+  const add = (i: number): void => { if (cards[i] && deck.length < dr.size && deck.filter((d) => d === i).length < dr.maxCopies) deck.push(i); };
+  for (const i of picks) for (let k = 0; k < dr.maxCopies; k++) add(i);
+  for (const i of opts.stock ?? []) if (cards[i] && !cards[i].token && cards[i].deckable !== false) add(i);
+  for (const i of game.suggestedDeck) add(i);
+  return deck;
+}

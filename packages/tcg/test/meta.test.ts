@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { LocalBotSession, PuzzleSession } from '../src/client/session';
-import { compileGame, createRules, endTurn, greedyBot, validateGame } from '../src/core/index';
+import { compileGame, createRules, endTurn, greedyBot, validateGame, seededRandom } from '../src/core/index';
 import type { GameConfig, MatchState } from '../src/core/index';
-import { addMatch, addUnlock, cardUnlocked, createGauntlet, createPuzzles, emptyProfile, emptyUnlocks, loadProfile, loadUnlocks, MAX_MATCHES, mergeUnlocks, pickStarter, saveProfile, saveUnlocks, STAGES, START_HEAT, HEAT_MIN, HEAT_MAX, UNLOCK_AT, starterChoices, summarize, unlockedTokens } from '../src/meta/index';
+import { addMatch, addUnlock, cardUnlocked, createGauntlet, createPuzzles, emptyProfile, emptyUnlocks, loadProfile, loadUnlocks, MAX_MATCHES, mergeUnlocks, pickStarter, practiceDeck, saveProfile, saveUnlocks, STAGES, START_HEAT, HEAT_MIN, HEAT_MAX, UNLOCK_AT, starterChoices, summarize, unlockedTokens } from '../src/meta/index';
 import type { MatchEntry, Store } from '../src/meta/index';
 
 const load = (p: string): GameConfig => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8')) as GameConfig;
@@ -175,6 +175,31 @@ test('unlocks: one starter of the starter kind, earned cards without duplicates,
   assert.deepEqual(mergeUnlocks(device, { starter: null, earned: [], heat: null }), device, 'an empty account keeps the device as it is');
   store.data.set('deckwright.unlocks.g', JSON.stringify({ ...u, earned: ['not-an-id'] }));
   assert.deepEqual(loadUnlocks(store, 'g.v1'), emptyUnlocks('g'), 'a bad record starts fresh');
+});
+
+test('practiceDeck: the bot brings as many collection cards as the player may use, its champion first, then the stock list', () => {
+  const { cards } = SAMPLE.game;
+  const dr = SAMPLE.game.config.deckRules!;
+  const collection = cards.map((_, i) => i).filter((i) => cards[i].token && cards[i].deckable !== false);
+  const support = cards.map((_, i) => i).filter((i) => !cards[i].token && cards[i].deckable !== false);
+  const stock = [...support.flatMap((c) => [c, c]), collection[0]]; // a collection card in the stock is skipped
+  const champ = collection[collection.length - 1];
+  const champion = String(cards[champ].token!.tokenId);
+  const legal = (deck: number[]) => deck.length === dr.size && deck.every((c) => deck.filter((d) => d === c).length <= dr.maxCopies);
+  const chars = (deck: number[]) => new Set(deck.filter((c) => cards[c].token));
+  for (let r = 0; r < 10; r++) {
+    const one = practiceDeck(SAMPLE.game, { champion, usable: 1, stock, rnd: seededRandom(`p-${r}`) });
+    assert.ok(legal(one));
+    assert.deepEqual([...chars(one)], [champ], 'a new player meets one character: the bot champion');
+    assert.deepEqual(one.slice(0, dr.maxCopies), Array(dr.maxCopies).fill(champ), 'its champion first, maxCopies of it');
+    assert.deepEqual(one.slice(dr.maxCopies, dr.maxCopies + 4), stock.slice(0, 4), 'then the stock list, in order');
+    const three = practiceDeck(SAMPLE.game, { champion, usable: 3, stock, rnd: seededRandom(`p-${r}`) });
+    assert.ok(legal(three) && chars(three).size === 3 && chars(three).has(champ), 'as many characters as the player may use');
+  }
+  assert.deepEqual(practiceDeck(SAMPLE.game, { champion, usable: 3, stock, rnd: seededRandom('same') }), practiceDeck(SAMPLE.game, { champion, usable: 3, stock, rnd: seededRandom('same') }), 'seeded');
+  const all = practiceDeck(SAMPLE.game, { champion: null, usable: 999, stock, rnd: seededRandom('all') });
+  assert.ok(legal(all) && all.every((c) => cards[c].token), 'everything unlocked: a full collection deck');
+  assert.ok(legal(practiceDeck(SAMPLE.game, { usable: 0, rnd: seededRandom('none') })), 'no stock: the suggested deck fills it');
 });
 
 test('Gauntlet, locked run: starter plus the stock list, common support rewards, an unlock at UNLOCK_AT wins', () => {

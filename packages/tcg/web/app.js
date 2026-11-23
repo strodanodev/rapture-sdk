@@ -11,7 +11,7 @@
 import {
   decode, Op, compileGame, createRules, LocalBotSession, RelaySession, ReplaySession, PuzzleSession, encodeRecord, decodeRecord, REPLAY_PARAM,
   statsFromCore, describeEffect, createGauntlet, createPuzzles, loadProfile, saveProfile, addMatch, summarize, utcDate,
-  loadUnlocks, saveUnlocks, starterChoices, pickStarter, addUnlock, unlockedTokens, mergeUnlocks,
+  loadUnlocks, saveUnlocks, starterChoices, pickStarter, addUnlock, unlockedTokens, mergeUnlocks, practiceDeck, seededRandom,
 } from "./engine/tessaract.js";
 import { createAccount } from "./lib/account.js";
 import { createWallet, LITEFORGE } from "./lib/wallet.js";
@@ -70,7 +70,9 @@ const claimOf = (c) => (c ? { tokenId: String(c.tokenId), stats: statsOf(c) } : 
 
 // ------------------------------------------------------------------ preferences, profile, wallet
 const store = (() => { try { return window.localStorage; } catch { return null; } })();
-const prefs = (() => { try { return { realm: "auto", level: 2, ...JSON.parse(store?.getItem("deckwright.prefs") ?? "{}") }; } catch { return { realm: "auto", level: 2 }; } })();
+// The practice bot starts on Easy where unlocks are on (a new player holds one champion), else Normal; a choice sticks.
+const defaultLevel = progressionCfg ? 1 : 2;
+const prefs = (() => { try { return { realm: "auto", level: defaultLevel, ...JSON.parse(store?.getItem("deckwright.prefs") ?? "{}") }; } catch { return { realm: "auto", level: defaultLevel }; } })();
 let profile = loadProfile(store, game.litnode.rulesetId);
 const saveProf = () => saveProfile(store, profile);
 const gauntlet = createGauntlet(rules);
@@ -330,7 +332,14 @@ async function startMatch(champion, declaredDeck, opts = {}) {
   const others = snap.cards.filter((c) => c !== champion);
   const foe = others.length ? others[Math.floor(Math.random() * others.length)] : null;
   const level = opts.level ?? prefs.level;
-  const session = new LocalBotSession(rules, randomSeed(), claimOf(champion), claimOf(foe), { level });
+  const seed = randomSeed();
+  // With unlocks on, the bot brings a deck like the player's: its champion and as many characters as the player may
+  // use, then the stock list. Without them it plays the game's suggested deck, as before.
+  const usable = progression ? [...app.unlockedIn("practice")].filter((id) => byToken.has(id)).length : 0;
+  const foeDeck = progression && foe
+    ? practiceDeck(rules.game, { champion: String(foe.tokenId), usable: Math.max(1, usable), stock: progression.stock, rnd: seededRandom(`${seed}|practice-foe`) })
+    : undefined;
+  const session = new LocalBotSession(rules, seed, claimOf(champion), claimOf(foe), { level, foeDeck });
   if (declaredDeck) session.declareDeck(declaredDeck);
   await versusInto(session, { kind: "practice", label: "Practice", opponent: foe?.name ?? "House bot", foeLabel: "House bot", mine: champion, foe },
     { names: [champion?.name ?? "Base champion", foe?.name ?? "House bot"], subs: ["You", `${["", "Easy", "Normal", "Hard"][level]} bot`], champs: [champion, foe], realm });

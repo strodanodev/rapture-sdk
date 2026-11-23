@@ -10,7 +10,7 @@
       "name": "rapture-sdk",
       "source": "./packages/tcg/plugin",
       "description": "Build, balance, ship and host an NFT trading card game with the Rapture SDK (formerly Tessaract).",
-      "version": "0.10.5",
+      "version": "0.10.6",
       "category": "development",
       "tags": [
         "tcg",

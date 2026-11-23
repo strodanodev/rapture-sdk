@@ -2,6 +2,14 @@
 
 Every rules or card change ships under a new `rulesetId`, so a game built on an older Deckwright keeps replaying exactly as it did.
 
+## 0.10.6 (2026-11-23): a fair practice bot for new players
+
+Client only: no rules change.
+
+- **Practice with unlocks on:** the house bot no longer brings the game's suggested deck (a full collection deck) against a player who holds one champion. `practiceDeck(game, { champion, usable, stock, rnd })` (`src/meta/unlocks.ts`) deals it a deck built like the player's own: its champion's card and as many other collection cards, at random, as the player may use (unlocked or held), maxCopies each, then the stock list, then the suggested deck for any gap. A new player meets one character and the stock list; the bot's deck grows with the player's unlocks, up to a full collection deck. Without `progression.json` the bot plays as before.
+- **The practice bot starts on Easy** where unlocks are on (a new player's first matches); a level the player picks is remembered as before. Without unlocks the default stays Normal.
+- Measured on Rapture TCG with a normal-bot player holding only a starter Mortal: practice against Normal went from about 5% to about 35-45% wins, against Easy from about 55% to about 90%.
+
 ## 0.10.5 (2026-11-23): a chosen few starters
 
 Client only: no rules change.
